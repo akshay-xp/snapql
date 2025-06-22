@@ -90,8 +90,8 @@ export function App() {
   }
 
   return (
-    <main className="grid grid-cols-[20rem_1fr_1fr] h-dvh">
-      <aside className="flex flex-col overflow-auto border-r border-base-200 relative">
+    <main className="grid grid-cols-[20rem_1fr] grid-rows-2 lg:grid-cols-[20rem_1fr_1fr] lg:grid-rows-none h-dvh">
+      <aside className="row-span-full flex flex-col overflow-auto border-r border-base-200 relative">
         <ul className="flex-1">
           {parsedRequests
             .sort(
