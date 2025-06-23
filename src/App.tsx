@@ -67,11 +67,9 @@ export function App() {
     <main className="grid grid-cols-[20rem_1fr] grid-rows-2 lg:grid-cols-[20rem_1fr_1fr] lg:grid-rows-none h-dvh bg-base-300">
       <aside className="row-span-full flex flex-col overflow-auto border-r border-base-100 relative bg-base-200">
         <header className="sticky top-0 w-full border-b border-base-100 p-2 bg-base-200">
-          <label className="input">
-            <Search />
+          <label className="input input-sm">
+            <Search className="size-5" />
             <input type="search" className="grow" placeholder="Search" />
-            <kbd className="kbd kbd-sm">⌘</kbd>
-            <kbd className="kbd kbd-sm">K</kbd>
           </label>
         </header>
         <ul className="flex-1">
@@ -89,10 +87,10 @@ export function App() {
               </li>
             ))}
         </ul>
-        <footer className="sticky bottom-0 w-full border-t border-base-100 p-2 bg-base-200">
+        <footer className="sticky bottom-0 w-full border-t border-base-100 p-2 bg-base-200 flex gap-1">
           <div className="tooltip" data-tip="clear">
             <button
-              className="btn btn-sm btn-circle"
+              className="btn btn-xs btn-circle btn-ghost"
               onClick={handleClearRequests}
             >
               <Ban className="size-5" />
@@ -103,7 +101,7 @@ export function App() {
             data-tip={newestFirst ? "newest first" : "oldest first"}
           >
             <button
-              className="btn btn-sm btn-circle"
+              className="btn btn-xs btn-circle btn-ghost"
               onClick={handleToggleSort}
             >
               {newestFirst ? (
