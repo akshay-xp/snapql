@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { JSONView } from "./components/json-view/json-view"
+import { Ban, ClockArrowDown, ClockArrowUp } from "lucide-react"
 
 type ParsedRequest = {
   id: string | number | null | undefined
@@ -80,12 +81,19 @@ export function App() {
               </li>
             ))}
         </ul>
-        <footer className="sticky bottom-0 w-full border-t border-base-200 p-1 bg-base-200">
-          <button className="btn btn-xs" onClick={handleClearRequests}>
-            Clear
+        <footer className="sticky bottom-0 w-full border-t border-base-200 p-2 bg-base-200">
+          <button
+            className="btn btn-xs btn-circle"
+            onClick={handleClearRequests}
+          >
+            <Ban className="size-4" />
           </button>
-          <button className="btn btn-xs" onClick={handleToggleSort}>
-            {newestFirst ? "Newest First" : "Oldest First"}
+          <button className="btn btn-xs btn-circle" onClick={handleToggleSort}>
+            {newestFirst ? (
+              <ClockArrowUp className="size-4" />
+            ) : (
+              <ClockArrowDown className="size-4" />
+            )}
           </button>
         </footer>
       </aside>
