@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ChangeEvent } from "react"
 import { JSONView } from "./components/json-view/json-view"
 import { Ban, ClockArrowDown, ClockArrowUp, Search } from "lucide-react"
 
@@ -16,6 +16,7 @@ export function App() {
   const [selectedRequest, setSelectedRequest] = useState<ParsedRequest | null>(
     null
   )
+  const [searchPattern, setSearchPattern] = useState<string>("")
 
   useEffect(() => {
     chrome.devtools.network.onRequestFinished.addListener((request) => {
@@ -63,17 +64,32 @@ export function App() {
     setSelectedRequest(selectedRequest)
   }
 
+  const handleSearch = (event: ChangeEvent<HTMLInputElement>) => {
+    // TODO: debounce
+    setSearchPattern(event.target.value)
+  }
+
   return (
     <main className="grid grid-cols-[20rem_1fr] grid-rows-2 lg:grid-cols-[20rem_1fr_1fr] lg:grid-rows-none h-dvh bg-base-300">
       <aside className="row-span-full flex flex-col overflow-auto border-r border-base-100 relative bg-base-200">
         <header className="sticky top-0 w-full border-b border-base-100 p-2 bg-base-200">
           <label className="input input-sm">
             <Search className="size-5" />
-            <input type="search" className="grow" placeholder="Search" />
+            <input
+              type="search"
+              className="grow"
+              placeholder="Search"
+              onChange={handleSearch}
+            />
           </label>
         </header>
         <ul className="flex-1">
           {parsedRequests
+            .filter((request) =>
+              request.payload.operationName
+                .toLowerCase()
+                .includes(searchPattern.trim().toLocaleLowerCase())
+            )
             .sort(
               (a, b) =>
                 (newestFirst ? -1 : 1) *
