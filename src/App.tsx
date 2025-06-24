@@ -76,7 +76,7 @@ export function App() {
       <PanelGroup direction="horizontal">
         <Panel defaultSize={20} minSize={20}>
           <div className="h-full overflow-auto flex flex-col relative bg-base-200">
-            <header className="sticky top-0 w-full border-b border-base-100 p-2 bg-base-200">
+            <header className="h-12 sticky top-0 w-full border-b border-base-100 p-2 bg-base-200">
               <label className="input input-sm">
                 <Search className="size-5" />
                 <input
@@ -139,14 +139,24 @@ export function App() {
         </Panel>
         <ResizableHandle />
         <Panel minSize={20}>
-          <div className="h-full overflow-auto">
-            {selectedRequest && <JSONView data={selectedRequest.payload} />}
+          <div className="flex flex-col h-full">
+            <div className="h-12 flex items-end w-full p-2 border-b border-base-100 bg-base-300">
+              <h2 className="text-base">Query</h2>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {selectedRequest && <JSONView data={selectedRequest.payload} />}
+            </div>
           </div>
         </Panel>
         <ResizableHandle />
         <Panel minSize={20}>
-          <div className="h-full overflow-auto">
-            {selectedRequest && <JSONView data={selectedRequest.response} />}
+          <div className="flex flex-col h-full">
+            <div className="h-12 flex items-end w-full p-2 border-b border-base-100 bg-base-300">
+              <h2 className="text-base">Response</h2>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {selectedRequest && <JSONView data={selectedRequest.response} />}
+            </div>
           </div>
         </Panel>
       </PanelGroup>
