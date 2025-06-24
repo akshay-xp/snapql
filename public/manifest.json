@@ -4,6 +4,6 @@
   "version": "0.0.0",
   "description": "Inspect GraphQL requests and responses in DevTools",
   "devtools_page": "devtools.html",
-  "permissions": ["declarativeNetRequest", "scripting"],
+  "permissions": [],
   "host_permissions": ["<all_urls>"]
 }
