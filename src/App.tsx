@@ -14,23 +14,30 @@ export function App() {
   )
 
   return (
-    <main className="h-dvh bg-base-300">
+    <main className="h-dvh bg-base-200">
       <PanelGroup direction="horizontal">
         <Panel defaultSize={20} minSize={20}>
           <NetworkSidebar
             parsedRequests={parsedRequests}
+            selectedRequest={selectedRequest}
             setSelectedRequest={setSelectedRequest}
             resetParsedRequests={resetParsedRequests}
           />
         </Panel>
         <ResizableHandle />
-        <Panel minSize={20}>
-          <RequestPanel selectedRequest={selectedRequest} />
-        </Panel>
-        <ResizableHandle />
-        <Panel minSize={20}>
-          <ResponsePanel selectedRequest={selectedRequest} />
-        </Panel>
+        {selectedRequest ? (
+          <>
+            <Panel>
+              <RequestPanel selectedRequest={selectedRequest} />
+            </Panel>
+            <ResizableHandle />
+            <Panel>
+              <ResponsePanel selectedRequest={selectedRequest} />
+            </Panel>
+          </>
+        ) : (
+          <Panel></Panel>
+        )}
       </PanelGroup>
     </main>
   )

@@ -5,12 +5,14 @@ import { useState, type ChangeEvent } from "react"
 type Props = {
   parsedRequests: ParsedRequest[]
   resetParsedRequests: () => void
+  selectedRequest: ParsedRequest | null
   setSelectedRequest: (req: ParsedRequest | null) => void
 }
 
 export function NetworkSidebar({
   parsedRequests,
   resetParsedRequests,
+  // selectedRequest,
   setSelectedRequest,
 }: Props) {
   const [searchPattern, setSearchPattern] = useState<string>("")
@@ -35,8 +37,8 @@ export function NetworkSidebar({
   }
 
   return (
-    <div className="h-full overflow-auto flex flex-col relative bg-base-200">
-      <header className="h-12 sticky top-0 w-full border-b border-base-100 p-2 bg-base-200">
+    <div className="h-full overflow-auto flex flex-col relative bg-base-100">
+      <header className="h-12 sticky top-0 w-full border-b border-base-300 p-2 bg-base-100 z-10">
         <label className="input input-sm">
           <Search className="size-5" />
           <input
@@ -47,7 +49,7 @@ export function NetworkSidebar({
           />
         </label>
       </header>
-      <ul className="flex-1">
+      <ul className="menu w-full flex-1">
         {parsedRequests
           .filter((request) =>
             request.payload.operationName
@@ -60,14 +62,15 @@ export function NetworkSidebar({
               (a.startDateTime.getTime() - b.startDateTime.getTime())
           )
           .map((request) => (
-            <li key={request.id} onClick={() => handleSelectRequest(request)}>
-              <button className="btn btn-sm btn-block btn-ghost justify-start">
-                {request.payload.operationName}
+            // todo: use a better key
+            <li key={request.id}>
+              <button onClick={() => handleSelectRequest(request)}>
+                <div className="truncate">{request.payload.operationName}</div>
               </button>
             </li>
           ))}
       </ul>
-      <footer className="sticky bottom-0 w-full border-t border-base-100 p-2 bg-base-200 flex gap-1">
+      <footer className="sticky bottom-0 w-full border-t border-base-300 p-2 bg-base-100 flex gap-1 z-10">
         <div className="tooltip" data-tip="clear">
           <button
             className="btn btn-xs btn-circle btn-ghost"

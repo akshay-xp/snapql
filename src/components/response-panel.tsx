@@ -8,11 +8,15 @@ type Props = {
 export function ResponsePanel({ selectedRequest }: Props) {
   return (
     <div className="flex flex-col h-full">
-      <div className="h-12 flex items-end w-full p-2 border-b border-base-100 bg-base-300">
-        <h2 className="text-base">Response</h2>
+      <div className="h-12 flex items-end w-full p-2 border-b border-base-300 bg-base-100">
+        <h2 className="text-lg">Response</h2>
       </div>
-      <div className="flex-1 overflow-auto">
-        {selectedRequest && <JSONView data={selectedRequest.response} />}
+      <div className="flex-1 overflow-auto px-6 py-4">
+        <div className="card card-border bg-base-100">
+          <div className="card-body">
+            {selectedRequest && <JSONView data={selectedRequest.response} />}
+          </div>
+        </div>
       </div>
     </div>
   )
