@@ -14,7 +14,9 @@ export function ResponsePanel({ selectedRequest }: Props) {
       <div className="flex-1 overflow-auto px-6 py-4">
         <div className="card card-border bg-base-100">
           <div className="card-body">
-            {selectedRequest && <JSONView data={selectedRequest.response} />}
+            {selectedRequest && (
+              <JSONView data={selectedRequest.response as object} />
+            )}
           </div>
         </div>
       </div>

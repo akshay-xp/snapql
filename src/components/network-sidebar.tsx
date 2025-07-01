@@ -52,7 +52,7 @@ export function NetworkSidebar({
       <ul className="menu w-full flex-1">
         {parsedRequests
           .filter((request) =>
-            request.payload.operationName
+            request.operationName
               .toLowerCase()
               .includes(searchPattern.trim().toLocaleLowerCase())
           )
