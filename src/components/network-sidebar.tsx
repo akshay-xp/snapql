@@ -1,6 +1,7 @@
 import { Ban, ClockArrowDown, ClockArrowUp, Search } from "lucide-react"
 import type { ParsedRequest } from "../features/network/types"
-import { useState, type ChangeEvent } from "react"
+import { type ChangeEvent } from "react"
+import { useSearch } from "../features/search/use-search"
 
 type Props = {
   parsedRequests: ParsedRequest[]
@@ -15,12 +16,14 @@ export function NetworkSidebar({
   // selectedRequest,
   setSelectedRequest,
 }: Props) {
-  const [searchPattern, setSearchPattern] = useState<string>("")
-  const [newestFirst, setNewestFirst] = useState<boolean>(true)
+  const { results, setSearchPattern, newestFirst, setNewestFirst } = useSearch({
+    parsedRequests,
+  })
 
   const handleClearRequests = () => {
     resetParsedRequests()
     setSelectedRequest(null)
+    setSearchPattern("")
   }
 
   const handleToggleSort = () => {
@@ -32,14 +35,13 @@ export function NetworkSidebar({
   }
 
   const handleSearch = (event: ChangeEvent<HTMLInputElement>) => {
-    // TODO: debounce
     setSearchPattern(event.target.value)
   }
 
   return (
     <div className="h-full overflow-auto flex flex-col relative bg-base-100">
       <header className="h-12 sticky top-0 w-full border-b border-base-300 p-2 bg-base-100 z-10">
-        <label className="input input-sm">
+        <label className="input input-sm w-full">
           <Search className="size-5" />
           <input
             type="search"
@@ -50,25 +52,18 @@ export function NetworkSidebar({
         </label>
       </header>
       <ul className="menu w-full flex-1">
-        {parsedRequests
-          .filter((request) =>
-            request.operationName
-              .toLowerCase()
-              .includes(searchPattern.trim().toLocaleLowerCase())
-          )
-          .sort(
-            (a, b) =>
-              (newestFirst ? -1 : 1) *
-              (a.startDateTime.getTime() - b.startDateTime.getTime())
-          )
-          .map((request) => (
-            // todo: use a better key
-            <li key={request.id}>
-              <button onClick={() => handleSelectRequest(request)}>
-                <div className="truncate">{request.payload.operationName}</div>
-              </button>
-            </li>
-          ))}
+        {results.map((request) => (
+          <li
+            // TODO: find a better key
+            key={[request.id, request.startDateTime.toISOString()]
+              .filter(Boolean)
+              .join("-")}
+          >
+            <button onClick={() => handleSelectRequest(request)}>
+              <div className="truncate">{request.payload.operationName}</div>
+            </button>
+          </li>
+        ))}
       </ul>
       <footer className="sticky bottom-0 w-full border-t border-base-300 p-2 bg-base-100 flex gap-1 z-10">
         <div className="tooltip" data-tip="clear">
