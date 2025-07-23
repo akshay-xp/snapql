@@ -11,23 +11,19 @@ export function useSearch({ parsedRequests }: Props) {
   const deferredSearchPattern = useDeferredValue(searchPattern)
   const [newestFirst, setNewestFirst] = useState(true)
 
-  // TODO: useMemo here is ineffective, find alternative
-  const fuse = useMemo(() => {
-    return new Fuse(parsedRequests, {
-      keys: ["operationName"],
-      threshold: 0.4,
-      // skip sort by score
-      shouldSort: false,
-    })
-  }, [parsedRequests])
-
   const results = useMemo(() => {
     // shallow clone
     let tempResults = parsedRequests.slice()
 
     // search
     if (deferredSearchPattern.trim()) {
-      const fuseResults = fuse.search(deferredSearchPattern)
+      const fuse = new Fuse(tempResults, {
+        keys: ["operationName"],
+        threshold: 0.4,
+        // skip sort by score
+        shouldSort: false,
+      })
+      const fuseResults = fuse.search(deferredSearchPattern.trim())
       tempResults = fuseResults.map((res) => res.item)
     }
 
@@ -39,7 +35,7 @@ export function useSearch({ parsedRequests }: Props) {
     )
 
     return tempResults
-  }, [parsedRequests, deferredSearchPattern, fuse, newestFirst])
+  }, [parsedRequests, deferredSearchPattern, newestFirst])
 
   return {
     results,
