@@ -55,9 +55,9 @@ export function NetworkSidebar({
         {results.map((request) => (
           <li
             // TODO: find a better key
-            key={[request.id, request.startDateTime.toISOString()]
-              .filter(Boolean)
-              .join("-")}
+            key={`${
+              request.payload.operationName
+            }-${request.startDateTime.toISOString()}`}
           >
             <button onClick={() => handleSelectRequest(request)}>
               <div className="truncate">{request.payload.operationName}</div>
