@@ -23,7 +23,6 @@ export function NetworkSidebar({
   const handleClearRequests = () => {
     resetParsedRequests()
     setSelectedRequest(null)
-    setSearchPattern("")
   }
 
   const handleToggleSort = () => {
