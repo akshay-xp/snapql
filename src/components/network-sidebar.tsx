@@ -38,8 +38,8 @@ export function NetworkSidebar({
   }
 
   return (
-    <div className="h-full overflow-auto flex flex-col relative bg-base-100">
-      <header className="h-12 sticky top-0 w-full border-b border-base-300 p-2 bg-base-100 z-10">
+    <div className="h-full flex flex-col relative bg-base-100">
+      <header className="h-12 w-full border-b border-base-300 px-3 py-2 bg-base-100 z-10">
         <label className="input input-sm w-full">
           <Search className="size-5" />
           <input
@@ -50,7 +50,7 @@ export function NetworkSidebar({
           />
         </label>
       </header>
-      <ul className="menu w-full flex-1">
+      <ul className="menu flex-nowrap w-full flex-1 overflow-y-auto">
         {results.map((request) => (
           <li
             // TODO: find a better key
@@ -75,7 +75,7 @@ export function NetworkSidebar({
           </li>
         ))}
       </ul>
-      <footer className="sticky bottom-0 w-full border-t border-base-300 p-2 bg-base-100 flex gap-1 z-10">
+      <footer className="h-12 w-full border-t border-base-300 px-3 py-2 bg-base-100 flex gap-1 z-10">
         <div className="tooltip" data-tip="clear">
           <button
             className="btn btn-xs btn-circle btn-ghost"
