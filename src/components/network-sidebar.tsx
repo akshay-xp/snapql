@@ -13,7 +13,7 @@ type Props = {
 export function NetworkSidebar({
   parsedRequests,
   resetParsedRequests,
-  // selectedRequest,
+  selectedRequest,
   setSelectedRequest,
 }: Props) {
   const { results, setSearchPattern, newestFirst, setNewestFirst } = useSearch({
@@ -58,7 +58,19 @@ export function NetworkSidebar({
               request.payload.operationName
             }-${request.startDateTime.toISOString()}`}
           >
-            <button onClick={() => handleSelectRequest(request)}>
+            <button
+              onClick={() => handleSelectRequest(request)}
+              className={
+                `${
+                  request.payload.operationName
+                }-${request.startDateTime.toISOString()}` ===
+                `${
+                  selectedRequest?.payload.operationName
+                }-${selectedRequest?.startDateTime.toISOString()}`
+                  ? "menu-active [--menu-active-fg:text-base-content]"
+                  : "text-base-content/70 hover:text-base-content"
+              }
+            >
               {request.response?.errors ? (
                 <div
                   aria-label="request failed"
