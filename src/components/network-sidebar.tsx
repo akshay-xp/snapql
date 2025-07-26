@@ -59,6 +59,17 @@ export function NetworkSidebar({
             }-${request.startDateTime.toISOString()}`}
           >
             <button onClick={() => handleSelectRequest(request)}>
+              {request.response?.errors ? (
+                <div
+                  aria-label="request failed"
+                  className="status status-error"
+                ></div>
+              ) : (
+                <div
+                  aria-label="request succeeded"
+                  className="status status-success"
+                ></div>
+              )}
               <div className="truncate">{request.payload.operationName}</div>
             </button>
           </li>
