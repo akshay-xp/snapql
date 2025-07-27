@@ -20,7 +20,7 @@ export function App() {
   return (
     <main className="h-dvh bg-base-200">
       <PanelGroup direction="horizontal">
-        <Panel defaultSize={20} minSize={direction === "horizontal" ? 20 : 35}>
+        <Panel minSize={10} defaultSize={20}>
           <NetworkSidebar
             parsedRequests={parsedRequests}
             selectedRequest={selectedRequest}
@@ -32,11 +32,11 @@ export function App() {
         {selectedRequest ? (
           <Panel>
             <PanelGroup direction={direction}>
-              <Panel>
+              <Panel minSize={25} collapsible>
                 <RequestPanel selectedRequest={selectedRequest} />
               </Panel>
               <ResizableHandle />
-              <Panel>
+              <Panel minSize={25} collapsible>
                 <ResponsePanel selectedRequest={selectedRequest} />
               </Panel>
             </PanelGroup>
