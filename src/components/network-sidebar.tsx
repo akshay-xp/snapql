@@ -89,7 +89,7 @@ export function NetworkSidebar({
           </li>
         ))}
       </ul>
-      <footer className="h-12 w-full border-t border-base-300 px-3 py-2 bg-base-100 flex gap-1 z-10">
+      <footer className="h-12 w-full border-t border-base-300 px-3 py-2 bg-base-100 flex items-center gap-1 z-10">
         <div className="tooltip" data-tip="clear">
           <button
             className="btn btn-xs btn-circle btn-ghost"
