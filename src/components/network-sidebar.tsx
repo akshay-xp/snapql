@@ -51,27 +51,27 @@ export function NetworkSidebar({
         </label>
       </header>
       <ul className="menu flex-nowrap w-full flex-1 overflow-y-auto">
-        {results.map((request) => (
+        {results.map((result) => (
           <li
             // TODO: find a better key
             key={`${
-              request.payload.operationName
-            }-${request.startDateTime.toISOString()}`}
+              result.request.payload.operationName
+            }-${result.startDateTime.toISOString()}`}
           >
             <button
-              onClick={() => handleSelectRequest(request)}
+              onClick={() => handleSelectRequest(result)}
               className={
                 `${
-                  request.payload.operationName
-                }-${request.startDateTime.toISOString()}` ===
+                  result.request.payload.operationName
+                }-${result.startDateTime.toISOString()}` ===
                 `${
-                  selectedRequest?.payload.operationName
+                  selectedRequest?.request.payload.operationName
                 }-${selectedRequest?.startDateTime.toISOString()}`
                   ? "menu-active [--menu-active-fg:text-base-content]"
                   : "text-base-content/70 hover:text-base-content"
               }
             >
-              {request.response?.errors ? (
+              {result.response.data?.errors ? (
                 <div
                   aria-label="request failed"
                   className="status status-error"
@@ -82,7 +82,9 @@ export function NetworkSidebar({
                   className="status status-success"
                 ></div>
               )}
-              <div className="truncate">{request.payload.operationName}</div>
+              <div className="truncate">
+                {result.request.payload.operationName}
+              </div>
             </button>
           </li>
         ))}

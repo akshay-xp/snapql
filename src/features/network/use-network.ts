@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
 import { parse as gqlParse } from "graphql"
-import type { GraphQLRequestBody, ParsedRequest } from "./types"
+import type {
+  GQLRequest,
+  GQLResponse,
+  GraphQLRequestBody,
+  ParsedRequest,
+} from "./types"
 import { parse } from "../../util/safe-json-parse"
 
 const getGraphqlOperation = (body: GraphQLRequestBody): string | undefined =>
@@ -71,17 +76,23 @@ export function useNetwork() {
         return
       }
 
-      req.getContent((data) => {
-        const response = parse<Record<string, unknown> | null>(data)
-        if (!response) {
+      req.getContent((rawData) => {
+        const data = parse<Record<string, unknown> | null>(rawData)
+        if (!data) {
           return
         }
+
+        const request = req.request as GQLRequest
+        request.payload = graphqlRequestBody
+
+        const response = req.response as GQLResponse
+        response.data = data
 
         const parsedRequest: ParsedRequest = {
           id: req._request_id,
           startDateTime: new Date(req.startedDateTime),
           operationName,
-          payload: graphqlRequestBody,
+          request,
           response,
         }
         setParsedRequests((prev) => [...prev, parsedRequest])
