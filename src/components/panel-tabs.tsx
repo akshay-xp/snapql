@@ -18,7 +18,7 @@ export function PanelTabs({ title, showHeaders, setShowHeaders }: Props) {
   }
 
   return (
-    <div className="tabs tabs-box tabs-xs">
+    <div className="tabs tabs-box tabs-xs flex-nowrap">
       <input
         type="radio"
         name={`header-tabs-${id}`}

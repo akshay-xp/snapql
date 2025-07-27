@@ -94,6 +94,7 @@ export function useNetwork() {
           operationName,
           request,
           response,
+          time: Math.round(req.time * 100) / 100,
         }
         setParsedRequests((prev) => [...prev, parsedRequest])
       })

@@ -26,10 +26,5 @@ export type ParsedRequest = {
 
   response: GQLResponse
 
-  metadata?: {
-    durationMs?: number
-    statusCode?: number
-    hasError?: boolean
-    errorMessage?: string
-  }
+  time: chrome.devtools.network.Request["time"]
 }
