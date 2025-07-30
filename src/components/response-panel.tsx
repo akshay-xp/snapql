@@ -12,6 +12,9 @@ type Props = {
 
 export function ResponsePanel({ selectedRequest }: Props) {
   const [showHeaders, setShowHeaders] = useState(false)
+  const fromCacheTag =
+    selectedRequest.fromCache ??
+    (selectedRequest.response._fetchedViaServiceWorker && "service worker")
 
   function handleCopy() {
     copyToClipboard(JSON.stringify(selectedRequest.response.data, null, 2))
@@ -23,8 +26,9 @@ export function ResponsePanel({ selectedRequest }: Props) {
         <p className="text-sm font-semibold mr-auto">
           {selectedRequest.response.status}&nbsp;
           {selectedRequest.response.statusText}
-          &nbsp;·&nbsp;
+          &nbsp;•&nbsp;
           {selectedRequest.time} ms
+          {fromCacheTag && ` • from ${fromCacheTag}`}
         </p>
         <PanelTabs
           title="Response"
