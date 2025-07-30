@@ -4,9 +4,10 @@ import Fuse from "fuse.js"
 
 type Props = {
   parsedRequests: ParsedRequest[]
+  showCachedResponses: boolean
 }
 
-export function useSearch({ parsedRequests }: Props) {
+export function useSearch({ parsedRequests, showCachedResponses }: Props) {
   const [searchPattern, setSearchPattern] = useState("")
   const deferredSearchPattern = useDeferredValue(searchPattern)
   const [newestFirst, setNewestFirst] = useState(true)
@@ -14,6 +15,13 @@ export function useSearch({ parsedRequests }: Props) {
   const results = useMemo(() => {
     // shallow clone
     let tempResults = parsedRequests.slice()
+
+    // filter
+    tempResults = tempResults.filter((result) => {
+      const isCached =
+        result.fromCache || result.response._fetchedViaServiceWorker
+      return showCachedResponses || !isCached
+    })
 
     // search
     if (deferredSearchPattern.trim()) {
@@ -35,7 +43,7 @@ export function useSearch({ parsedRequests }: Props) {
     )
 
     return tempResults
-  }, [parsedRequests, deferredSearchPattern, newestFirst])
+  }, [parsedRequests, deferredSearchPattern, showCachedResponses, newestFirst])
 
   return {
     results,

@@ -1,6 +1,13 @@
-import { Ban, ClockArrowDown, ClockArrowUp, Search } from "lucide-react"
+import {
+  Ban,
+  ClockArrowDown,
+  ClockArrowUp,
+  Funnel,
+  Search,
+  X,
+} from "lucide-react"
 import type { ParsedRequest } from "../features/network/types"
-import { type ChangeEvent } from "react"
+import { useRef, useState, type ChangeEvent } from "react"
 import { useSearch } from "../features/search/use-search"
 
 type Props = {
@@ -16,8 +23,13 @@ export function NetworkSidebar({
   selectedRequest,
   setSelectedRequest,
 }: Props) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  const [showCachedResponses, setShowCachedResponses] = useState(true)
+
   const { results, setSearchPattern, newestFirst, setNewestFirst } = useSearch({
     parsedRequests,
+    showCachedResponses,
   })
 
   const handleClearRequests = () => {
@@ -35,6 +47,14 @@ export function NetworkSidebar({
 
   const handleSearch = (event: ChangeEvent<HTMLInputElement>) => {
     setSearchPattern(event.target.value)
+  }
+
+  const handleShowCacheToggle = () => {
+    setShowCachedResponses((prev) => !prev)
+  }
+
+  const handleModalOpen = () => {
+    dialogRef.current?.showModal()
   }
 
   return (
@@ -56,7 +76,7 @@ export function NetworkSidebar({
             // TODO: find a better key
             key={`${
               result.request.payload.operationName
-            }-${result.startDateTime.toISOString()}`}
+            }-${result.startDateTime.toISOString()}-${result.time}`}
           >
             <button
               onClick={() => handleSelectRequest(result)}
@@ -112,6 +132,37 @@ export function NetworkSidebar({
               <ClockArrowDown className="size-5" />
             )}
           </button>
+        </div>
+        <div className="tooltip" data-tip={"filter"}>
+          <button
+            className="btn btn-xs btn-circle btn-ghost"
+            onClick={handleModalOpen}
+          >
+            <Funnel className="size-5" />
+          </button>
+          <dialog ref={dialogRef} className="modal">
+            <div className="modal-box">
+              <h3 className="font-bold text-lg">Filter Requests</h3>
+              <form method="dialog">
+                {/* if there is a button in form, it will close the modal */}
+                <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+                  <X className="size-5" />
+                </button>
+              </form>
+              <label className="label py-4 text-sm">
+                <input
+                  type="checkbox"
+                  checked={showCachedResponses}
+                  onChange={handleShowCacheToggle}
+                  className="toggle toggle-sm toggle-secondary"
+                />
+                Show cached requests
+              </label>
+            </div>
+            <form method="dialog" className="modal-backdrop">
+              <button>close</button>
+            </form>
+          </dialog>
         </div>
       </footer>
     </div>

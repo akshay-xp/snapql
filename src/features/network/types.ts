@@ -14,6 +14,11 @@ export type GQLRequest = chrome.devtools.network.Request["request"] & {
 
 export type GQLResponse = chrome.devtools.network.Request["response"] & {
   data: Record<string, unknown> | null
+  /**
+   * set to true if the response is from service worker, false otherwise.
+   * not included in the chromes official typescript typings.
+   */
+  _fetchedViaServiceWorker?: boolean
 }
 
 export type ParsedRequest = {
@@ -27,4 +32,6 @@ export type ParsedRequest = {
   response: GQLResponse
 
   time: chrome.devtools.network.Request["time"]
+
+  fromCache: chrome.devtools.network.Request["_fromCache"]
 }
