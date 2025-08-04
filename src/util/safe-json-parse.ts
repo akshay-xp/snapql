@@ -12,7 +12,7 @@
  *   console.log(obj.name); // "Alice"
  * }
  */
-export function parse<T = unknown>(
+export function safeJSONParse<T = unknown>(
   text?: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reviver?: (this: any, key: string, value: any) => any

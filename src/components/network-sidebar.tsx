@@ -72,21 +72,11 @@ export function NetworkSidebar({
       </header>
       <ul className="menu flex-nowrap w-full flex-1 overflow-y-auto">
         {results.map((result) => (
-          <li
-            // TODO: find a better key
-            key={`${
-              result.request.payload.operationName
-            }-${result.startDateTime.toISOString()}-${result.time}`}
-          >
+          <li key={result.id}>
             <button
               onClick={() => handleSelectRequest(result)}
               className={
-                `${
-                  result.request.payload.operationName
-                }-${result.startDateTime.toISOString()}` ===
-                `${
-                  selectedRequest?.request.payload.operationName
-                }-${selectedRequest?.startDateTime.toISOString()}`
+                result.id === selectedRequest?.id
                   ? "menu-active [--menu-active-fg:text-base-content]"
                   : "text-base-content/70 hover:text-base-content"
               }
@@ -102,9 +92,7 @@ export function NetworkSidebar({
                   className="status status-success"
                 ></div>
               )}
-              <div className="truncate">
-                {result.request.payload.operationName}
-              </div>
+              <div className="truncate">{result.operationName}</div>
             </button>
           </li>
         ))}

@@ -14,7 +14,7 @@ export function RequestPanel({ selectedRequest }: Props) {
   const [showHeaders, setShowHeaders] = useState(false)
 
   function handleCopy() {
-    copyToClipboard(JSON.stringify(selectedRequest.request.payload, null, 2))
+    copyToClipboard(JSON.stringify(selectedRequest.request.data, null, 2))
   }
 
   return (
@@ -36,7 +36,7 @@ export function RequestPanel({ selectedRequest }: Props) {
         <div className="card card-border bg-base-100">
           <div className="card-body">
             {!showHeaders ? (
-              <JSONView data={selectedRequest.request.payload} />
+              <JSONView data={selectedRequest.request.data} />
             ) : (
               <HeadersTable headers={selectedRequest.request.headers} />
             )}

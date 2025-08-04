@@ -12,9 +12,18 @@ type Props = {
 
 export function ResponsePanel({ selectedRequest }: Props) {
   const [showHeaders, setShowHeaders] = useState(false)
+
   const fromCacheTag =
     selectedRequest.fromCache ??
     (selectedRequest.response._fetchedViaServiceWorker && "service worker")
+  const headerText = [
+    selectedRequest.response.status &&
+      `${selectedRequest.response.status} ${selectedRequest.response.statusText}`,
+    `${selectedRequest.time} ms`,
+    fromCacheTag && `from ${fromCacheTag}`,
+  ]
+    .filter(Boolean)
+    .join(" • ")
 
   function handleCopy() {
     copyToClipboard(JSON.stringify(selectedRequest.response.data, null, 2))
@@ -23,13 +32,7 @@ export function ResponsePanel({ selectedRequest }: Props) {
   return (
     <div className="flex flex-col h-full">
       <div className="h-12 flex items-center gap-2 w-full px-3 py-2 border-b border-base-300 bg-base-100">
-        <p className="text-sm font-semibold mr-auto">
-          {selectedRequest.response.status}&nbsp;
-          {selectedRequest.response.statusText}
-          &nbsp;•&nbsp;
-          {selectedRequest.time} ms
-          {fromCacheTag && ` • from ${fromCacheTag}`}
-        </p>
+        <p className="text-sm font-semibold mr-auto">{headerText}</p>
         <PanelTabs
           title="Response"
           showHeaders={showHeaders}
@@ -43,7 +46,16 @@ export function ResponsePanel({ selectedRequest }: Props) {
         <div className="card card-border bg-base-100">
           <div className="card-body">
             {!showHeaders ? (
-              <JSONView data={selectedRequest.response.data as object} />
+              selectedRequest.response.data ? (
+                <JSONView data={selectedRequest.response.data as object} />
+              ) : (
+                <div className="text-center">
+                  <p className="font-bold">Failed to load response data</p>
+                  <p className="text-sm text-base-content/70">
+                    No data found for resource with given identifier
+                  </p>
+                </div>
+              )
             ) : (
               <HeadersTable headers={selectedRequest.response.headers} />
             )}

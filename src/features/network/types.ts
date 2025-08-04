@@ -1,15 +1,13 @@
+import type { OperationTypeNode } from "graphql"
+
 export type GraphQLRequestBody = {
-  id?: string
-  query?: string
+  query: string
   variables?: Record<string, unknown>
-  operationName?: string
-  extensions?: {
-    persistedQuery?: unknown
-  }
+  operationName: string
 }
 
 export type GQLRequest = chrome.devtools.network.Request["request"] & {
-  payload: GraphQLRequestBody
+  data: GraphQLRequestBody[]
 }
 
 export type GQLResponse = chrome.devtools.network.Request["response"] & {
@@ -25,6 +23,7 @@ export type ParsedRequest = {
   id: string | number | null | undefined
   startDateTime: Date
 
+  operation: OperationTypeNode
   operationName: string
 
   request: GQLRequest
