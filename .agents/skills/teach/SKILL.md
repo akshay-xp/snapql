@@ -1,7 +1,7 @@
 ---
 name: teach
-description: Teach the user a new skill or concept, within this workspace.
-disable-model-invocation: true
+description: Teach the user a new skill or concept, within this workspace. Only invoke when the user explicitly calls this via slash command.
+
 argument-hint: "What would you like to learn about?"
 ---
 
