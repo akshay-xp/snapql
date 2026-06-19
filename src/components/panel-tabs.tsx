@@ -1,12 +1,12 @@
 import { useId } from "react"
 
 type Props = {
-  title: string
+  bodyLabel: string
   showHeaders: boolean
   setShowHeaders: (value: boolean) => void
 }
 
-export function PanelTabs({ title, showHeaders, setShowHeaders }: Props) {
+export function PanelTabs({ bodyLabel, showHeaders, setShowHeaders }: Props) {
   const id = useId()
 
   const handleRequestClick = () => {
@@ -23,7 +23,7 @@ export function PanelTabs({ title, showHeaders, setShowHeaders }: Props) {
         type="radio"
         name={`header-tabs-${id}`}
         className="tab"
-        aria-label={title}
+        aria-label={bodyLabel}
         checked={!showHeaders}
         onChange={handleRequestClick}
       />
