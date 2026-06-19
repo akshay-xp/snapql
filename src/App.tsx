@@ -4,8 +4,7 @@ import { ResizableHandle } from "./components/resizable/resizable"
 import type { ParsedRequest } from "./features/network/types"
 import { useNetwork } from "./features/network/use-network"
 import { NetworkSidebar } from "./components/network-sidebar"
-import { RequestPanel } from "./components/request-panel"
-import { ResponsePanel } from "./components/response-panel"
+import { DetailPanel } from "./components/detail-panel"
 import { useBreakpoint } from "./util/use-breakpoint"
 
 export function App() {
@@ -16,6 +15,20 @@ export function App() {
   const breakpoint = useBreakpoint()
   const direction =
     breakpoint === "base" || breakpoint === "sm" ? "vertical" : "horizontal"
+
+  const fromCacheTag =
+    selectedRequest?.fromCache ??
+    (selectedRequest?.response._fetchedViaServiceWorker && "service worker")
+  const responseTitle = selectedRequest
+    ? [
+        selectedRequest.response.status &&
+          `${selectedRequest.response.status} ${selectedRequest.response.statusText}`,
+        `${selectedRequest.time} ms`,
+        fromCacheTag && `from ${fromCacheTag}`,
+      ]
+        .filter(Boolean)
+        .join(" • ")
+    : ""
 
   return (
     <main className="h-dvh bg-base-200">
@@ -33,11 +46,27 @@ export function App() {
           <Panel>
             <PanelGroup direction={direction}>
               <Panel minSize={25} collapsible>
-                <RequestPanel selectedRequest={selectedRequest} />
+                <DetailPanel
+                  title={selectedRequest.request.url}
+                  data={selectedRequest.request.data}
+                  headers={selectedRequest.request.headers}
+                />
               </Panel>
               <ResizableHandle />
               <Panel minSize={25} collapsible>
-                <ResponsePanel selectedRequest={selectedRequest} />
+                <DetailPanel
+                  title={responseTitle}
+                  data={selectedRequest.response.data}
+                  headers={selectedRequest.response.headers}
+                  emptyState={
+                    <div className="text-center">
+                      <p className="font-bold">Failed to load response data</p>
+                      <p className="text-sm text-base-content/70">
+                        No data found for resource with given identifier
+                      </p>
+                    </div>
+                  }
+                />
               </Panel>
             </PanelGroup>
           </Panel>

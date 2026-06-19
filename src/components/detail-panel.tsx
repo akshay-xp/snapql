@@ -1,30 +1,31 @@
 import { Copy } from "lucide-react"
-import type { ParsedRequest } from "../features/network/types"
 import { JSONView } from "./json-view/json-view"
 import { copyToClipboard } from "../util/copy-to-clipboar"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { PanelTabs } from "./panel-tabs"
 import { HeadersTable } from "./headers-table"
 
 type Props = {
-  selectedRequest: ParsedRequest
+  title: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: object | any[] | null
+  headers: chrome.devtools.network.Request["request"]["headers"]
+  emptyState?: ReactNode
 }
 
-export function RequestPanel({ selectedRequest }: Props) {
+export function DetailPanel({ title, data, headers, emptyState }: Props) {
   const [showHeaders, setShowHeaders] = useState(false)
 
   function handleCopy() {
-    copyToClipboard(JSON.stringify(selectedRequest.request.data, null, 2))
+    copyToClipboard(JSON.stringify(data, null, 2))
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="h-12 flex items-center gap-2 w-full px-3 py-2 border-b border-base-300 bg-base-100">
-        <h1 className="text-sm font-semibold truncate mr-auto">
-          {selectedRequest.request.url}
-        </h1>
+        <p className="text-sm font-semibold truncate mr-auto">{title}</p>
         <PanelTabs
-          title="Request"
+          bodyLabel="Body"
           showHeaders={showHeaders}
           setShowHeaders={setShowHeaders}
         />
@@ -36,9 +37,13 @@ export function RequestPanel({ selectedRequest }: Props) {
         <div className="card card-border bg-base-100">
           <div className="card-body">
             {!showHeaders ? (
-              <JSONView data={selectedRequest.request.data} />
+              data ? (
+                <JSONView data={data} />
+              ) : (
+                emptyState ?? null
+              )
             ) : (
-              <HeadersTable headers={selectedRequest.request.headers} />
+              <HeadersTable headers={headers} />
             )}
           </div>
         </div>
