@@ -27,3 +27,4 @@ GitHub milestones M0 (foundation) to M7 (1.0 release).
 ## Docs
 
 - `docs/build.md`: scripts, manifests, per-browser output.
+- `docs/capture.md`: entry model, capped store, lazy bodies.
