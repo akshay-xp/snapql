@@ -9,6 +9,9 @@ export function createStore(cap = DEFAULT_CAP) {
     add(entry: Entry) {
       entries = [...entries, entry].slice(-cap)
     },
+    clear() {
+      entries = []
+    },
     snapshot() {
       return entries
     },

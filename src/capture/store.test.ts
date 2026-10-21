@@ -50,4 +50,16 @@ describe("createStore", () => {
     expect(store.snapshot()).toHaveLength(5000)
     expect(store.snapshot()[0].id).toBe(2)
   })
+
+  it("clears entries and keeps accepting new ones", () => {
+    const store = createStore()
+    store.add(entry(1))
+    store.add(entry(2))
+
+    store.clear()
+    expect(store.snapshot()).toEqual([])
+
+    store.add(entry(3))
+    expect(store.snapshot().map((e) => e.id)).toEqual([3])
+  })
 })
