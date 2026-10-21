@@ -28,9 +28,18 @@
 - Chrome: `chrome://extensions`, Developer mode, Load unpacked, `dist/chrome`.
 - Firefox: `about:debugging#/runtime/this-firefox`, Load Temporary Add-on, `dist/firefox/manifest.json`.
 
+## CI
+
+- `.github/workflows/ci.yml`: one `ci` job on push and PR to `master`.
+- Steps: `pnpm install --frozen-lockfile`, then `lint`, `typecheck`, `test`, `build` as separate steps; first failure fails the job.
+- Node 22: the `engines` minimum, so CI catches use of newer Node APIs.
+- pnpm version comes from `packageManager` in `package.json` (read by `pnpm/action-setup`); not repeated in the workflow.
+- Validate locally: `pnpm dlx @action-validator/cli .github/workflows/ci.yml`.
+
 ## Key files
 
 - `vite.config.ts`: target selection, plugins, entries.
+- `.github/workflows/ci.yml`: CI.
 - `scripts/build-manifests.ts`: manifest base, per-target diff, Vite plugin.
 - `scripts/build-manifests.test.ts`: manifest tests.
 - `src/browser/devtools.ts`: browser adapter.
