@@ -3,7 +3,7 @@
 Inspect GraphQL requests and responses in DevTools.
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/bopfjlgmfhmpnceeknaddfgeanchkbmm?label=Chrome%20Web%20Store&logo=googlechrome&color=blue)](https://chrome.google.com/webstore/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm)
-![Made with React](https://img.shields.io/badge/Made%20with-React-61DAFB?logo=react&logoColor=white)
+![Made with Solid](https://img.shields.io/badge/Made%20with-Solid-2C4F7C?logo=solid&logoColor=white)
 ![Built with Vite](https://img.shields.io/badge/Built%20with-Vite-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Styled%20with-TailwindCSS-38B2AC?logo=tailwindcss&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/Code-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -33,8 +33,10 @@ You can get SnapQL directly from the Chrome Web Store:
 
 1.  Clone the repo: `git clone https://github.com/akshay-xp/snapql.git`
 2.  Install dependencies: `pnpm install`
-3.  Build the extension: `pnpm build`
-4.  Open `chrome://extensions`, enable Developer Mode, and load the `dist` folder as an unpacked extension
+3.  Build the extension: `pnpm build` (outputs `dist/chrome` and `dist/firefox`)
+4.  Load it:
+    - **Chrome:** open `chrome://extensions`, enable Developer Mode, and load `dist/chrome` as an unpacked extension
+    - **Firefox:** open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and pick `dist/firefox/manifest.json`
 
 ---
 
