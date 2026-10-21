@@ -3,9 +3,28 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
   "engines": {
     "node": ">=22",
     "pnpm": ">=10"
   },
-  "packageManager": "pnpm@10.12.1"
+  "packageManager": "pnpm@10.12.1",
+  "dependencies": {
+    "solid-js": "^1.9.17"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/chrome": "^0.3.6",
+    "@types/node": "^22.20.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-solid": "^2.11.14",
+    "vitest": "^5.0.5"
+  }
 }
