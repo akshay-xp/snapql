@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { toEntry } from "./entry"
 import { createStore } from "./store"
 
@@ -61,5 +61,19 @@ describe("createStore", () => {
 
     store.add(entry(3))
     expect(store.snapshot().map((e) => e.id)).toEqual([3])
+  })
+
+  it("notifies subscribers on add and clear until unsubscribed", () => {
+    const store = createStore()
+    const fn = vi.fn()
+    const off = store.subscribe(fn)
+
+    store.add(entry(1))
+    store.clear()
+    expect(fn).toHaveBeenCalledTimes(2)
+
+    off()
+    store.add(entry(2))
+    expect(fn).toHaveBeenCalledTimes(2)
   })
 })
