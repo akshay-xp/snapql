@@ -19,7 +19,12 @@ describe("manifestFor", () => {
 
     expect(firefox).toStrictEqual({
       ...chrome,
-      browser_specific_settings: { gecko: { id: "snapql@akshay-xp" } },
+      browser_specific_settings: {
+        gecko: {
+          id: "snapql@akshay-xp",
+          data_collection_permissions: { required: ["none"] },
+        },
+      },
     })
     expect(chrome).not.toHaveProperty("browser_specific_settings")
   })

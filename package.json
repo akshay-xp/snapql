@@ -6,7 +6,8 @@
   "scripts": {
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "vite build --mode chrome && vite build --mode firefox"
   },
   "engines": {
     "node": ">=22",

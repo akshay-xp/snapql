@@ -1,3 +1,5 @@
+import type { Plugin } from "vite"
+
 export type Target = "chrome" | "firefox"
 
 // Provisional until an AMO account exists.
@@ -16,8 +18,27 @@ export function manifestFor(target: Target, version: string) {
   if (target === "firefox") {
     return {
       ...manifest,
-      browser_specific_settings: { gecko: { id: GECKO_ID } },
+      browser_specific_settings: {
+        gecko: {
+          id: GECKO_ID,
+          // SnapQL never sends data anywhere.
+          data_collection_permissions: { required: ["none"] },
+        },
+      },
     }
   }
   return manifest
+}
+
+export function manifestPlugin(target: Target, version: string): Plugin {
+  return {
+    name: "snapql-manifest",
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "manifest.json",
+        source: JSON.stringify(manifestFor(target, version), null, 2),
+      })
+    },
+  }
 }
