@@ -20,6 +20,7 @@ export type Entry = {
 }
 
 export function toEntry(req: FinishedRequest, id: number): Entry {
+  let body: Promise<Body> | undefined
   return {
     id,
     method: req.method,
@@ -27,6 +28,9 @@ export function toEntry(req: FinishedRequest, id: number): Entry {
     status: req.status,
     startedAt: Date.parse(req.startedDateTime),
     time: req.time,
-    getBody: req.fetchBody,
+    getBody: () => {
+      body ??= req.fetchBody()
+      return body
+    },
   }
 }

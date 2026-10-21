@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { type FinishedRequest, toEntry } from "./entry"
 
 function request(overrides: Partial<FinishedRequest> = {}): FinishedRequest {
@@ -25,5 +25,22 @@ describe("toEntry", () => {
       startedAt: Date.parse("2026-10-22T10:00:00.000Z"),
       time: 12.5,
     })
+  })
+
+  it("fetches the body lazily and only once", async () => {
+    const body = { content: "{}", encoding: "" }
+    const fetchBody = vi.fn(() => Promise.resolve(body))
+    const entry = toEntry(request({ fetchBody }), 1)
+
+    expect(fetchBody).not.toHaveBeenCalled()
+
+    const [first, second] = await Promise.all([
+      entry.getBody(),
+      entry.getBody(),
+    ])
+
+    expect(fetchBody).toHaveBeenCalledTimes(1)
+    expect(first).toBe(body)
+    expect(second).toBe(body)
   })
 })
