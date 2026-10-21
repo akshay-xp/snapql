@@ -23,6 +23,19 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 - `snapshot()`: current `readonly Entry[]`. Immutable: each change replaces the array, so an old snapshot never changes and reference equality signals change (what Solid needs).
 - `subscribe(fn)`: `fn` runs after every `add`/`clear`; returns an unsubscribe function.
 
+## Browser adapter (`src/browser/devtools.ts`)
+
+- `toFinishedRequest(req)`: Chrome devtools `Request` to `FinishedRequest`. `fetchBody` wraps the callback form of `getContent`, since the promise overload is not guaranteed in Firefox's `chrome.*` namespace.
+- `onRequestFinished(cb)`: subscribes to `chrome.devtools.network.onRequestFinished`, delivers mapped requests, returns an unsubscribe that removes the same listener.
+- Only requests finishing while the panel is open are seen (no HAR backfill until M1).
+
+## Wiring (`src/capture/capture.ts`, `src/panel/main.tsx`)
+
+- `startCapture(subscribe, store)`: assigns ids from 1 (never reused, also across `clear()`), adds `toEntry(req, id)` to the store, returns the unsubscribe.
+- `main.tsx`: `createStore()`, `startCapture(onRequestFinished, store)`, renders `<App store={store} />`.
+- `App` mirrors `store.snapshot()` into a Solid signal on each `subscribe` notification; the panel never calls `getBody()`.
+- Capture runs in the panel page; devtools APIs are available there in Chrome. Firefox: pending manual verification.
+
 ## Invariants
 
 - No `solid-js` or `chrome.*` in `src/capture/`.
@@ -33,6 +46,9 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 - `src/capture/entry.ts`, `src/capture/entry.test.ts`
 - `src/capture/store.ts`, `src/capture/store.test.ts`
+- `src/capture/capture.ts`, `src/capture/capture.test.ts`
+- `src/browser/devtools.ts`, `src/browser/devtools.test.ts`
+- `src/panel/main.tsx`, `src/panel/app.tsx`
 
 ## Related
 
