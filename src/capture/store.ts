@@ -29,3 +29,5 @@ export function createStore(cap = DEFAULT_CAP) {
     },
   }
 }
+
+export type Store = ReturnType<typeof createStore>
