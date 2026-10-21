@@ -20,3 +20,13 @@ export function toFinishedRequest(
       ),
   }
 }
+
+export function onRequestFinished(
+  cb: (req: FinishedRequest) => void,
+): () => void {
+  const listener = (req: chrome.devtools.network.Request) =>
+    cb(toFinishedRequest(req))
+  chrome.devtools.network.onRequestFinished.addListener(listener)
+  return () =>
+    chrome.devtools.network.onRequestFinished.removeListener(listener)
+}
