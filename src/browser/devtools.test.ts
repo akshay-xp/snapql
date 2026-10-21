@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest"
-import { toFinishedRequest } from "./devtools"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { onRequestFinished, toFinishedRequest } from "./devtools"
 
 function chromeRequest() {
   return {
@@ -32,5 +32,33 @@ describe("toFinishedRequest", () => {
       content: "e30=",
       encoding: "base64",
     })
+  })
+})
+
+describe("onRequestFinished", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("delivers mapped requests and removes the same listener", () => {
+    const addListener = vi.fn()
+    const removeListener = vi.fn()
+    vi.stubGlobal("chrome", {
+      devtools: {
+        network: { onRequestFinished: { addListener, removeListener } },
+      },
+    })
+    const cb = vi.fn()
+
+    const off = onRequestFinished(cb)
+    const listener = addListener.mock.calls[0][0]
+    listener(chromeRequest())
+
+    expect(cb).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://api.test/graphql" }),
+    )
+
+    off()
+    expect(removeListener).toHaveBeenCalledWith(listener)
   })
 })
