@@ -12,4 +12,15 @@ describe("manifestFor", () => {
       icons: { "128": "128.png" },
     })
   })
+
+  it("builds the Firefox manifest as Chrome plus the gecko id", () => {
+    const firefox = manifestFor("firefox", "0.2.0")
+    const chrome = manifestFor("chrome", "0.2.0")
+
+    expect(firefox).toStrictEqual({
+      ...chrome,
+      browser_specific_settings: { gecko: { id: "snapql@akshay-xp" } },
+    })
+    expect(chrome).not.toHaveProperty("browser_specific_settings")
+  })
 })
