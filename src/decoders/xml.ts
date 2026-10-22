@@ -1,4 +1,5 @@
-// Hand-written instead of DOMParser so decoders run outside a browser (Vitest).
+import { baseMime } from "./text"
+import type { Decoder, RequestView } from "./types"
 
 type Token = {
   kind: "open" | "close" | "empty" | "text" | "other" | "bad"
@@ -6,6 +7,7 @@ type Token = {
   name: string
 }
 
+// Hand-written instead of DOMParser so decoders run outside a browser (Vitest).
 const token =
   /<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![^>]*>|<\/?[^>]+>|<|[^<]+/g
 
@@ -55,4 +57,33 @@ export function prettyXml(text: string): string {
     }
   }
   return elements && !open.length ? lines.join("\n") : text
+}
+
+// Element local names in document order, or undefined when the body is not XML.
+function elements(
+  req: RequestView,
+): { names: string[]; text: string } | undefined {
+  const body = req.requestBody
+  if (
+    !body ||
+    !(
+      baseMime(body.mimeType).includes("xml") ||
+      body.text.trimStart()[0] === "<"
+    )
+  )
+    return
+  const names = tokens(body.text)
+    .filter((t) => t.kind === "open" || t.kind === "empty")
+    .map((t) => localName(t.name))
+  return names.length ? { names, text: body.text } : undefined
+}
+
+const localName = (name: string) => name.slice(name.indexOf(":") + 1)
+
+export const xml: Decoder = {
+  kind: "xml",
+  decode(req) {
+    const doc = elements(req)
+    return doc && { summary: doc.names[0], data: { xml: prettyXml(doc.text) } }
+  },
 }
