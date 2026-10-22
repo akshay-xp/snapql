@@ -11,7 +11,7 @@ export function App(props: {
 
   return (
     <main class="flex h-dvh flex-col font-mono text-xs">
-      <header class="flex items-center gap-2 border-b border-gray-300 p-2">
+      <header class="flex items-center gap-2 border-b border-border p-2">
         <h1 class="font-semibold">SnapQL</h1>
         <label class="ml-auto flex items-center gap-1">
           <input
@@ -23,7 +23,7 @@ export function App(props: {
         </label>
         <button
           type="button"
-          class="rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-100"
+          class="rounded border border-border px-2 py-0.5 hover:bg-selected"
           onClick={() => props.store.clear()}
         >
           Clear
@@ -32,7 +32,7 @@ export function App(props: {
       <ul class="flex-1 overflow-y-auto">
         <For each={entries()}>
           {(entry) => (
-            <li class="flex gap-2 border-b border-gray-100 px-2 py-1">
+            <li class="flex gap-2 border-b border-border px-2 py-1">
               <span class="w-14 shrink-0">{entry.method}</span>
               <span class="w-10 shrink-0">{entry.status}</span>
               <Show

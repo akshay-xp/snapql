@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { createServer, type Server } from "node:http"
 import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
@@ -35,17 +35,31 @@ export type Panel = {
   page: Page
   origin: string
   rows(): Promise<string[]>
+  themeKind(): Promise<string | undefined>
+  devtoolsTheme(): Promise<"light" | "dark">
+  cssVar(name: string): Promise<string>
   clear(): Promise<void>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
 
 export async function openPanel(
-  options: { visitFirst?: boolean } = {},
+  options: { visitFirst?: boolean; devtoolsTheme?: "light" | "dark" } = {},
 ): Promise<Panel> {
   const server = await startServer()
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
   const userDataDir = await mkdtemp(join(tmpdir(), "snapql-e2e-"))
+  if (options.devtoolsTheme) {
+    // Headless DevTools ignores emulated color schemes; its own setting works.
+    const ui = options.devtoolsTheme === "dark" ? "dark" : "default"
+    await mkdir(join(userDataDir, "Default"))
+    await writeFile(
+      join(userDataDir, "Default", "Preferences"),
+      JSON.stringify({
+        devtools: { preferences: { "ui-theme": JSON.stringify(ui) } },
+      }),
+    )
+  }
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: "chromium",
     headless: true,
@@ -94,6 +108,18 @@ export async function openPanel(
   return {
     page,
     origin,
+    themeKind: () =>
+      panelFrame.evaluate<string | undefined>(
+        "document.documentElement.dataset.themeKind",
+      ),
+    devtoolsTheme: () =>
+      devtools.evaluate<"light" | "dark">(
+        `document.documentElement.classList.contains("theme-with-dark-background") ? "dark" : "light"`,
+      ),
+    cssVar: (name: string) =>
+      panelFrame.evaluate<string>(
+        `getComputedStyle(document.documentElement).getPropertyValue(${JSON.stringify(name)}).trim()`,
+      ),
     rows: () =>
       panelFrame.evaluate<string[]>(
         `[...document.querySelectorAll("li")].map((li) => li.innerText.replace(/\\s+/g, " ").trim())`,

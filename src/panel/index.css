@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+/* Components use these tokens only; the active theme sets the --theme-* vars. */
+@theme inline {
+  --color-bg: var(--theme-bg);
+  --color-fg: var(--theme-fg);
+  --color-muted: var(--theme-muted);
+  --color-border: var(--theme-border);
+  --color-selected: var(--theme-selected);
+  --color-error: var(--theme-error);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}

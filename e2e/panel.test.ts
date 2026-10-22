@@ -1,4 +1,5 @@
 import { expect, test } from "vitest"
+import { defaultTheme } from "../src/panel/themes"
 import { openPanel } from "./harness"
 
 test("panel lists requests from the inspected page", async () => {
@@ -90,3 +91,18 @@ test("navigating clears old rows unless Preserve log is on", async () => {
     await panel.close()
   }
 })
+
+for (const kind of ["light", "dark"] as const) {
+  test(`panel follows the ${kind} DevTools theme`, async () => {
+    const panel = await openPanel({ devtoolsTheme: kind })
+    try {
+      expect(await panel.devtoolsTheme()).toBe(kind)
+      await expect.poll(panel.themeKind).toBe(kind)
+      expect(await panel.cssVar("--theme-bg")).toBe(
+        defaultTheme(kind).colors.bg,
+      )
+    } finally {
+      await panel.close()
+    }
+  })
+}
