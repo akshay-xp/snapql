@@ -21,10 +21,13 @@ test("clear empties the panel and later requests still appear", async () => {
     await expect
       .poll(panel.rows)
       .toEqual(expect.arrayContaining(["/api/two POST"]))
+    expect(await panel.text("header")).toBeNull()
     await panel.clear()
     await expect.poll(panel.rows).toEqual([])
+    expect(await panel.text("footer")).toBe("0 requests")
     await panel.page.evaluate(() => fetch("/api/one"))
     await expect.poll(panel.rows).toEqual(["/api/one GET"])
+    expect(await panel.text("footer")).toBe("1 request")
   } finally {
     await panel.close()
   }
@@ -73,7 +76,11 @@ test("navigating clears old rows unless Preserve log is on", async () => {
     await visit("/other", three)
     expect(await panel.rows()).not.toContain(two)
 
+    const pressed = () =>
+      panel.attr('button[aria-label="Preserve log"]', "aria-pressed")
+    expect(await pressed()).toBe("false")
     await panel.togglePreserveLog()
+    expect(await pressed()).toBe("true")
     await visit("/", two)
     await visit("/other", three)
     expect(await panel.rows()).toContain(two)
