@@ -1,6 +1,7 @@
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import type { Entry } from "../capture/entry"
 import { nextIndex } from "./keys"
+import { rowLabel } from "./row"
 import { scrollToRow, visibleRange } from "./virtual"
 
 // Must match the rows' h-7 class (border-box, so the border is included).
@@ -65,48 +66,52 @@ export function List(props: {
           style={{ transform: `translateY(${range().start * ROW_HEIGHT}px)` }}
         >
           <For each={props.entries.slice(range().start, range().end)}>
-            {(entry) => (
-              // Focus stays on the listbox (aria-activedescendant), which handles
-              // the keyboard, so options are neither focusable nor key handlers.
-              // biome-ignore lint/a11y/useFocusableInteractive: see above
-              // biome-ignore lint/a11y/useKeyWithClickEvents: see above
-              <div
-                id={`entry-${entry.id}`}
-                role="option"
-                aria-selected={entry.id === props.selectedId}
-                class="flex h-7 cursor-default items-center gap-2 border-b border-border px-2"
-                classList={{
-                  "bg-selected": entry.id === props.selectedId,
-                  "text-error": entry.status >= 400,
-                }}
-                onClick={() => props.onSelect(entry.id)}
-              >
-                <span class="w-14 shrink-0">{entry.method}</span>
-                <span class="w-10 shrink-0">{entry.status}</span>
-                <Show
-                  when={entry.decoded}
-                  fallback={
-                    <span class="truncate" title={entry.url}>
-                      {entry.url}
-                    </span>
-                  }
+            {(entry) => {
+              const selected = () => entry.id === props.selectedId
+              const label = rowLabel(entry)
+              return (
+                // Focus stays on the listbox (aria-activedescendant), which handles
+                // the keyboard, so options are neither focusable nor key handlers.
+                // biome-ignore lint/a11y/useFocusableInteractive: see above
+                // biome-ignore lint/a11y/useKeyWithClickEvents: see above
+                <div
+                  id={`entry-${entry.id}`}
+                  role="option"
+                  aria-selected={selected()}
+                  class="flex h-7 cursor-default items-center gap-2 border-b border-border px-2"
+                  classList={{ "bg-selected": selected() }}
+                  onClick={() => props.onSelect(entry.id)}
                 >
-                  {(decoded) => (
-                    <>
-                      <span class="shrink-0">{decoded().kind}</span>
-                      <span class="truncate" title={entry.url}>
-                        {decoded().title}
-                      </span>
-                      <Show when={decoded().detail}>
-                        <span class="shrink-0 text-muted">
-                          {decoded().detail}
-                        </span>
-                      </Show>
-                    </>
-                  )}
-                </Show>
-              </div>
-            )}
+                  <span class="min-w-0 flex-1 truncate" title={entry.url}>
+                    {label.title}
+                  </span>
+                  <Show when={label.detail}>
+                    <span
+                      class="shrink-0"
+                      classList={{ "text-muted": !selected() }}
+                    >
+                      {label.detail}
+                    </span>
+                  </Show>
+                  <Show when={label.failure}>
+                    <span class="shrink-0 rounded bg-error px-1 font-semibold text-bg">
+                      {label.failure}
+                    </span>
+                  </Show>
+                  {/* Present but empty when undecoded, so tags align in a column. */}
+                  <span
+                    class="w-16 shrink-0 rounded border text-center"
+                    classList={{
+                      "border-border": !!label.kind,
+                      "border-transparent": !label.kind,
+                      "text-muted": !selected(),
+                    }}
+                  >
+                    {label.kind}
+                  </span>
+                </div>
+              )
+            }}
           </For>
         </div>
       </div>
