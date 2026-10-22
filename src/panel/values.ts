@@ -1,3 +1,5 @@
+import type { Exchange, NameValue } from "../capture/entry"
+
 export type Jwt = {
   header: Record<string, unknown>
   payload: Record<string, unknown>
@@ -33,3 +35,31 @@ function segmentObject(segment: string): Record<string, unknown> | undefined {
     return undefined
   }
 }
+
+export type Token = { source: string; jwt: Jwt }
+
+export function findTokens(
+  exchange: Pick<
+    Exchange,
+    "requestHeaders" | "requestCookies" | "responseCookies" | "queryString"
+  >,
+): Token[] {
+  const candidates = [
+    ...exchange.requestHeaders
+      .filter((h) => h.name.toLowerCase() === "authorization")
+      .map((h) => ({
+        source: "Authorization header",
+        value: h.value.match(/^bearer\s+(.+)$/i)?.[1] ?? "",
+      })),
+    ...labelled("cookie", exchange.requestCookies),
+    ...labelled("set-cookie", exchange.responseCookies),
+    ...labelled("query", exchange.queryString),
+  ]
+  return candidates.flatMap(({ source, value }) => {
+    const jwt = decodeJwt(value)
+    return jwt ? [{ source, jwt }] : []
+  })
+}
+
+const labelled = (prefix: string, pairs: NameValue[]) =>
+  pairs.map((p) => ({ source: `${prefix} ${p.name}`, value: p.value }))
