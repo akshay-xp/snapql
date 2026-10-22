@@ -1,4 +1,5 @@
 import type { Body, Entry } from "../capture/entry"
+import { prettyXml } from "../decoders/xml"
 
 export type FormattedBody = { text: string; notes: string[] }
 
@@ -32,7 +33,7 @@ export function formatBody(
     return { text: body.content.slice(0, BODY_LIMIT), notes }
   }
   if (base64 || !pretty) return { text: body.content, notes }
-  return { text: prettyJson(body.content) ?? body.content, notes }
+  return { text: prettyJson(body.content) ?? prettyXml(body.content), notes }
 }
 
 function base64Bytes(content: string): number {
