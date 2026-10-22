@@ -8,6 +8,12 @@
   --color-border: var(--theme-border);
   --color-selected: var(--theme-selected);
   --color-error: var(--theme-error);
+  --color-surface: var(--theme-surface);
+  --color-accent: var(--theme-accent);
+  --color-success: var(--theme-success);
+  --color-syntax-key: var(--theme-syntax-key);
+  --color-syntax-string: var(--theme-syntax-string);
+  --color-syntax-number: var(--theme-syntax-number);
 }
 
 body {
