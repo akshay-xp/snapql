@@ -4,6 +4,7 @@ import {
   getTheme,
   onNavigated,
   onRequestFinished,
+  onThemeChanged,
   toFinishedRequest,
 } from "./devtools"
 
@@ -140,5 +141,50 @@ describe("getTheme", () => {
     vi.stubGlobal("chrome", { devtools: { panels: { themeName } } })
 
     expect(getTheme()).toBe(kind)
+  })
+})
+
+describe("onThemeChanged", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("uses the Firefox theme event when present", () => {
+    const addListener = vi.fn()
+    const removeListener = vi.fn()
+    vi.stubGlobal("chrome", {
+      devtools: {
+        panels: { onThemeChanged: { addListener, removeListener } },
+      },
+    })
+    const cb = vi.fn()
+
+    const off = onThemeChanged(cb)
+    const listener = addListener.mock.calls[0][0]
+    listener("dark")
+
+    expect(cb).toHaveBeenCalledWith("dark")
+    off()
+    expect(removeListener).toHaveBeenCalledWith(listener)
+  })
+
+  it("falls back to the OS color scheme", () => {
+    const addEventListener = vi.fn()
+    const removeEventListener = vi.fn()
+    vi.stubGlobal("chrome", { devtools: { panels: {} } })
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ addEventListener, removeEventListener })),
+    )
+    const cb = vi.fn()
+
+    const off = onThemeChanged(cb)
+    const [event, handler] = addEventListener.mock.calls[0]
+    handler({ matches: false })
+
+    expect(event).toBe("change")
+    expect(cb).toHaveBeenCalledWith("light")
+    off()
+    expect(removeEventListener).toHaveBeenCalledWith("change", handler)
   })
 })
