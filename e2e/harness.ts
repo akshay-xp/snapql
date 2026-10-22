@@ -14,6 +14,7 @@ const decodersPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
   fetch("/api/users/1")
+  fetch("/api/form", { method: "POST", body: new URLSearchParams({ a: "1", b: "x y" }) })
 </script>`
 
 // No favicon request, so the last row is the last item.
@@ -246,6 +247,7 @@ function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "application/json" })
         .end('{"id":1}')
+    if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
     if (req.url === "/decoders")
       return res
         .writeHead(200, { "content-type": "text/html" })
