@@ -17,6 +17,17 @@ const testPage = `<!doctype html>
         body: JSON.stringify({ query: "query GetUser { user { id } }" }),
       }),
     )
+    .then(() =>
+      fetch(
+        "/graphql?" +
+          new URLSearchParams({
+            operationName: "GetUser",
+            extensions: JSON.stringify({
+              persistedQuery: { version: 1, sha256Hash: "abcdef1234567890" },
+            }),
+          }),
+      ),
+    )
     .then(() => fetch("/api/two", { method: "POST" }))
 </script>`
 
@@ -93,7 +104,8 @@ function startServer(): Promise<Server> {
   const server = createServer((req, res) => {
     if (req.url === "/api/one") return res.writeHead(200).end("one")
     if (req.url === "/api/two") return res.writeHead(201).end("two")
-    if (req.url === "/graphql") return res.writeHead(200).end('{"data":{}}')
+    if (new URL(req.url ?? "", "http://x").pathname === "/graphql")
+      return res.writeHead(200).end('{"data":{}}')
     res.writeHead(200, { "content-type": "text/html" }).end(testPage)
   })
   return new Promise((done) =>

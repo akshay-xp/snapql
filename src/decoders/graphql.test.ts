@@ -72,6 +72,20 @@ describe("graphql", () => {
     ).toBe("query Other")
   })
 
+  it("decodes persisted queries sent as GET params", () => {
+    const get = (extensions: string): RequestView => ({
+      method: "GET",
+      url: `https://api.test/graphql?${new URLSearchParams({ operationName: "GetUser", extensions })}`,
+      status: 200,
+    })
+    const extensions = JSON.stringify({
+      persistedQuery: { version: 1, sha256Hash: "abcdef1234567890" },
+    })
+
+    expect(graphql.decode(get(extensions))?.summary).toBe("persisted GetUser")
+    expect(graphql.decode(get("not-json"))).toBeUndefined()
+  })
+
   it("summarizes persisted queries sent by hash", () => {
     const extensions = {
       persistedQuery: { version: 1, sha256Hash: "abcdef1234567890" },

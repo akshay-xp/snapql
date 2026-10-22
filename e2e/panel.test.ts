@@ -43,6 +43,7 @@ test("decoded requests show their kind and summary", async () => {
       .toEqual(
         expect.arrayContaining([
           "POST 200 graphql query GetUser",
+          "GET 200 graphql persisted GetUser",
           `GET 200 ${panel.origin}/api/one`,
         ]),
       )
