@@ -122,6 +122,7 @@ export type Panel = {
   toggleSort(): Promise<void>
   search(query: string): Promise<void>
   clearSearch(): Promise<void>
+  clickButton(text: string): Promise<void>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
@@ -295,6 +296,10 @@ export async function openPanel(
     clearSearch: () =>
       panelFrame.evaluate<void>(
         `document.querySelector('button[aria-label="Clear filter"]').click()`,
+      ),
+    clickButton: (text: string) =>
+      panelFrame.evaluate<void>(
+        `[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(text)}).click()`,
       ),
     toggleSort: () =>
       panelFrame.evaluate<void>(
