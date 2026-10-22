@@ -114,6 +114,7 @@ export type Panel = {
   themeKind(): Promise<string | undefined>
   devtoolsTheme(): Promise<"light" | "dark">
   cssVar(name: string): Promise<string>
+  style(selector: string, property: string): Promise<string>
   clear(): Promise<void>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
@@ -196,6 +197,11 @@ export async function openPanel(
       panelFrame.evaluate<string>(
         `getComputedStyle(document.documentElement).getPropertyValue(${JSON.stringify(name)}).trim()`,
       ),
+    style: (selector: string, property: string) =>
+      panelFrame.evaluate<string>(`(() => {
+        const el = document.querySelector(${JSON.stringify(selector)})
+        return el ? getComputedStyle(el).getPropertyValue(${JSON.stringify(property)}) : ""
+      })()`),
     rows: () =>
       panelFrame.evaluate<string[]>(
         `[...document.querySelectorAll('[role="option"]')].map(${rowText})`,

@@ -146,7 +146,7 @@ function RawPanel(props: { entry: Entry }) {
   return (
     <>
       <h2 class="text-muted">Request</h2>
-      <pre class="mb-3 whitespace-pre-wrap break-all">
+      <pre class="font-mono mb-3 whitespace-pre-wrap break-all">
         {rawRequest(props.entry)}
       </pre>
       <h2 class="text-muted">Response</h2>
@@ -194,7 +194,7 @@ function Pairs(props: {
     <section class="mb-3">
       <h2 class="text-muted">{props.title}</h2>
       <Show when={props.pairs.length} fallback={<p class="text-muted">None</p>}>
-        <ul>
+        <ul class="font-mono">
           <For each={props.pairs}>
             {(pair) => (
               <li class="break-all">
@@ -234,7 +234,7 @@ function LoadedBody(props: {
           <For each={b().notes}>
             {(note) => <p class="text-muted">{note}</p>}
           </For>
-          <pre class="whitespace-pre-wrap break-all">
+          <pre class="font-mono whitespace-pre-wrap break-all">
             {props.render(b().text)}
           </pre>
         </>
@@ -271,7 +271,7 @@ function Summary(props: { entry: Entry }) {
           {([name, value]) => (
             <>
               <dt class="text-muted">{name}</dt>
-              <dd class="break-all">{value}</dd>
+              <dd class="break-all font-mono">{value}</dd>
             </>
           )}
         </For>
@@ -326,11 +326,11 @@ function Tokens(props: { entry: Entry }) {
                 {(expires) => <p class="text-muted">expires {expires()}</p>}
               </Show>
               <h3 class="text-muted">header</h3>
-              <pre class="whitespace-pre-wrap break-all">
+              <pre class="font-mono whitespace-pre-wrap break-all">
                 {json(token.jwt.header)}
               </pre>
               <h3 class="text-muted">payload</h3>
-              <pre class="whitespace-pre-wrap break-all">
+              <pre class="font-mono whitespace-pre-wrap break-all">
                 {json(token.jwt.payload)}
               </pre>
             </div>
@@ -352,7 +352,9 @@ function Sections(props: { data: unknown }) {
         ) : (
           <section class="mt-3">
             <h2 class="text-muted">{section.name}</h2>
-            <pre class="whitespace-pre-wrap break-all">{section.text}</pre>
+            <pre class="font-mono whitespace-pre-wrap break-all">
+              {section.text}
+            </pre>
           </section>
         )
       }
