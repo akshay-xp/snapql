@@ -45,6 +45,8 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - Pure helpers for header, cookie and param values; `decodeBase64` (UTF-8) lives here and is shared with `body.ts`.
 - `decodeJwt(value)`: three base64url segments (`[\w-]`; signature may be empty), header and payload must decode to plain JSON objects and the header needs a string `alg`; returns `{ header, payload, expires? }` with `expires` = `exp` as ISO. Anything else `undefined`. Never verified.
 - `findTokens(exchange)`: JWTs in order from `Authorization: Bearer` (case-insensitive), request cookies (`cookie <name>`), response cookies (`set-cookie <name>`), query params (`query <name>`); non-JWT values skipped.
+- `decodeValue(value)`: first match of: JWT (payload as pretty JSON); percent-decoded text (raw kept if malformed) that parses to a JSON object/array (pretty JSON); percent-decoded text when it differs from the raw value; else `undefined`.
+- `Pairs` with `decode` (Headers, Params/Cookies) shows `decodeValue` as a muted `whitespace-pre-wrap` line under the raw value; Summary rows don't decode.
 - Summary `Tokens` section (after decoded data, before Response), only when tokens exist: `<source> · unverified`, `expires <iso>` when present, `header` and `payload` as pretty JSON.
 
 ## Body (`src/panel/body.ts`)
