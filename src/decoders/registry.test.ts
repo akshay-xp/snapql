@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { decodeRequest } from "./registry"
+import { DECODE_LIMIT, decodeRequest } from "./registry"
 import type { Decoder, RequestView } from "./types"
 
 const req: RequestView = {
@@ -36,5 +36,18 @@ describe("decodeRequest", () => {
 
   it("returns undefined when no decoder matches", () => {
     expect(decodeRequest(req, [returnsUndefined, throws])).toBeUndefined()
+  })
+
+  it("skips request bodies over the decode limit", () => {
+    const a = match("a")
+    const withBody = (length: number): RequestView => ({
+      ...req,
+      requestBody: { mimeType: "text/plain", text: "x".repeat(length) },
+    })
+
+    expect(decodeRequest(withBody(DECODE_LIMIT + 1), [a])).toBeUndefined()
+    expect(a.decode).not.toHaveBeenCalled()
+    expect(decodeRequest(withBody(DECODE_LIMIT), [a])?.kind).toBe("a")
+    expect(decodeRequest(req, [a])?.kind).toBe("a")
   })
 })
