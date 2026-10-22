@@ -2,8 +2,34 @@ import type { DecodeResult, RequestView } from "../decoders/types"
 
 export type Body = { content: string; encoding: string }
 
+export type NameValue = { name: string; value: string }
+
+// HAR phases in ms; -1 means the phase did not apply or was not reported.
+export type Timings = {
+  blocked: number
+  dns: number
+  connect: number
+  ssl: number
+  send: number
+  wait: number
+  receive: number
+}
+
+export type Exchange = {
+  requestHeaders: NameValue[]
+  responseHeaders: NameValue[]
+  queryString: NameValue[]
+  requestCookies: NameValue[]
+  responseCookies: NameValue[]
+  httpVersion: string
+  statusText: string
+  size: number
+  timings: Timings
+}
+
 export type FinishedRequest = RequestView & {
   mimeType: string
+  exchange: Exchange
   startedDateTime: string
   time: number
   fetchBody: () => Promise<Body>
@@ -17,6 +43,7 @@ export type Entry = {
   startedAt: number
   time: number
   mimeType: string
+  exchange: Exchange
   decoded?: DecodeResult
   getBody: () => Promise<Body>
 }
@@ -35,6 +62,7 @@ export function toEntry(
     startedAt: Date.parse(req.startedDateTime),
     time: req.time,
     mimeType: req.mimeType,
+    exchange: req.exchange,
     decoded,
     getBody: () => {
       body ??= req.fetchBody()
