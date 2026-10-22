@@ -103,4 +103,39 @@ describe("startCapture", () => {
     expect(urls(store)[2]).toEqual([3, "https://api.test/live"])
     expect(store.snapshot()[0].decoded?.kind).toBe("fake")
   })
+
+  it("holds live requests until backfill is in and drops duplicates", async () => {
+    const store = createStore()
+    let resolve: (reqs: FinishedRequest[]) => void = () => {}
+    const { source, emit } = fakeSource(new Promise((r) => (resolve = r)))
+    const l1 = { ...request("https://api.test/l1"), startedDateTime: "t1" }
+
+    startCapture(source, store, [])
+    emit(l1)
+    emit(request("https://api.test/l2"))
+    await Promise.resolve()
+    expect(store.snapshot()).toEqual([])
+
+    resolve([request("https://api.test/h0"), { ...l1 }])
+
+    await vi.waitFor(() =>
+      expect(urls(store)).toEqual([
+        [1, "https://api.test/h0"],
+        [2, "https://api.test/l1"],
+        [3, "https://api.test/l2"],
+      ]),
+    )
+  })
+
+  it("still adds live requests when the HAR read fails", async () => {
+    const store = createStore()
+    const { source, emit } = fakeSource(Promise.reject(new Error("no HAR")))
+
+    startCapture(source, store, [])
+    emit(request("https://api.test/l1"))
+
+    await vi.waitFor(() =>
+      expect(urls(store)).toEqual([[1, "https://api.test/l1"]]),
+    )
+  })
 })
