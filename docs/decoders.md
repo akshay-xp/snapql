@@ -52,7 +52,8 @@ No capture, store, or UI change.
 ## Multipart (`src/decoders/multipart.ts`)
 
 - Kind `multipart`. Matches a request body whose base mime is `multipart/form-data` with a `boundary` param (quotes allowed); no boundary means no match.
-- `parseMultipart(text, boundary)` returns `Part[]` (`{ name, filename?, type?, content }`): CRLF or LF, headers case-insensitive, parts without a `name` skipped. Shared with GraphQL uploads.
+- Shared with GraphQL uploads: `multipartParts(body)` (mime + boundary check, then parse; `undefined` if not multipart) and `fileRows(parts)` (file parts as rows).
+- `parseMultipart(text, boundary)` returns `Part[]` (`{ name, filename?, type?, content }`): CRLF or LF, headers case-insensitive, parts without a `name` skipped.
 - Parts with a `filename` are files, the rest fields. Summary joins the non-zero counts: `2 fields`, `1 file`, `2 fields, 1 file`.
 - `data`: `{ fields: NameValue[], files: NameValue[] }`, rendered as rows. File value `<filename> (<type>, <n> bytes)`; type defaults to `application/octet-stream`; size is UTF-8 bytes of the captured content.
 - Empty file content shows `size unknown`: browsers may omit file contents from the captured body, so a truly empty file looks the same.
@@ -80,6 +81,7 @@ No capture, store, or UI change.
 - Hand-written tokenizer (no `graphql` dep): tracks brace depth; strings, block strings, and `#` comments are skipped so their contents never count.
 - `data` is the parsed body (or the URL params object).
 - Batch: non-empty array body where every item is an operation or APQ (one bad item means no match). Summary `<n> operations: <op>, <op>` (`1 operation: ...`), each op summarized as above. `data`: `{ operations: NameValue[] }`, name = op summary, value = query text (APQ: the hash); plus `variables: NameValue[]` for ops that have variables (value = JSON), omitted when none do.
+- Uploads (GraphQL multipart request spec): a `multipart/form-data` body with a non-file `operations` field is decoded from that JSON (single or batch, as above); `data` gains `files: NameValue[]` from the file parts. Without a GraphQL `operations` field it doesn't match, so `multipart` takes it.
 
 ## Key files
 
