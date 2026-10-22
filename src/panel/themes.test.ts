@@ -1,5 +1,36 @@
 import { describe, expect, it } from "vitest"
-import { colorTokens, defaultTheme, themes, themeVars } from "./themes"
+import {
+  type ColorToken,
+  colorTokens,
+  defaultTheme,
+  themes,
+  themeVars,
+} from "./themes"
+
+// WCAG relative luminance of a #rrggbb color.
+function luminance(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = Number.parseInt(hex.slice(i, i + 2), 16) / 255
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function contrast(a: string, b: string) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+const textTokens: ColorToken[] = [
+  "fg",
+  "muted",
+  "error",
+  "success",
+  "accent",
+  "syntax-key",
+  "syntax-string",
+  "syntax-number",
+]
 
 describe("themes", () => {
   it("defaults to the DevTools theme of the same kind", () => {
@@ -40,6 +71,20 @@ describe("themes", () => {
       "syntax-string": "#a8461b",
       "syntax-number": "#6a3fb8",
     })
+  })
+
+  it("keeps text at 4.5:1 contrast on bg and surface", () => {
+    for (const theme of themes) {
+      for (const token of textTokens) {
+        for (const ground of ["bg", "surface"] as const) {
+          const ratio = contrast(theme.colors[token], theme.colors[ground])
+          expect(
+            Math.floor(ratio * 100) / 100,
+            `${theme.id} ${token} on ${ground}`,
+          ).toBeGreaterThanOrEqual(4.5)
+        }
+      }
+    }
   })
 
   it("has unique ids", () => {

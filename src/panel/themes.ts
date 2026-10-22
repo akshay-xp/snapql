@@ -26,8 +26,8 @@ export type Theme = {
 
 // Values copied from the DevTools document's --sys-color-* variables, so the
 // panel looks native. Source variable per token:
-// bg cdt-base-container, fg on-surface, muted token-subtle, selected
-// tonal-container, error error. The rest are SnapQL's own: border is softer
+// bg cdt-base-container, fg on-surface, muted token-subtle (dark only; the
+// light value fails 4.5:1 on surface), selected tonal-container, error error. The rest are SnapQL's own: border is softer
 // than DevTools' divider, and surface, accent, success and syntax-* have no
 // DevTools counterpart.
 export const themes: Theme[] = [
@@ -38,7 +38,7 @@ export const themes: Theme[] = [
     colors: {
       bg: "#ffffff",
       fg: "#1f1f1f",
-      muted: "#757575",
+      muted: "#5f6368",
       border: "#e3e3e3",
       selected: "#d3e3fd",
       error: "#b3261e",
