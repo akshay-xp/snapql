@@ -168,23 +168,15 @@ describe("onThemeChanged", () => {
     expect(removeListener).toHaveBeenCalledWith(listener)
   })
 
-  it("falls back to the OS color scheme", () => {
-    const addEventListener = vi.fn()
-    const removeEventListener = vi.fn()
-    vi.stubGlobal("chrome", { devtools: { panels: {} } })
-    vi.stubGlobal(
-      "matchMedia",
-      vi.fn(() => ({ addEventListener, removeEventListener })),
-    )
+  it("does nothing without the Firefox event", () => {
+    const matchMedia = vi.fn()
+    vi.stubGlobal("chrome", { devtools: { panels: { themeName: "dark" } } })
+    vi.stubGlobal("matchMedia", matchMedia)
     const cb = vi.fn()
 
-    const off = onThemeChanged(cb)
-    const [event, handler] = addEventListener.mock.calls[0]
-    handler({ matches: false })
+    onThemeChanged(cb)()
 
-    expect(event).toBe("change")
-    expect(cb).toHaveBeenCalledWith("light")
-    off()
-    expect(removeEventListener).toHaveBeenCalledWith("change", handler)
+    expect(matchMedia).not.toHaveBeenCalled()
+    expect(cb).not.toHaveBeenCalled()
   })
 })
