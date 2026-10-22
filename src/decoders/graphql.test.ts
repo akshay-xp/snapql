@@ -75,4 +75,17 @@ describe("graphql", () => {
   it("ignores JSON without a query", () => {
     expect(graphql.decode(post({ a: 1 }))).toBeUndefined()
   })
+
+  it("ignores non-JSON and batched bodies", () => {
+    const form: RequestView = {
+      ...post({}),
+      requestBody: {
+        mimeType: "application/x-www-form-urlencoded",
+        text: "a=1&b=2",
+      },
+    }
+
+    expect(graphql.decode(form)).toBeUndefined()
+    expect(graphql.decode(post([{ query: "query A { a }" }]))).toBeUndefined()
+  })
 })

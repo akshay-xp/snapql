@@ -1,12 +1,14 @@
 import type { Decoder } from "./types"
 
+type GraphQLRequest = { query?: unknown; operationName?: string } | null
+
 const operationTypes = new Set(["query", "mutation", "subscription"])
 
 export const graphql: Decoder = {
   kind: "graphql",
   decode(req) {
-    const data = req.requestBody
-      ? JSON.parse(req.requestBody.text)
+    const data: GraphQLRequest | undefined = req.requestBody
+      ? parseJson(req.requestBody.text)
       : Object.fromEntries(new URL(req.url).searchParams)
     if (typeof data?.query !== "string") return
     const summary = operationSummary(data.query, data.operationName)
@@ -17,6 +19,14 @@ export const graphql: Decoder = {
 // Strings and comments are matched first so their contents never count as braces or keywords.
 const token = /"""[\s\S]*?"""|"(?:\\.|[^"\\])*"|#[^\n]*|[{}(]|[_A-Za-z]\w*/g
 const identifier = /^[_A-Za-z]/
+
+function parseJson(text: string): GraphQLRequest | undefined {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
 
 type Operation = { type: string; name?: string }
 
