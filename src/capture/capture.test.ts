@@ -76,7 +76,7 @@ describe("startCapture", () => {
     const fake: Decoder = {
       kind: "fake",
       decode: (req) =>
-        req.url.endsWith("/a") ? { summary: "a", data: null } : undefined,
+        req.url.endsWith("/a") ? { title: "a", data: null } : undefined,
     }
     const a = request("https://api.test/a")
 
@@ -86,7 +86,7 @@ describe("startCapture", () => {
 
     await vi.waitFor(() =>
       expect(store.snapshot().map((e) => e.decoded)).toEqual([
-        { kind: "fake", summary: "a", data: null },
+        { kind: "fake", title: "a", data: null },
         undefined,
       ]),
     )
@@ -103,7 +103,7 @@ describe("startCapture", () => {
     )
     const fake: Decoder = {
       kind: "fake",
-      decode: () => ({ summary: "s", data: null }),
+      decode: () => ({ title: "s", data: null }),
     }
 
     startCapture(source, store, [fake], () => false)

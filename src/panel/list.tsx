@@ -95,8 +95,13 @@ export function List(props: {
                     <>
                       <span class="shrink-0">{decoded().kind}</span>
                       <span class="truncate" title={entry.url}>
-                        {decoded().summary}
+                        {decoded().title}
                       </span>
+                      <Show when={decoded().detail}>
+                        <span class="shrink-0 text-muted">
+                          {decoded().detail}
+                        </span>
+                      </Show>
                     </>
                   )}
                 </Show>

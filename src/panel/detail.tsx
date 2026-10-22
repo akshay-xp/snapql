@@ -9,7 +9,7 @@ import {
 import type { Entry, NameValue } from "../capture/entry"
 import { decoders } from "../decoders"
 import { decoderFor } from "../decoders/registry"
-import type { Decoded } from "../decoders/types"
+import type { DecodedResponse } from "../decoders/types"
 import { loadBody } from "./body"
 import { nextTab } from "./keys"
 import { rawRequest, rawResponse } from "./raw"
@@ -257,7 +257,8 @@ function Summary(props: { entry: Entry }) {
       ["URL", e.url],
       ["Status", String(e.status)],
       ["Kind", e.decoded?.kind],
-      ["Summary", e.decoded?.summary],
+      ["Title", e.decoded?.title],
+      ["Detail", e.decoded?.detail],
       ["Started", new Date(e.startedAt).toISOString()],
       ["Time", `${Math.round(e.time)} ms`],
     ].filter((f): f is [string, string] => f[1] !== undefined)
@@ -287,7 +288,7 @@ function Summary(props: { entry: Entry }) {
 // Mounted only while Summary is shown, so the response body loads on demand.
 function ResponseGroup(props: {
   entry: Entry
-  decode: (text: string) => Decoded | undefined
+  decode: (text: string) => DecodedResponse | undefined
 }) {
   const [body] = createResource(
     () => props.entry,
