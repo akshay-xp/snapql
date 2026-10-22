@@ -270,6 +270,15 @@ test("a large session renders only the visible rows", async () => {
 
     await expect.poll(panel.optionCount).toBeGreaterThan(0)
     expect(await panel.optionCount()).toBeLessThan(100)
+
+    // Capture can trail the page, so retry End until the last item is in.
+    await expect
+      .poll(async () => {
+        await panel.press("End")
+        return panel.selectedRow()
+      })
+      .toMatch(/api\/item\?i=999$/)
+    expect(await panel.selectedVisible()).toBe(true)
   } finally {
     await panel.close()
   }

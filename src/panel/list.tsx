@@ -1,7 +1,7 @@
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import type { Entry } from "../capture/entry"
 import { nextIndex } from "./keys"
-import { visibleRange } from "./virtual"
+import { scrollToRow, visibleRange } from "./virtual"
 
 // Must match the rows' h-6 class (border-box, so the border is included).
 export const ROW_HEIGHT = 24
@@ -42,6 +42,9 @@ export function List(props: {
     if (next === undefined) return
     e.preventDefault()
     props.onSelect(props.entries[next].id)
+    // Reveal the row so it is rendered and aria-activedescendant resolves.
+    const top = scrollToRow(next, el.scrollTop, el.clientHeight, ROW_HEIGHT)
+    if (top !== undefined) el.scrollTop = top
   }
 
   return (
