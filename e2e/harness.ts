@@ -24,6 +24,11 @@ const decodersPage = `<!doctype html>
     headers: { "content-type": "application/json" },
     body: '[{"query":"query A { a }"},{"query":"query B { b }"}]',
   })
+  const gqlUpload = new FormData()
+  gqlUpload.append("operations", '{"query":"mutation Upload($file: Upload!) { upload(file: $file) }","variables":{"file":null}}')
+  gqlUpload.append("map", '{"0":["variables.file"]}')
+  gqlUpload.append("0", new Blob(["hi"], { type: "text/plain" }), "a.txt")
+  fetch("/graphql", { method: "POST", body: gqlUpload })
   fetch("/api/trpc/user.byId,post.list?batch=1&input=" + encodeURIComponent('{"0":{"id":1},"1":{}}'))
   fetch("/api/rpc", {
     method: "POST",

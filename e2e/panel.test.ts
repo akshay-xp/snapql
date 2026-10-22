@@ -325,6 +325,7 @@ test("M3 decoders summarize their requests", async () => {
           "POST 200 jsonrpc sum",
           "GET 200 trpc user.byId, post.list",
           "POST 200 graphql 2 operations: query A, query B",
+          "POST 200 graphql mutation Upload",
         ]),
       )
 
@@ -340,6 +341,9 @@ test("M3 decoders summarize their requests", async () => {
 
     await panel.select("POST 200 graphql 2 operations: query A, query B")
     expect(await panel.detail()).toContain("query A = query A { a }")
+
+    await panel.select("POST 200 graphql mutation Upload")
+    expect(await panel.detail()).toContain("0 = a.txt (text/plain, ")
 
     await panel.select("GET 200 trpc user.byId, post.list")
     const batch = await panel.detail()
