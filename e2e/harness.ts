@@ -34,6 +34,11 @@ const decodersPage = `<!doctype html>
     headers: { "content-type": "application/json" },
     body: '{"query":"query Broken { user { posts { id } } }"}',
   })
+  fetch("/api/gql-defer", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: '{"query":"query Deferred { user { id ... @defer { name } } }"}',
+  })
   fetch("/api/trpc/user.byId,post.list?batch=1&input=" + encodeURIComponent('{"0":{"id":1},"1":{}}'))
   fetch("/api/rpc", {
     method: "POST",
@@ -284,6 +289,24 @@ function startServer(): Promise<Server> {
         .writeHead(200, { "content-type": "application/json" })
         .end(
           '{"data":{"user":null},"errors":[{"message":"boom","path":["user","posts",0]},{"message":"bad"}]}',
+        )
+    if (req.url === "/api/gql-defer")
+      return res
+        .writeHead(200, { "content-type": 'multipart/mixed; boundary="-"' })
+        .end(
+          [
+            "",
+            "---",
+            "Content-Type: application/json; charset=utf-8",
+            "",
+            '{"data":{"user":{"id":"1"}},"hasNext":true}',
+            "---",
+            "Content-Type: application/json; charset=utf-8",
+            "",
+            '{"incremental":[{"data":{"name":"Ada"},"path":["user"]}],"hasNext":false}',
+            "-----",
+            "",
+          ].join("\r\n"),
         )
     if (req.url?.startsWith("/api/trpc/"))
       return res

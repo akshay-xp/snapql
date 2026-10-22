@@ -327,6 +327,7 @@ test("M3 decoders summarize their requests", async () => {
           "POST 200 graphql 2 operations: query A, query B",
           "POST 200 graphql mutation Upload",
           "POST 200 graphql query Broken",
+          "POST 200 graphql query Deferred",
         ]),
       )
 
@@ -353,6 +354,10 @@ test("M3 decoders summarize their requests", async () => {
       "user.posts.0 = boom",
       "(root) = bad",
     ])
+      await expect.poll(panel.detail).toContain(text)
+
+    await panel.select("POST 200 graphql query Deferred")
+    for (const text of ["no errors", '"id": "1"', '"name": "Ada"', "parts"])
       await expect.poll(panel.detail).toContain(text)
 
     await panel.select("GET 200 trpc user.byId, post.list")
