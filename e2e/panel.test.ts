@@ -316,7 +316,17 @@ test("M3 decoders summarize their requests", async () => {
     await panel.page.goto(`${panel.origin}/decoders`)
     await expect
       .poll(panel.rows)
-      .toEqual(expect.arrayContaining(["GET 200 json /api/users/1"]))
+      .toEqual(
+        expect.arrayContaining([
+          "GET 200 json /api/users/1",
+          "POST 200 form 2 fields",
+        ]),
+      )
+
+    await panel.select("POST 200 form 2 fields")
+    const detail = await panel.detail()
+    expect(detail).toContain("a = 1")
+    expect(detail).toContain("b = x y")
   } finally {
     await panel.close()
   }
