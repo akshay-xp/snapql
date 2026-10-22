@@ -6,6 +6,11 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 - `FinishedRequest`: input from the browser adapter. `RequestView` (`method`, `url`, `status`, `requestBody?`) plus `mimeType` (response `content.mimeType`, `""` if absent), `startedDateTime` (ISO string), `time` (ms), `fetchBody()`.
 - `Entry`: what the store holds. `id`, `method`, `url`, `status`, `startedAt` (epoch ms), `time`, `mimeType`, `decoded?` (`DecodeResult`), `getBody()`.
+- `Exchange` (on `FinishedRequest` and `Entry`): what the detail tabs show, mapped once by the adapter from the HAR entry.
+  - `requestHeaders`, `responseHeaders`, `queryString`, `requestCookies`, `responseCookies`: `NameValue[]` (`{ name, value }` only; cookie attributes and HAR `comment`s dropped). Missing: `[]`.
+  - `httpVersion` (response's; used for request and status lines), `statusText`: missing `""`.
+  - `size` (response `content.size`), `timings` (`Timings`: `blocked, dns, connect, ssl, send, wait, receive` ms): missing `-1`, which also means "phase n/a" in HAR.
+- `Entry.requestBody`: the request body, kept for the Raw tab (decoders read it from `FinishedRequest` at capture).
 - `Body`: `{ content, encoding }`; `encoding` is `""` or `"base64"`, as reported by the browser.
 - `toEntry(req, id, decoded?)`: maps one to the other. Capture owns `FinishedRequest` so this module never references `chrome.*`, not even in types.
 
@@ -64,6 +69,7 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 - `src/capture/entry.ts`, `src/capture/entry.test.ts`
 - `src/capture/store.ts`, `src/capture/store.test.ts`
+- `src/capture/test-helpers.ts`: `emptyExchange` for tests
 - `src/capture/capture.ts`, `src/capture/capture.test.ts`
 - `src/browser/devtools.ts`, `src/browser/devtools.test.ts`
 - `src/panel/main.tsx`, `src/panel/app.tsx`
