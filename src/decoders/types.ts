@@ -2,6 +2,8 @@ export type RequestView = {
   method: string
   url: string
   status: number
+  // Response content type: metadata known at capture, not the response body.
+  mimeType: string
   requestBody?: { mimeType: string; text: string }
 }
 

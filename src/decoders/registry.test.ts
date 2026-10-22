@@ -6,6 +6,7 @@ const req: RequestView = {
   method: "GET",
   url: "https://api.test/a",
   status: 200,
+  mimeType: "",
 }
 
 const returnsUndefined: Decoder = { kind: "none", decode: () => undefined }
