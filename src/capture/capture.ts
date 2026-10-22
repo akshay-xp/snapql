@@ -18,19 +18,25 @@ export function startCapture(
   let id = 1
   const add = (req: FinishedRequest) =>
     store.add(toEntry(req, id++, decodeRequest(req, decoders)))
-  // Live requests wait for the HAR read so backfilled ones keep their place, and
-  // a request in both feeds is added once.
+  // Live requests wait for the HAR read so backfilled ones keep their place.
+  // Chrome also delivers already-finished requests live after the HAR read, so
+  // a live request matching a HAR entry is dropped; a request finishes once,
+  // so its key is forgotten on first match.
   let buffer: FinishedRequest[] | undefined = []
+  let fromHAR = new Set<string>()
+  const addLive = (req: FinishedRequest) => {
+    if (!fromHAR.delete(key(req))) add(req)
+  }
   const off = source.onRequestFinished((req) =>
-    buffer ? buffer.push(req) : add(req),
+    buffer ? buffer.push(req) : addLive(req),
   )
   source
     .getHAR()
     .catch(() => [])
     .then((har) => {
-      const seen = new Set(har.map(key))
+      fromHAR = new Set(har.map(key))
       har.forEach(add)
-      buffer?.filter((req) => !seen.has(key(req))).forEach(add)
+      buffer?.forEach(addLive)
       buffer = undefined
     })
   return off
