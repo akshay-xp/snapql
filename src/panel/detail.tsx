@@ -13,6 +13,8 @@ import { parseJson } from "../decoders/json"
 import { decoderFor } from "../decoders/registry"
 import type { DecodedResponse } from "../decoders/types"
 import { loadBody } from "./body"
+import { pairsText, valueText } from "./copy"
+import { CopyButton } from "./copy-button"
 import { summaryHeading } from "./heading"
 import { OPEN_DEPTH } from "./json"
 import { JsonTree } from "./json-tree"
@@ -182,7 +184,7 @@ function TimingPanel(props: { entry: Entry }) {
 
 function Pairs(props: { title: string; pairs: NameValue[]; decode?: boolean }) {
   return (
-    <Section title={props.title}>
+    <Section title={props.title} copy={() => pairsText(props.pairs)}>
       <Show when={props.pairs.length} fallback={<p class="text-muted">None</p>}>
         <dl
           data-section={props.title}
@@ -359,7 +361,15 @@ function Tokens(props: { entry: Entry }) {
     <Show when={tokens().length}>
       <For each={tokens()}>
         {(token) => (
-          <Section title="Tokens">
+          <Section
+            title="Tokens"
+            copy={() =>
+              valueText({
+                header: token.jwt.header,
+                payload: token.jwt.payload,
+              })
+            }
+          >
             <p>
               {token.source} <span class="text-muted">· unverified</span>
             </p>
@@ -377,10 +387,19 @@ function Tokens(props: { entry: Entry }) {
   )
 }
 
-function Section(props: { title: string; children: JSX.Element }) {
+function Section(props: {
+  title: string
+  copy?: () => string
+  children: JSX.Element
+}) {
   return (
     <section class="mt-4 flex flex-col gap-1.5">
-      <h2 class="font-semibold text-muted">{props.title}</h2>
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-muted">{props.title}</h2>
+        <Show when={props.copy}>
+          {(copy) => <CopyButton label={`Copy ${props.title}`} text={copy()} />}
+        </Show>
+      </div>
       <div data-block class="rounded-md bg-surface px-3 py-2">
         {props.children}
       </div>
@@ -395,7 +414,12 @@ function Sections(props: { data: unknown }) {
         "rows" in section ? (
           <Pairs title={section.name} pairs={section.rows} />
         ) : (
-          <Section title={section.name}>
+          <Section
+            title={section.name}
+            copy={() =>
+              valueText("text" in section ? section.text : section.json)
+            }
+          >
             {"text" in section ? (
               <Text>{section.text}</Text>
             ) : (

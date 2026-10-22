@@ -298,10 +298,27 @@ test("Summary shows the request and its decoded data", async () => {
         "background-color",
       ),
     ).toBe("rgb(31, 31, 31)")
-    expect(await panel.style('[role="tabpanel"] section > h2', "color")).toBe(
+    expect(await panel.style('[role="tabpanel"] section h2', "color")).toBe(
       "rgb(143, 143, 143)",
     )
     expect(detail).toContain('id: "1"')
+
+    await panel.stubClipboard()
+    await panel.click('button[aria-label="Copy variables"]')
+    expect(await panel.copied()).toBe('{\n  "id": "1"\n}')
+    expect(
+      await panel.attr(
+        '[role="tabpanel"] button[aria-label="Copied"]',
+        "title",
+      ),
+    ).toBe("Copied")
+    await expect
+      .poll(() => panel.attr('button[aria-label="Copy variables"]', "title"), {
+        timeout: 3000,
+      })
+      .toBe("Copy variables")
+    await panel.click('button[aria-label="Copy query"]')
+    expect(await panel.copied()).toBe("query GetUser { user { id } }")
 
     const caret = '[role="tabpanel"] button[aria-expanded]'
     expect(await panel.attr(caret, "aria-expanded")).toBe("true")
@@ -569,6 +586,9 @@ test("M3 decoders summarize their requests", async () => {
     const form = await panel.pairs()
     expect(form).toContain("a = 1")
     expect(form).toContain("b = x y")
+    await panel.stubClipboard()
+    await panel.click('button[aria-label="Copy fields"]')
+    expect(await panel.copied()).toBe("a = 1\nb = x y")
 
     await panel.select("/api/upload 1 field, 1 file multipart")
     const upload = await panel.pairs()
@@ -604,6 +624,9 @@ test("M3 decoders summarize their requests", async () => {
       'alg: "HS256"',
     ])
       expect(me).toContain(text)
+    await panel.click('button[aria-label="Copy Tokens"]')
+    expect(await panel.copied()).toContain('"sub": "42"')
+    expect(await panel.copied()).toContain('"alg": "HS256"')
     await panel.openTab("Params/Cookies")
     expect(await panel.pairs()).toContain("greeting = hello%20world")
     expect(await panel.detail()).toContain("\nhello world")
