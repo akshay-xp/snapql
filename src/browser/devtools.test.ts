@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { onRequestFinished, toFinishedRequest } from "./devtools"
 
-function chromeRequest() {
+function chromeRequest(postData?: { mimeType: string; text: string }) {
   return {
-    request: { method: "POST", url: "https://api.test/graphql" },
+    request: { method: "POST", url: "https://api.test/graphql", postData },
     response: { status: 201 },
     startedDateTime: "2026-10-22T10:00:00.000Z",
     time: 3,
@@ -32,6 +32,15 @@ describe("toFinishedRequest", () => {
       content: "e30=",
       encoding: "base64",
     })
+  })
+
+  it("passes the request body through", () => {
+    const postData = { mimeType: "application/json", text: "{}" }
+
+    expect(toFinishedRequest(chromeRequest(postData)).requestBody).toEqual(
+      postData,
+    )
+    expect(toFinishedRequest(chromeRequest()).requestBody).toBeUndefined()
   })
 })
 

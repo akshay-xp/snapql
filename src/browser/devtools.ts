@@ -7,10 +7,15 @@ export function createPanel(title: string, iconPath: string, pagePath: string) {
 export function toFinishedRequest(
   req: chrome.devtools.network.Request,
 ): FinishedRequest {
+  const postData = req.request.postData
   return {
     method: req.request.method,
     url: req.request.url,
     status: req.response.status,
+    requestBody:
+      postData?.text === undefined
+        ? undefined
+        : { mimeType: postData.mimeType, text: postData.text },
     startedDateTime: req.startedDateTime,
     time: req.time,
     // Callback form: the promise overload is not guaranteed in Firefox's chrome.* namespace.
