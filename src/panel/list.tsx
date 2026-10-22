@@ -3,8 +3,8 @@ import type { Entry } from "../capture/entry"
 import { nextIndex } from "./keys"
 import { scrollToRow, visibleRange } from "./virtual"
 
-// Must match the rows' h-6 class (border-box, so the border is included).
-export const ROW_HEIGHT = 24
+// Must match the rows' h-7 class (border-box, so the border is included).
+export const ROW_HEIGHT = 28
 const OVERSCAN = 10
 
 export function List(props: {
@@ -74,7 +74,7 @@ export function List(props: {
                 id={`entry-${entry.id}`}
                 role="option"
                 aria-selected={entry.id === props.selectedId}
-                class="flex h-6 cursor-default items-center gap-2 border-b border-border px-2"
+                class="flex h-7 cursor-default items-center gap-2 border-b border-border px-2"
                 classList={{
                   "bg-selected": entry.id === props.selectedId,
                   "text-error": entry.status >= 400,
