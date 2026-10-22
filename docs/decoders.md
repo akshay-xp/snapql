@@ -28,8 +28,9 @@ No capture, store, or UI change.
 ## GraphQL (`src/decoders/graphql.ts`)
 
 - Kind `graphql`. Input: JSON request body, or `query`/`operationName` URL params when there is no body.
-- Matches only a plain object with a string `query`. Non-JSON bodies and batched arrays don't match (batching is M3).
+- Matches a plain object with a string `query`, or an APQ request (below). Non-JSON bodies and batched arrays don't match (batching is M3).
 - Summary `<type> <name>`: `query GetUser`, `mutation AddTodo`, `subscription OnTick`. Anonymous: `<type>`. Shorthand `{ ... }`: `query`.
+- APQ (Automatic Persisted Queries): no `query` text but a string `extensions.persistedQuery.sha256Hash`, in the POST body or a JSON-encoded `extensions` GET param. Summary `persisted <operationName>`, or `persisted <first 8 hash chars>` without a name. When query text is present it takes precedence. An unparseable `extensions` param means no match.
 - Multiple operations: the one named by `operationName`, else the first. `fragment` definitions are skipped.
 - Hand-written tokenizer (no `graphql` dep): tracks brace depth; strings, block strings, and `#` comments are skipped so their contents never count.
 - `data` is the parsed body (or the URL params object).
