@@ -17,7 +17,7 @@ Turn a request into a protocol `kind` and a one-line `summary` for the panel row
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, then M3's specific decoders, `json` last as the catch-all.
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, `form`, `json` (catch-all, last). Later M3 decoders slot in before `form`.
 
 ## Adding a decoder
 
@@ -25,6 +25,12 @@ Turn a request into a protocol `kind` and a one-line `summary` for the panel row
 2. Add it to the `decoders` array in `src/decoders/index.ts`.
 
 No capture, store, or UI change.
+
+## Form (`src/decoders/form.ts`)
+
+- Kind `form`. Matches a request body whose base mime is `application/x-www-form-urlencoded`.
+- Summary: field count, `1 field` / `<n> fields`. `data`: `{ fields: NameValue[] }`, decoded with `URLSearchParams` (`%XX` and `+`), rendered as rows (see `docs/panel.md`).
+- Shared helpers in `src/decoders/text.ts`: `baseMime(mime)` (before `;`, lowercased), `count(n, word)`.
 
 ## JSON (`src/decoders/json.ts`)
 
@@ -46,7 +52,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/json.ts` (+ `.test.ts`), `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/form.ts`, `src/decoders/json.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
