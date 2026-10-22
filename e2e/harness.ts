@@ -9,6 +9,13 @@ const extensionDir = resolve("dist/chrome")
 
 const rowText = `(o) => o.innerText.replace(/\\s+/g, " ").trim()`
 
+// One request per M3 decoder; issues add theirs here.
+const decodersPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  fetch("/api/users/1")
+</script>`
+
 // No favicon request, so the last row is the last item.
 const bulkPage = `<!doctype html>
 <link rel="icon" href="data:,">
@@ -235,6 +242,14 @@ function startServer(): Promise<Server> {
     if (req.url === "/api/two") return res.writeHead(201).end("two")
     if (req.url === "/api/three") return res.writeHead(200).end("three")
     if (req.url?.startsWith("/api/item")) return res.writeHead(200).end("item")
+    if (req.url === "/api/users/1")
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end('{"id":1}')
+    if (req.url === "/decoders")
+      return res
+        .writeHead(200, { "content-type": "text/html" })
+        .end(decodersPage)
     if (req.url === "/bulk")
       return res.writeHead(200, { "content-type": "text/html" }).end(bulkPage)
     if (req.url === "/other")
