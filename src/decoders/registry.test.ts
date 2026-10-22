@@ -18,7 +18,7 @@ const throws: Decoder = {
 }
 const match = (kind: string): Decoder => ({
   kind,
-  decode: vi.fn(() => ({ summary: `summary ${kind}`, data: kind })),
+  decode: vi.fn(() => ({ title: `title ${kind}`, data: kind })),
 })
 
 describe("decodeRequest", () => {
@@ -28,7 +28,7 @@ describe("decodeRequest", () => {
 
     expect(decodeRequest(req, [returnsUndefined, throws, a, b])).toEqual({
       kind: "a",
-      summary: "summary a",
+      title: "title a",
       data: "a",
     })
     expect(b.decode).not.toHaveBeenCalled()

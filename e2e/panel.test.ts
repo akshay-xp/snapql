@@ -43,8 +43,8 @@ test("decoded requests show their kind and summary", async () => {
       .poll(panel.rows)
       .toEqual(
         expect.arrayContaining([
-          "POST 200 graphql query GetUser",
-          "GET 200 graphql persisted GetUser",
+          "POST 200 graphql GetUser query",
+          "GET 200 graphql GetUser persisted",
           `GET 200 ${panel.origin}/api/one`,
         ]),
       )
@@ -152,7 +152,7 @@ test("Summary shows the request and its decoded data", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
-    const row = "POST 200 graphql query GetUser"
+    const row = "POST 200 graphql GetUser query"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
 
     await panel.select(row)
@@ -161,6 +161,8 @@ test("Summary shows the request and its decoded data", async () => {
     expect(detail).toContain("query GetUser { user { id } }")
     expect(detail).toContain('"id": "1"')
     expect(detail).toContain(`${panel.origin}/graphql`)
+    expect(detail).toMatch(/Title\s*GetUser/)
+    expect(detail).toMatch(/Detail\s*query/)
   } finally {
     await panel.close()
   }
@@ -170,7 +172,7 @@ test("Body tab loads and pretty-prints the response", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
-    const row = "POST 200 graphql query GetUser"
+    const row = "POST 200 graphql GetUser query"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
 
     await panel.select(row)
@@ -187,8 +189,8 @@ test("Headers and Params/Cookies tabs list name/value pairs", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
-    const post = "POST 200 graphql query GetUser"
-    const apq = "GET 200 graphql persisted GetUser"
+    const post = "POST 200 graphql GetUser query"
+    const apq = "GET 200 graphql GetUser persisted"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([post, apq]))
 
     await panel.select(post)
@@ -207,7 +209,7 @@ test("Timing tab lists HAR phases", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
-    const post = "POST 200 graphql query GetUser"
+    const post = "POST 200 graphql GetUser query"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([post]))
 
     await panel.select(post)
@@ -223,7 +225,7 @@ test("Raw tab shows the request and response as sent", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
-    const post = "POST 200 graphql query GetUser"
+    const post = "POST 200 graphql GetUser query"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([post]))
 
     await panel.select(post)
@@ -318,37 +320,37 @@ test("M3 decoders summarize their requests", async () => {
       .poll(panel.rows)
       .toEqual(
         expect.arrayContaining([
-          "GET 200 json /api/users/1",
-          "POST 200 form 2 fields",
-          "POST 200 multipart 1 field, 1 file",
+          "GET 200 json /api/users/1 GET",
+          "POST 200 form /api/form 2 fields",
+          "POST 200 multipart /api/upload 1 field, 1 file",
           "POST 200 soap GetPrice",
           "POST 200 jsonrpc sum",
-          "GET 200 trpc user.byId, post.list",
-          "POST 200 graphql 2 operations: query A, query B",
-          "POST 200 graphql mutation Upload",
-          "POST 200 graphql query Broken",
-          "POST 200 graphql query Deferred",
-          "GET 200 json /api/me",
+          "GET 200 trpc user.byId, post.list 2 procedures",
+          "POST 200 graphql A, B 2 ops",
+          "POST 200 graphql Upload mutation",
+          "POST 200 graphql Broken query",
+          "POST 200 graphql Deferred query",
+          "GET 200 json /api/me GET",
         ]),
       )
 
-    await panel.select("POST 200 form 2 fields")
+    await panel.select("POST 200 form /api/form 2 fields")
     const detail = await panel.detail()
     expect(detail).toContain("a = 1")
     expect(detail).toContain("b = x y")
 
-    await panel.select("POST 200 multipart 1 field, 1 file")
+    await panel.select("POST 200 multipart /api/upload 1 field, 1 file")
     const upload = await panel.detail()
     expect(upload).toContain("a = 1")
     expect(upload).toContain("f = f.txt (text/plain, ")
 
-    await panel.select("POST 200 graphql 2 operations: query A, query B")
+    await panel.select("POST 200 graphql A, B 2 ops")
     expect(await panel.detail()).toContain("query A = query A { a }")
 
-    await panel.select("POST 200 graphql mutation Upload")
+    await panel.select("POST 200 graphql Upload mutation")
     expect(await panel.detail()).toContain("0 = a.txt (text/plain, ")
 
-    await panel.select("POST 200 graphql query Broken")
+    await panel.select("POST 200 graphql Broken query")
     for (const text of [
       "Response",
       "2 errors",
@@ -357,11 +359,11 @@ test("M3 decoders summarize their requests", async () => {
     ])
       await expect.poll(panel.detail).toContain(text)
 
-    await panel.select("POST 200 graphql query Deferred")
+    await panel.select("POST 200 graphql Deferred query")
     for (const text of ["no errors", '"id": "1"', '"name": "Ada"', "parts"])
       await expect.poll(panel.detail).toContain(text)
 
-    await panel.select("GET 200 json /api/me")
+    await panel.select("GET 200 json /api/me GET")
     const me = await panel.detail()
     for (const text of [
       "Tokens",
@@ -377,7 +379,7 @@ test("M3 decoders summarize their requests", async () => {
     expect(cookies).toContain("\nhello world")
     await panel.openTab("Summary")
 
-    await panel.select("GET 200 trpc user.byId, post.list")
+    await panel.select("GET 200 trpc user.byId, post.list 2 procedures")
     const batch = await panel.detail()
     expect(batch).toContain('user.byId = {"id":1}')
     expect(batch).toContain("post.list = {}")
