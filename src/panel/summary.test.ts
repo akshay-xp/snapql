@@ -20,4 +20,17 @@ describe("dataSections", () => {
       { name: "data", text: "[\n  1,\n  2\n]" },
     ])
   })
+
+  it("turns name/value lists into rows", () => {
+    expect(dataSections({ fields: [{ name: "a", value: "1" }] })).toEqual([
+      { name: "fields", rows: [{ name: "a", value: "1" }] },
+    ])
+    expect(dataSections({ list: [] })).toEqual([{ name: "list", text: "[]" }])
+    expect(dataSections({ mixed: [{ name: "a", value: 1 }] })).toEqual([
+      {
+        name: "mixed",
+        text: '[\n  {\n    "name": "a",\n    "value": 1\n  }\n]',
+      },
+    ])
+  })
 })

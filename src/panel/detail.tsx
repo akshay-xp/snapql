@@ -253,12 +253,22 @@ function Summary(props: { entry: Entry }) {
         </For>
       </dl>
       <For each={dataSections(props.entry.decoded?.data)}>
-        {(section) => (
-          <section class="mt-3">
-            <h2 class="text-muted">{section.name}</h2>
-            <pre class="whitespace-pre-wrap break-all">{section.text}</pre>
-          </section>
-        )}
+        {(section) =>
+          "rows" in section ? (
+            <div class="mt-3">
+              <Pairs
+                title={section.name}
+                pairs={section.rows}
+                separator=" = "
+              />
+            </div>
+          ) : (
+            <section class="mt-3">
+              <h2 class="text-muted">{section.name}</h2>
+              <pre class="whitespace-pre-wrap break-all">{section.text}</pre>
+            </section>
+          )
+        }
       </For>
     </>
   )
