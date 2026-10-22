@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatBody } from "./body"
+import { BODY_LIMIT, formatBody } from "./body"
 
 const text = (content: string) => ({ content, encoding: "" })
 
@@ -28,6 +28,17 @@ describe("formatBody", () => {
     ])
     expect(formatBody(base64("aGVsbG8hIQ==")).notes).toEqual([
       "base64-encoded, 7 bytes",
+    ])
+  })
+
+  it("truncates bodies over the limit without pretty-printing", () => {
+    const content = `[${"1,".repeat((BODY_LIMIT + 8) / 2)}1]`
+
+    const formatted = formatBody(text(content))
+
+    expect(formatted.text).toBe(content.slice(0, BODY_LIMIT))
+    expect(formatted.notes).toEqual([
+      `Truncated: showing 1 MB of ${content.length} characters`,
     ])
   })
 })

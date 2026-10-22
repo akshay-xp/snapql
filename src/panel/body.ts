@@ -2,14 +2,20 @@ import type { Body } from "../capture/entry"
 
 export type FormattedBody = { text: string; notes: string[] }
 
+// Bigger bodies are cut and never parsed, so a huge payload can't freeze the panel.
+export const BODY_LIMIT = 1024 * 1024
+
 export function formatBody(body: Body): FormattedBody {
-  if (body.encoding === "base64") {
-    return {
-      text: body.content,
-      notes: [`base64-encoded, ${base64Bytes(body.content)} bytes`],
-    }
+  const base64 = body.encoding === "base64"
+  const notes = base64
+    ? [`base64-encoded, ${base64Bytes(body.content)} bytes`]
+    : []
+  if (body.content.length > BODY_LIMIT) {
+    notes.push(`Truncated: showing 1 MB of ${body.content.length} characters`)
+    return { text: body.content.slice(0, BODY_LIMIT), notes }
   }
-  return { text: prettyJson(body.content) ?? body.content, notes: [] }
+  if (base64) return { text: body.content, notes }
+  return { text: prettyJson(body.content) ?? body.content, notes }
 }
 
 function base64Bytes(content: string): number {
