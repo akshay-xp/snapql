@@ -4,9 +4,10 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## Layout (`src/panel/app.tsx`)
 
-- Header: title, Preserve log checkbox, Clear.
+- No header bar.
 - Type: UI text in Tailwind `font-sans` at 12px (`text-xs` on `main`); `font-mono` only on code and data: `<pre>` blocks (Body, Raw, Summary sections, Tokens), `Pairs` lists, Summary `<dd>` values.
-- Body: flex row. `List` left, `Detail` right when an entry is selected.
+- Body: flex row. Left `<section>` (`flex-1 flex-col`): `List`, or `Waiting` when the store is empty ("Waiting for requests", "Reload the page to capture its traffic."), then `Footer`. `Detail` right when an entry is selected.
+- Footer (`src/panel/footer.tsx`): icon buttons, each with `aria-label` = `title`: Clear; sort (`Newest first` / `Oldest first`, the current order, icon flips); Preserve log (`aria-pressed`, `text-accent` when on). Then the count, `count(n, "request")` (`0 requests`, `1 request`). Icons inline SVG, `aria-hidden`.
 - Divider (`src/panel/splitter.tsx`, `src/panel/splitter.ts`): an `<hr aria-orientation="vertical">` (implicit `separator` role; Biome prefers the native element) absolutely positioned over the detail pane's left border, so it takes no layout width and list + detail always fill the row.
   - Drag: `pointerdown` on the handle adds `pointermove`/`pointerup` listeners on `window` (drag survives leaving the handle; also works with the e2e's synthetic events), removed on release or unmount.
   - `App` owns `detailWidth` (undefined = 50%, until the first drag; not persisted). Width = row's right edge minus pointer x, through `clampWidth(width, container, MIN_PANE)`: each side keeps at least `MIN_PANE` (200px); a row narrower than 400px splits in half.
@@ -17,6 +18,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - `entries`: Solid signal mirroring `store.snapshot()` on each store notification.
 - `selectedId`: signal in `App`. `selected()` derives the entry; an effect resets `selectedId` to `undefined` when the entry leaves the store (Clear, eviction, navigation), which closes the pane.
 - `preserveLog`: owned by `main.tsx` (see `docs/capture.md`).
+- `newestFirst`: signal in `App`, default `true`, not persisted. `App` passes `List` the reversed snapshot when on; `List` knows nothing of order, so ↑/↓/Home/End follow the displayed order.
 
 ## List (`src/panel/list.tsx`, `src/panel/keys.ts`)
 
@@ -78,12 +80,12 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## E2E harness (`e2e/harness.ts`)
 
-- `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `dragDivider(dx)` dispatches pointerdown on the handle and pointermove/up on `window`; `paneWidths()` gives `{ list, detail }` (the headless panel is ~550px wide, so drags stay small); `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries End until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`).
+- `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `dragDivider(dx)` dispatches pointerdown on the handle and pointermove/up on `window`; `paneWidths()` gives `{ list, detail }` (the headless panel is ~550px wide, so drags stay small); `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries Home (newest first) until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`), `text(selector)` (collapsed innerText or `null`), `attr(selector, name)`; `clear()`, `toggleSort()` and `togglePreserveLog()` click footer buttons by `aria-label`.
 - `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`, `style(selector, property)` (computed style of the first match, `""` if none).
 
 ## Key files
 
-- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`, `src/panel/splitter.tsx`
+- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/footer.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`, `src/panel/splitter.tsx`
 - `src/panel/keys.ts`, `src/panel/row.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
 - `src/panel/index.css`
 - `e2e/harness.ts`, `e2e/panel.test.ts`
