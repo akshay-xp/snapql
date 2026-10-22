@@ -283,9 +283,15 @@ test("Summary shows the request and its decoded data", async () => {
 
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
-    expect(detail).toContain(`${panel.origin}/graphql`)
-    expect(detail).toMatch(/Title\s*GetUser/)
-    expect(detail).toMatch(/Detail\s*query/)
+    expect(await panel.text('[role="tabpanel"] header')).toMatch(
+      /^GetUser graphql query POST \/graphql · 200 OK · \d+ ms · \d\d:\d\d:\d\d$/,
+    )
+    expect(
+      await panel.attr('[role="tabpanel"] header [data-path]', "title"),
+    ).toBe(`${panel.origin}/graphql`)
+    expect(
+      await panel.style('[role="tabpanel"] header [data-status]', "color"),
+    ).toBe("rgb(129, 201, 149)")
     expect(detail).toContain('id: "1"')
 
     const caret = '[role="tabpanel"] button[aria-expanded]'
@@ -541,6 +547,14 @@ test("M3 decoders summarize their requests", async () => {
           "/api/missing GET 404",
         ]),
       )
+
+    await panel.select("/api/missing GET 404")
+    expect(await panel.text('[role="tabpanel"] header')).toContain(
+      "404 Not Found",
+    )
+    expect(
+      await panel.style('[role="tabpanel"] header [data-status]', "color"),
+    ).toBe("rgb(242, 184, 181)")
 
     await panel.select("/api/form 2 fields form")
     const detail = await panel.detail()
