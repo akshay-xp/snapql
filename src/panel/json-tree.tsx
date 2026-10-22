@@ -10,7 +10,7 @@ import {
 
 export function JsonTree(props: { value: unknown; openDepth?: number }) {
   return (
-    <div class="font-mono break-all">
+    <div class="font-mono [overflow-wrap:anywhere]">
       <Node
         value={props.value}
         depth={0}
