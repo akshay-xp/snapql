@@ -39,7 +39,9 @@ export type Panel = {
   close(): Promise<void>
 }
 
-export async function openPanel(): Promise<Panel> {
+export async function openPanel(
+  options: { visitFirst?: boolean } = {},
+): Promise<Panel> {
   const server = await startServer()
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
   const userDataDir = await mkdtemp(join(tmpdir(), "snapql-e2e-"))
@@ -63,15 +65,24 @@ export async function openPanel(): Promise<Panel> {
     return file.split("\n")[0] || undefined
   })
   const devtools = await connect(port, (t) => t.url.startsWith("devtools://"))
-  await poll(() =>
+  const panelId = await poll(() =>
     devtools.evaluate<string | undefined>(`(async () => {
       const { InspectorView } = await import("./ui/legacy/legacy.js")
-      const view = InspectorView.InspectorView.instance()
-      const id = view.tabbedPane.tabIds().find((id) => id.includes("SnapQL"))
-      if (id) await view.showPanel(id)
-      return id
+      return InspectorView.InspectorView.instance()
+        .tabbedPane.tabIds().find((id) => id.includes("SnapQL"))
     })()`),
   )
+  // Visit only once DevTools is up, or it never records the requests.
+  if (options.visitFirst) {
+    await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith("/api/two")),
+      page.goto(origin),
+    ])
+  }
+  await devtools.evaluate(`(async () => {
+    const { InspectorView } = await import("./ui/legacy/legacy.js")
+    await InspectorView.InspectorView.instance().showPanel(${JSON.stringify(panelId)})
+  })()`)
   const panelFrame = await connect(port, (t) => t.url.endsWith("/panel.html"))
   await poll(() =>
     panelFrame
