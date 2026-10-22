@@ -13,9 +13,17 @@ export function App(props: {
     <main class="flex h-dvh flex-col font-mono text-xs">
       <header class="flex items-center gap-2 border-b border-gray-300 p-2">
         <h1 class="font-semibold">SnapQL</h1>
+        <label class="ml-auto flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={props.preserveLog()}
+            onChange={(e) => props.setPreserveLog(e.currentTarget.checked)}
+          />
+          Preserve log
+        </label>
         <button
           type="button"
-          class="ml-auto rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-100"
+          class="rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-100"
           onClick={() => props.store.clear()}
         >
           Clear

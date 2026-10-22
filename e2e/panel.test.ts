@@ -67,3 +67,26 @@ test("requests made before the panel opened are backfilled", async () => {
     await panel.close()
   }
 })
+
+test("navigating clears old rows unless Preserve log is on", async () => {
+  const panel = await openPanel()
+  try {
+    const two = `POST 201 ${panel.origin}/api/two`
+    const three = `GET 200 ${panel.origin}/api/three`
+    const visit = async (path: string, row: string) => {
+      await panel.page.goto(panel.origin + path)
+      await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+    }
+
+    await visit("/", two)
+    await visit("/other", three)
+    expect(await panel.rows()).not.toContain(two)
+
+    await panel.togglePreserveLog()
+    await visit("/", two)
+    await visit("/other", three)
+    expect(await panel.rows()).toContain(two)
+  } finally {
+    await panel.close()
+  }
+})

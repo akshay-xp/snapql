@@ -36,6 +36,7 @@ export type Panel = {
   origin: string
   rows(): Promise<string[]>
   clear(): Promise<void>
+  togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
 
@@ -101,6 +102,10 @@ export async function openPanel(
       panelFrame.evaluate<void>(
         `[...document.querySelectorAll("button")].find((b) => b.textContent === "Clear").click()`,
       ),
+    togglePreserveLog: () =>
+      panelFrame.evaluate<void>(
+        `[...document.querySelectorAll("label")].find((l) => l.textContent.trim() === "Preserve log").querySelector("input").click()`,
+      ),
     close: async () => {
       devtools.close()
       panelFrame.close()
@@ -115,6 +120,11 @@ function startServer(): Promise<Server> {
   const server = createServer((req, res) => {
     if (req.url === "/api/one") return res.writeHead(200).end("one")
     if (req.url === "/api/two") return res.writeHead(201).end("two")
+    if (req.url === "/api/three") return res.writeHead(200).end("three")
+    if (req.url === "/other")
+      return res
+        .writeHead(200, { "content-type": "text/html" })
+        .end(`<!doctype html><script>fetch("/api/three")</script>`)
     if (new URL(req.url ?? "", "http://x").pathname === "/graphql")
       return res.writeHead(200).end('{"data":{}}')
     res.writeHead(200, { "content-type": "text/html" }).end(testPage)
