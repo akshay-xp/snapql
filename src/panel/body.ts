@@ -1,9 +1,10 @@
 import type { Body, Entry } from "../capture/entry"
+import { baseMime } from "../decoders/text"
 import { prettyXml } from "../decoders/xml"
 
 export type FormattedBody = { text: string; notes: string[] }
 
-export type FormatOptions = { pretty?: boolean }
+export type FormatOptions = { pretty?: boolean; mimeType?: string }
 
 // The panel's only getBody() caller, so bodies load only where this is used.
 export async function loadBody(
@@ -22,8 +23,10 @@ export const BODY_LIMIT = 1024 * 1024
 
 export function formatBody(
   body: Body,
-  { pretty = true }: FormatOptions = {},
+  { pretty = true, mimeType = "" }: FormatOptions = {},
 ): FormattedBody {
+  if (body.encoding === "base64" && isTextMime(mimeType))
+    body = { content: decodeBase64(body.content), encoding: "" }
   const base64 = body.encoding === "base64"
   const notes = base64
     ? [`base64-encoded, ${base64Bytes(body.content)} bytes`]
@@ -47,4 +50,13 @@ function prettyJson(text: string): string | undefined {
   } catch {
     return undefined
   }
+}
+
+const isTextMime = (mimeType: string) =>
+  /^text\/|[/+]json$|xml|javascript/.test(baseMime(mimeType))
+
+function decodeBase64(content: string): string {
+  return new TextDecoder().decode(
+    Uint8Array.from(atob(content), (c) => c.charCodeAt(0)),
+  )
 }
