@@ -4,19 +4,20 @@ Turn a request into a protocol `kind` and a one-line `summary` for the panel row
 
 ## Contract (`src/decoders/types.ts`)
 
-- `RequestView`: `method`, `url`, `status`, `requestBody?: { mimeType, text }`. Request side only; response bodies are never read while decoding.
+- `RequestView`: `method`, `url`, `status`, `mimeType`, `requestBody?: { mimeType, text }`. `mimeType` is the response content type: metadata known at capture, so decoders may use it; response bodies are never read while decoding.
 - `Decoder`: `{ kind, decode(req): Decoded | undefined }`. One call covers detect, decode, summarize, so the body is parsed once.
 - `Decoded`: `{ summary, data }`; `data` is the parsed request (decoder-specific).
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
-- No headers or query params in `RequestView` yet: no decoder needs them; GET params come from `url`. Add when a decoder does (M3).
-- Response decoding is out of M1; planned as an optional lazy `decodeResponse(body)` when M2 adds the detail view.
+- No headers or query params in `RequestView`: GET params come from `url`. Add when a decoder needs them.
 
 ## Registry (`src/decoders/registry.ts`)
 
 - `decodeRequest(req, decoders)`: tries decoders in order; first non-`undefined` wins, tagged with its `kind`.
 - A decoder that throws counts as no match, so a bad decoder never drops a request.
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
-- Order lives in `src/decoders/index.ts` (`decoders`). More specific decoders go first.
+- `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
+- `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, then M3's specific decoders, `json` last as the catch-all.
 
 ## Adding a decoder
 
@@ -24,6 +25,13 @@ Turn a request into a protocol `kind` and a one-line `summary` for the panel row
 2. Add it to the `decoders` array in `src/decoders/index.ts`.
 
 No capture, store, or UI change.
+
+## JSON (`src/decoders/json.ts`)
+
+- Kind `json`, the catch-all for REST/JSON calls; last in order so specific JSON protocols win.
+- Matches when the request body parses as JSON, or the response `mimeType` is JSON (base type before `;` ends in `/json` or `+json`).
+- Summary: URL path (`/api/users/1`). `data`: parsed request body, or `undefined` when there is none.
+- `parseJson(text)`: shared helper (also used by GraphQL), `undefined` on failure.
 
 ## GraphQL (`src/decoders/graphql.ts`)
 
@@ -38,7 +46,8 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/graphql.test.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/json.ts` (+ `.test.ts`), `src/decoders/registry.test.ts`
+- E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
 
