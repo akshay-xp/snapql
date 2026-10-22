@@ -1,6 +1,17 @@
-import type { Body } from "../capture/entry"
+import type { Body, Entry } from "../capture/entry"
 
 export type FormattedBody = { text: string; notes: string[] }
+
+// The panel's only getBody() caller, so bodies load only where this is used.
+export async function loadBody(
+  entry: Pick<Entry, "getBody">,
+): Promise<FormattedBody> {
+  try {
+    return formatBody(await entry.getBody())
+  } catch (err) {
+    return { text: "", notes: [`Body unavailable: ${(err as Error).message}`] }
+  }
+}
 
 // Bigger bodies are cut and never parsed, so a huge payload can't freeze the panel.
 export const BODY_LIMIT = 1024 * 1024
