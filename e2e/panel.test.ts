@@ -309,3 +309,15 @@ test("dragging the divider resizes the detail pane", async () => {
     await panel.close()
   }
 })
+
+test("M3 decoders summarize their requests", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/decoders`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["GET 200 json /api/users/1"]))
+  } finally {
+    await panel.close()
+  }
+})
