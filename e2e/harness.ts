@@ -19,6 +19,11 @@ const decodersPage = `<!doctype html>
   upload.append("a", "1")
   upload.append("f", new Blob(["hi"], { type: "text/plain" }), "f.txt")
   fetch("/api/upload", { method: "POST", body: upload })
+  fetch("/graphql", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: '[{"query":"query A { a }"},{"query":"query B { b }"}]',
+  })
   fetch("/api/trpc/user.byId,post.list?batch=1&input=" + encodeURIComponent('{"0":{"id":1},"1":{}}'))
   fetch("/api/rpc", {
     method: "POST",
