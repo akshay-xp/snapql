@@ -259,3 +259,18 @@ test("arrow keys move between detail tabs and wrap", async () => {
     await panel.close()
   }
 })
+
+test("a large session renders only the visible rows", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/bulk`)
+    await expect
+      .poll(() => panel.page.title(), { timeout: 30_000 })
+      .toBe("done")
+
+    await expect.poll(panel.optionCount).toBeGreaterThan(0)
+    expect(await panel.optionCount()).toBeLessThan(100)
+  } finally {
+    await panel.close()
+  }
+}, 60_000)

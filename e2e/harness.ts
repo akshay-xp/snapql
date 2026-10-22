@@ -9,6 +9,16 @@ const extensionDir = resolve("dist/chrome")
 
 const rowText = `(o) => o.innerText.replace(/\\s+/g, " ").trim()`
 
+// No favicon request, so the last row is the last item.
+const bulkPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  ;(async () => {
+    for (let i = 0; i < 1000; i++) await fetch("/api/item?i=" + i)
+    document.title = "done"
+  })()
+</script>`
+
 const testPage = `<!doctype html>
 <script>
   fetch("/api/one")
@@ -40,6 +50,7 @@ export type Panel = {
   page: Page
   origin: string
   rows(): Promise<string[]>
+  optionCount(): Promise<number>
   press(key: string): Promise<void>
   select(row: string): Promise<void>
   selectedRow(): Promise<string | undefined>
@@ -136,6 +147,10 @@ export async function openPanel(
       panelFrame.evaluate<string[]>(
         `[...document.querySelectorAll('[role="option"]')].map(${rowText})`,
       ),
+    optionCount: () =>
+      panelFrame.evaluate<number>(
+        `document.querySelectorAll('[role="option"]').length`,
+      ),
     press: (key: string) =>
       panelFrame.evaluate<void>(`(() => {
         const list = document.querySelector('[role="listbox"]')
@@ -194,6 +209,9 @@ function startServer(): Promise<Server> {
     if (req.url === "/api/one") return res.writeHead(200).end("one")
     if (req.url === "/api/two") return res.writeHead(201).end("two")
     if (req.url === "/api/three") return res.writeHead(200).end("three")
+    if (req.url?.startsWith("/api/item")) return res.writeHead(200).end("item")
+    if (req.url === "/bulk")
+      return res.writeHead(200, { "content-type": "text/html" }).end(bulkPage)
     if (req.url === "/other")
       return res
         .writeHead(200, { "content-type": "text/html" })
