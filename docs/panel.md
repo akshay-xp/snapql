@@ -38,16 +38,18 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - Active tab is a signal in `Detail`; it survives selection changes because the `Show` around `Detail` is not keyed.
 - Summary: `<dl>` of Method, URL, Status, Kind, Summary, Started (ISO), Time (ms, rounded); Kind/Summary only when decoded.
 - `dataSections(decoded.data)`: a field holding a non-empty array of `{ name: string, value: string }` becomes a rows section, rendered with `Pairs` as `name = value` (decoders use this for form fields, parts, calls). Other plain-object fields become labelled `<pre>` blocks, strings as-is (e.g. GraphQL query text), others pretty JSON (variables). Non-object data is one `data` block; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
+- Response group: when `decoderFor(decoded.kind, decoders)` has `decodeResponse` (`decoders` imported from `src/decoders/index.ts`), `ResponseGroup` loads `loadBody(entry, { pretty: false })` and renders `Response`, the response summary and `Sections` (the same `dataSections` rendering). Mounted only inside Summary, so the body loads only while Summary is shown for such an entry. Nothing renders when `decodeResponse` returns `undefined`.
 
 ## Body (`src/panel/body.ts`)
 
 - `LoadedBody` (used by Body and Raw) mounts only while its tab is active and runs `createResource(entry, loadBody)`, so bodies load on demand. Body uses `pretty: true`; Raw uses `formatBody`'s `{ pretty: false }` (truncation and base64 note still apply). The fetcher is wrapped because `createResource` passes its own info object as a second argument. `loadBody` is the panel's only `getBody()` caller (`grep -rn getBody src/panel` hits only `body.ts` and its test); `getBody` itself memoizes, so revisiting the tab does not refetch.
-- `formatBody(body)`: `{ text, notes }`.
+- `formatBody(body, { pretty, mimeType })`: `{ text, notes }`. `loadBody` passes `entry.mimeType`.
+  - base64 with a text-like mime (`text/*`, `/json`, `+json`, contains `xml` or `javascript`): decoded as UTF-8 first, then treated as text (limit counts decoded chars).
   - Over `BODY_LIMIT` (1024 * 1024 characters): first `BODY_LIMIT` chars, note `Truncated: showing 1 MB of <n> characters`, never parsed.
-  - `base64`: note `base64-encoded, <n> bytes` (decoded size) plus raw base64; never parsed.
-  - Otherwise: pretty JSON if it parses, else `prettyXml` (from `src/decoders/xml.ts`; balanced XML indented, anything else, including HTML, as-is). Detection is by parse only, so `formatBody` takes no mime type.
+  - Other `base64`: note `base64-encoded, <n> bytes` (decoded size) plus raw base64; never parsed.
+  - Otherwise: pretty JSON if it parses, else `prettyXml` (from `src/decoders/xml.ts`; balanced XML indented, anything else, including HTML, as-is). Detection is by parse only; `mimeType` is used only for base64.
 - Failed fetch: `{ text: "", notes: ["Body unavailable: <message>"] }`.
-- Chrome reports bodies of responses without a text-like `content-type` as base64; the e2e server sends `application/json` for `/graphql`.
+- Chrome reports some text responses as base64 (e.g. no `content-type`); text-like ones are decoded above, the rest stay a note. The e2e server sends `application/json` for `/graphql`.
 
 ## Themes (`src/panel/themes.ts`, `src/panel/index.css`, `src/panel/main.tsx`)
 
