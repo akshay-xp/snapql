@@ -43,6 +43,7 @@ export type Entry = {
   startedAt: number
   time: number
   mimeType: string
+  requestBody?: RequestView["requestBody"]
   exchange: Exchange
   decoded?: DecodeResult
   getBody: () => Promise<Body>
@@ -62,6 +63,7 @@ export function toEntry(
     startedAt: Date.parse(req.startedDateTime),
     time: req.time,
     mimeType: req.mimeType,
+    requestBody: req.requestBody,
     exchange: req.exchange,
     decoded,
     getBody: () => {
