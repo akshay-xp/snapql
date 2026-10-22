@@ -56,6 +56,22 @@ describe("graphql", () => {
     expect(summary({ query })).toBe("query A")
   })
 
+  it("decodes GET requests from query params", () => {
+    const get = (params: Record<string, string>): RequestView => ({
+      method: "GET",
+      url: `https://api.test/graphql?${new URLSearchParams(params)}`,
+      status: 200,
+    })
+    const query = "query GetUser { a } query Other { b }"
+
+    expect(graphql.decode(get({ query }))).toMatchObject({
+      summary: "query GetUser",
+    })
+    expect(
+      graphql.decode(get({ query, operationName: "Other" }))?.summary,
+    ).toBe("query Other")
+  })
+
   it("ignores JSON without a query", () => {
     expect(graphql.decode(post({ a: 1 }))).toBeUndefined()
   })
