@@ -1,4 +1,5 @@
 import { parseJson } from "./json"
+import { count } from "./text"
 import type { Decoder } from "./types"
 
 export const trpc: Decoder = {
@@ -19,6 +20,10 @@ export const trpc: Decoder = {
         : input
       return { name, value: value === undefined ? "" : JSON.stringify(value) }
     })
-    return { summary: names.join(", "), data: { procedures } }
+    return {
+      title: names.join(", "),
+      ...(names.length > 1 && { detail: count(names.length, "procedure") }),
+      data: { procedures },
+    }
   },
 }

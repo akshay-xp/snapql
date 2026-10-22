@@ -24,7 +24,7 @@ const body = (v: unknown) => post(JSON.stringify(v))
 describe("jsonrpc", () => {
   it("summarizes a call by its method", () => {
     expect(jsonrpc.decode(body(call("sum", [1, 2])))).toEqual({
-      summary: "sum",
+      title: "sum",
       data: { method: "sum", params: [1, 2] },
     })
   })
@@ -32,7 +32,8 @@ describe("jsonrpc", () => {
   it("lists batch calls as rows", () => {
     const batch = [call("sum", [1, 2]), call("ping"), call("get", { id: 7 })]
     expect(jsonrpc.decode(body(batch))).toEqual({
-      summary: "3 calls",
+      title: "sum, ping, get",
+      detail: "3 calls",
       data: {
         calls: [
           { name: "sum", value: "[1,2]" },

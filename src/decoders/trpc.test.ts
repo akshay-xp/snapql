@@ -24,7 +24,7 @@ describe("trpc", () => {
         req(`https://x/api/trpc/user.byId?input=${input({ id: 1 })}`),
       ),
     ).toEqual({
-      summary: "user.byId",
+      title: "user.byId",
       data: { procedures: [{ name: "user.byId", value: '{"id":1}' }] },
     })
   })
@@ -37,7 +37,11 @@ describe("trpc", () => {
     ]
     expect(
       trpc.decode(req(`https://x/trpc/a.b,c.d?batch=1&input=${batch}`)),
-    ).toEqual({ summary: "a.b, c.d", data: { procedures } })
+    ).toEqual({
+      title: "a.b, c.d",
+      detail: "2 procedures",
+      data: { procedures },
+    })
     expect(
       trpc.decode(req(`https://x/trpc/a.b%2Cc.d?batch=1&input=${batch}`))?.data,
     ).toEqual({ procedures })
