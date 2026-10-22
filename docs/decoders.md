@@ -17,7 +17,7 @@ Turn a request into a protocol `kind` and a one-line `summary` for the panel row
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, `form`, `json` (catch-all, last). Later M3 decoders slot in before `form`.
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, `multipart`, `form`, `json` (catch-all, last). Later M3 decoders slot in before `multipart`.
 
 ## Adding a decoder
 
@@ -26,11 +26,19 @@ Turn a request into a protocol `kind` and a one-line `summary` for the panel row
 
 No capture, store, or UI change.
 
+## Multipart (`src/decoders/multipart.ts`)
+
+- Kind `multipart`. Matches a request body whose base mime is `multipart/form-data` with a `boundary` param (quotes allowed); no boundary means no match.
+- `parseMultipart(text, boundary)` returns `Part[]` (`{ name, filename?, type?, content }`): CRLF or LF, headers case-insensitive, parts without a `name` skipped. Shared with GraphQL uploads.
+- Parts with a `filename` are files, the rest fields. Summary joins the non-zero counts: `2 fields`, `1 file`, `2 fields, 1 file`.
+- `data`: `{ fields: NameValue[], files: NameValue[] }`, rendered as rows. File value `<filename> (<type>, <n> bytes)`; type defaults to `application/octet-stream`; size is UTF-8 bytes of the captured content.
+- Empty file content shows `size unknown`: browsers may omit file contents from the captured body, so a truly empty file looks the same.
+
 ## Form (`src/decoders/form.ts`)
 
 - Kind `form`. Matches a request body whose base mime is `application/x-www-form-urlencoded`.
 - Summary: field count, `1 field` / `<n> fields`. `data`: `{ fields: NameValue[] }`, decoded with `URLSearchParams` (`%XX` and `+`), rendered as rows (see `docs/panel.md`).
-- Shared helpers in `src/decoders/text.ts`: `baseMime(mime)` (before `;`, lowercased), `count(n, word)`.
+- Shared helpers in `src/decoders/text.ts`: `baseMime(mime)` (before `;`, lowercased), `count(n, word)`. Used by form and multipart.
 
 ## JSON (`src/decoders/json.ts`)
 
@@ -52,7 +60,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/form.ts`, `src/decoders/json.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
