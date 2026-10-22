@@ -344,11 +344,12 @@ function ResponseGroup(props: {
   return (
     <Show when={decoded()}>
       {(d) => (
-        <section class="mt-3">
-          <h2 class="font-bold">Response</h2>
-          <p>{d().summary}</p>
+        <div class="mt-5">
+          <h2 class="font-semibold">
+            Response <span class="font-normal text-muted">· {d().summary}</span>
+          </h2>
           <Sections data={d().data} />
-        </section>
+        </div>
       )}
     </Show>
   )
@@ -358,24 +359,34 @@ function Tokens(props: { entry: Entry }) {
   const tokens = () => findTokens(props.entry.exchange)
   return (
     <Show when={tokens().length}>
-      <section class="mt-3">
-        <h2 class="font-bold">Tokens</h2>
-        <For each={tokens()}>
-          {(token) => (
-            <div class="mt-2">
-              <p>{token.source} · unverified</p>
-              <Show when={token.jwt.expires}>
-                {(expires) => <p class="text-muted">expires {expires()}</p>}
-              </Show>
-              <h3 class="text-muted">header</h3>
-              <JsonTree value={token.jwt.header} />
-              <h3 class="text-muted">payload</h3>
-              <JsonTree value={token.jwt.payload} />
-            </div>
-          )}
-        </For>
-      </section>
+      <For each={tokens()}>
+        {(token) => (
+          <Section title="Tokens">
+            <p>
+              {token.source} <span class="text-muted">· unverified</span>
+            </p>
+            <Show when={token.jwt.expires}>
+              {(expires) => <p class="text-muted">expires {expires()}</p>}
+            </Show>
+            <h3 class="mt-1 text-muted">header</h3>
+            <JsonTree value={token.jwt.header} />
+            <h3 class="mt-1 text-muted">payload</h3>
+            <JsonTree value={token.jwt.payload} />
+          </Section>
+        )}
+      </For>
     </Show>
+  )
+}
+
+function Section(props: { title: string; children: JSX.Element }) {
+  return (
+    <section class="mt-4 flex flex-col gap-1.5">
+      <h2 class="font-semibold text-muted">{props.title}</h2>
+      <div data-block class="rounded-md bg-surface px-3 py-2">
+        {props.children}
+      </div>
+    </section>
   )
 }
 
@@ -388,14 +399,13 @@ function Sections(props: { data: unknown }) {
             <Pairs title={section.name} pairs={section.rows} separator=" = " />
           </div>
         ) : (
-          <section class="mt-3">
-            <h2 class="text-muted">{section.name}</h2>
+          <Section title={section.name}>
             {"text" in section ? (
               <Text>{section.text}</Text>
             ) : (
               <JsonTree value={section.json} />
             )}
-          </section>
+          </Section>
         )
       }
     </For>
