@@ -294,11 +294,17 @@ test("dragging the divider resizes the detail pane", async () => {
     await panel.press("ArrowDown")
     const { detail } = await panel.paneWidths()
 
-    await panel.dragDivider(-100)
+    // Small enough to stay clear of the 200px minimum in the ~550px headless panel.
+    await panel.dragDivider(-50)
 
     // The initial 50% width can be fractional; allow 1px of rounding.
     const grown = (await panel.paneWidths()).detail - detail
-    expect(Math.abs(grown - 100)).toBeLessThanOrEqual(1)
+    expect(Math.abs(grown - 50)).toBeLessThanOrEqual(1)
+
+    await panel.dragDivider(10_000)
+    expect((await panel.paneWidths()).detail).toBe(200)
+    await panel.dragDivider(-10_000)
+    expect((await panel.paneWidths()).list).toBe(200)
   } finally {
     await panel.close()
   }
