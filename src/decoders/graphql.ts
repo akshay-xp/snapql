@@ -5,6 +5,7 @@ import type { Decoder } from "./types"
 type GraphQLRequest = {
   query?: unknown
   operationName?: string
+  variables?: unknown
   extensions?: { persistedQuery?: { sha256Hash?: unknown } }
 } | null
 
@@ -23,14 +24,19 @@ export const graphql: Decoder = {
     const ops = data as NonNullable<GraphQLRequest>[]
     const summaries = ops.map(summarize)
     if (!ops.length || !summaries.every((s) => s)) return
+    const name = (i: number) => summaries[i] as string
+    const operations = ops.map((op, i) => ({
+      name: name(i),
+      value: typeof op.query === "string" ? op.query : (apqHash(op) ?? ""),
+    }))
+    const variables = ops.flatMap((op, i) =>
+      op.variables === undefined
+        ? []
+        : [{ name: name(i), value: JSON.stringify(op.variables) }],
+    )
     return {
       summary: `${count(ops.length, "operation")}: ${summaries.join(", ")}`,
-      data: {
-        operations: ops.map((op, i) => ({
-          name: summaries[i] as string,
-          value: typeof op.query === "string" ? op.query : (apqHash(op) ?? ""),
-        })),
-      },
+      data: variables.length ? { operations, variables } : { operations },
     }
   },
 }
