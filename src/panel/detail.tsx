@@ -13,6 +13,7 @@ import { parseJson } from "../decoders/json"
 import { decoderFor } from "../decoders/registry"
 import type { DecodedResponse } from "../decoders/types"
 import { loadBody } from "./body"
+import { summaryHeading } from "./heading"
 import { OPEN_DEPTH } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
@@ -283,32 +284,41 @@ function Summary(props: { entry: Entry }) {
     const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
     return decode && ((text: string) => decode(text, decoded))
   }
-  const fields = () => {
-    const e = props.entry
-    return [
-      ["Method", e.method],
-      ["URL", e.url],
-      ["Status", String(e.status)],
-      ["Kind", e.decoded?.kind],
-      ["Title", e.decoded?.title],
-      ["Detail", e.decoded?.detail],
-      ["Started", new Date(e.startedAt).toISOString()],
-      ["Time", `${Math.round(e.time)} ms`],
-    ].filter((f): f is [string, string] => f[1] !== undefined)
-  }
+  const heading = () => summaryHeading(props.entry)
 
   return (
     <>
-      <dl class="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5">
-        <For each={fields()}>
-          {([name, value]) => (
-            <>
-              <dt class="text-muted">{name}</dt>
-              <dd class="break-all font-mono">{value}</dd>
-            </>
-          )}
-        </For>
-      </dl>
+      <header class="flex flex-col gap-1">
+        <div class="flex items-baseline gap-2">
+          <span class="break-all text-[15px] font-semibold">
+            {heading().title}
+          </span>
+          <Show when={heading().tag}>
+            <span class="shrink-0 rounded border border-border px-1.5 text-[11px] text-muted">
+              {heading().tag}
+            </span>
+          </Show>
+        </div>
+        <div class="flex flex-wrap gap-x-1.5 text-muted">
+          <span class="font-mono" data-path title={props.entry.url}>
+            {heading().method} {heading().path}
+          </span>
+          <span>·</span>
+          <span
+            data-status
+            classList={{
+              "text-success": heading().ok,
+              "text-error": !heading().ok,
+            }}
+          >
+            {heading().status}
+          </span>
+          <span>·</span>
+          <span>{heading().time}</span>
+          <span>·</span>
+          <span>{heading().clock}</span>
+        </div>
+      </header>
       <Sections data={props.entry.decoded?.data} />
       <Tokens entry={props.entry} />
       <Show when={decodeResponse()}>
