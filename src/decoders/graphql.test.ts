@@ -152,4 +152,19 @@ describe("graphql", () => {
     expect(summary([])).toBeUndefined()
     expect(summary([{ query: "query A { a }" }, { foo: 1 }])).toBeUndefined()
   })
+
+  it("lists variables of batched operations that have them", () => {
+    const decoded = graphql.decode(
+      post([
+        { query: "query A($id: ID) { a(id: $id) }", variables: { id: 1 } },
+        { query: "query B { b }" },
+      ]),
+    )
+    expect(decoded?.data).toHaveProperty("variables", [
+      { name: "query A", value: '{"id":1}' },
+    ])
+    expect(
+      graphql.decode(post([{ query: "query B { b }" }]))?.data,
+    ).not.toHaveProperty("variables")
+  })
 })
