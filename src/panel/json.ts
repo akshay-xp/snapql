@@ -20,7 +20,8 @@ export function brackets(value: object): string {
   return Array.isArray(value) ? `[${n}]` : `{${n}}`
 }
 
-export const startsOpen = (depth: number) => depth < OPEN_DEPTH
+export const startsOpen = (depth: number, openDepth = OPEN_DEPTH) =>
+  depth < openDepth
 
 export function clip(text: string) {
   return {

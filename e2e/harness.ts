@@ -123,6 +123,7 @@ export type Panel = {
   search(query: string): Promise<void>
   clearSearch(): Promise<void>
   clickButton(text: string): Promise<void>
+  click(selector: string): Promise<void>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
@@ -296,6 +297,10 @@ export async function openPanel(
     clearSearch: () =>
       panelFrame.evaluate<void>(
         `document.querySelector('button[aria-label="Clear filter"]').click()`,
+      ),
+    click: (selector: string) =>
+      panelFrame.evaluate<void>(
+        `document.querySelector(${JSON.stringify(selector)}).click()`,
       ),
     clickButton: (text: string) =>
       panelFrame.evaluate<void>(

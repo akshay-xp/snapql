@@ -283,10 +283,22 @@ test("Summary shows the request and its decoded data", async () => {
 
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
-    expect(detail).toContain('"id": "1"')
     expect(detail).toContain(`${panel.origin}/graphql`)
     expect(detail).toMatch(/Title\s*GetUser/)
     expect(detail).toMatch(/Detail\s*query/)
+    expect(detail).toContain('id: "1"')
+
+    const caret = '[role="tabpanel"] button[aria-expanded]'
+    expect(await panel.attr(caret, "aria-expanded")).toBe("true")
+    expect(
+      await panel.style('[role="tabpanel"] [data-json="string"]', "color"),
+    ).toBe("rgb(242, 162, 117)")
+    expect(
+      await panel.style('[role="tabpanel"] [data-json="key"]', "color"),
+    ).toBe("rgb(124, 172, 248)")
+    await panel.click(caret)
+    expect(await panel.detail()).toContain("{…} 1 key")
+    expect(await panel.detail()).not.toContain('id: "1"')
   } finally {
     await panel.close()
   }
@@ -532,7 +544,7 @@ test("M3 decoders summarize their requests", async () => {
       await expect.poll(panel.detail).toContain(text)
 
     await panel.select("Deferred query graphql")
-    for (const text of ["no errors", '"id": "1"', '"name": "Ada"', "parts"])
+    for (const text of ["no errors", 'id: "1"', 'name: "Ada"', "parts"])
       await expect.poll(panel.detail).toContain(text)
 
     await panel.select("/api/me GET json")
