@@ -119,6 +119,7 @@ export type Panel = {
   text(selector: string): Promise<string | null>
   attr(selector: string, name: string): Promise<string | null>
   clear(): Promise<void>
+  toggleSort(): Promise<void>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
@@ -282,6 +283,10 @@ export async function openPanel(
     clear: () =>
       panelFrame.evaluate<void>(
         `document.querySelector('button[aria-label="Clear"]').click()`,
+      ),
+    toggleSort: () =>
+      panelFrame.evaluate<void>(
+        `document.querySelector('button[aria-label="Newest first"], button[aria-label="Oldest first"]').click()`,
       ),
     togglePreserveLog: () =>
       panelFrame.evaluate<void>(

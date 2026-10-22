@@ -33,6 +33,43 @@ test("clear empties the panel and later requests still appear", async () => {
   }
 })
 
+test("rows are newest first; the sort button flips the order", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const sequence = [
+      "/api/one GET",
+      "GetUser query graphql",
+      "GetUser persisted graphql",
+      "/api/two POST",
+    ]
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining(sequence))
+    const order = async () => {
+      const rows = await panel.rows()
+      return sequence.map((row) => rows.indexOf(row))
+    }
+    const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b)
+
+    const newest = await order()
+    expect(newest).toEqual(sorted(newest).reverse())
+    expect(await panel.attr('button[aria-label="Newest first"]', "title")).toBe(
+      "Newest first",
+    )
+
+    await panel.toggleSort()
+    expect(await panel.attr('button[aria-label="Oldest first"]', "title")).toBe(
+      "Oldest first",
+    )
+    const oldest = await order()
+    expect(oldest).toEqual(sorted(oldest))
+
+    await panel.press("End")
+    expect(await panel.selectedRow()).toBe((await panel.rows()).at(-1))
+  } finally {
+    await panel.close()
+  }
+})
+
 test("decoded requests show their kind and summary", async () => {
   const panel = await openPanel()
   try {
@@ -338,7 +375,7 @@ test("a large session renders only the visible rows", async () => {
     // Capture can trail the page, so retry End until the last item is in.
     await expect
       .poll(async () => {
-        await panel.press("End")
+        await panel.press("Home")
         return panel.selectedRow()
       })
       .toMatch(/\/api\/item\?i=999 GET$/)
