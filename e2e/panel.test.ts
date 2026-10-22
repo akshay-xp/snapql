@@ -107,6 +107,24 @@ for (const kind of ["light", "dark"] as const) {
   })
 }
 
+test("the active tab is underlined in the accent color", async () => {
+  const panel = await openPanel({ devtoolsTheme: "dark" })
+  try {
+    await panel.page.goto(panel.origin)
+    const row = "POST 200 graphql GetUser query"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+    await panel.select(row)
+    expect(
+      await panel.style(
+        '[role="tab"][aria-selected="true"]',
+        "border-bottom-color",
+      ),
+    ).toBe("rgb(124, 172, 248)")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("rows select from the keyboard or by click", async () => {
   const panel = await openPanel()
   try {

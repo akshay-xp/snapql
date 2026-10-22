@@ -69,7 +69,7 @@ export function Detail(props: {
               tabIndex={active() === tab ? 0 : -1}
               class="border-b-2 px-2 py-1"
               classList={{
-                "border-fg": active() === tab,
+                "border-accent": active() === tab,
                 "border-transparent text-muted": active() !== tab,
               }}
               onClick={() => setActive(tab)}
