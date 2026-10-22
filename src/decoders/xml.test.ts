@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { RequestView } from "./types"
-import { prettyXml, xml } from "./xml"
+import { prettyXml, soap, xml } from "./xml"
 
 describe("prettyXml", () => {
   const pretty = [
@@ -59,5 +59,35 @@ describe("xml", () => {
     expect(xml.decode(post("not xml", "text/xml"))).toBeUndefined()
     expect(xml.decode(post('{"a":1}', "application/json"))).toBeUndefined()
     expect(xml.decode(post())).toBeUndefined()
+  })
+})
+
+const soap11 =
+  '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Header><a:Auth/></soap:Header><soap:Body><m:GetPrice><m:Item>Apples</m:Item></m:GetPrice></soap:Body></soap:Envelope>'
+
+describe("soap", () => {
+  it("names a SOAP 1.1 call by its Body operation, skipping Header", () => {
+    expect(soap.decode(post(soap11, "text/xml"))).toEqual({
+      summary: "GetPrice",
+      data: { xml: prettyXml(soap11) },
+    })
+  })
+
+  it("handles SOAP 1.2 and unprefixed envelopes", () => {
+    const soap12 =
+      '<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope"><env:Body><GetStock/></env:Body></env:Envelope>'
+    expect(
+      soap.decode(post(soap12, "application/soap+xml; charset=utf-8"))?.summary,
+    ).toBe("GetStock")
+    expect(
+      soap.decode(post("<Envelope><Body><Ping/></Body></Envelope>"))?.summary,
+    ).toBe("Ping")
+  })
+
+  it("ignores empty Bodies and plain XML", () => {
+    expect(
+      soap.decode(post("<Envelope><Body></Body></Envelope>")),
+    ).toBeUndefined()
+    expect(soap.decode(post("<Order/>"))).toBeUndefined()
   })
 })
