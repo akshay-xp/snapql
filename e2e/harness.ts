@@ -19,6 +19,7 @@ const decodersPage = `<!doctype html>
   upload.append("a", "1")
   upload.append("f", new Blob(["hi"], { type: "text/plain" }), "f.txt")
   fetch("/api/upload", { method: "POST", body: upload })
+  fetch("/api/trpc/user.byId,post.list?batch=1&input=" + encodeURIComponent('{"0":{"id":1},"1":{}}'))
   fetch("/api/rpc", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -263,6 +264,10 @@ function startServer(): Promise<Server> {
         .end('{"id":1}')
     if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
     if (req.url === "/api/upload") return res.writeHead(200).end("ok")
+    if (req.url?.startsWith("/api/trpc/"))
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end('[{"result":{"data":{}}},{"result":{"data":[]}}]')
     if (req.url === "/api/rpc")
       return res
         .writeHead(200, { "content-type": "application/json" })

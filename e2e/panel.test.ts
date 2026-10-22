@@ -323,6 +323,7 @@ test("M3 decoders summarize their requests", async () => {
           "POST 200 multipart 1 field, 1 file",
           "POST 200 soap GetPrice",
           "POST 200 jsonrpc sum",
+          "GET 200 trpc user.byId, post.list",
         ]),
       )
 
@@ -335,6 +336,11 @@ test("M3 decoders summarize their requests", async () => {
     const upload = await panel.detail()
     expect(upload).toContain("a = 1")
     expect(upload).toContain("f = f.txt (text/plain, ")
+
+    await panel.select("GET 200 trpc user.byId, post.list")
+    const batch = await panel.detail()
+    expect(batch).toContain('user.byId = {"id":1}')
+    expect(batch).toContain("post.list = {}")
 
     await panel.select("POST 200 soap GetPrice")
     expect(await panel.detail()).toContain("<m:Item>Apples</m:Item>")
