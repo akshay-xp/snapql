@@ -45,6 +45,7 @@ const decodersPage = `<!doctype html>
     headers: { "content-type": "application/json" },
     body: '{"query":"query Deferred { user { id ... @defer { name } } }"}',
   })
+  fetch("/api/missing")
   fetch("/api/me", { headers: { Authorization: "Bearer ${jwt}" } })
   fetch("/api/trpc/user.byId,post.list?batch=1&input=" + encodeURIComponent('{"0":{"id":1},"1":{}}'))
   fetch("/api/rpc", {
@@ -290,6 +291,7 @@ function startServer(): Promise<Server> {
     if (req.url === "/api/one") return res.writeHead(200).end("one")
     if (req.url === "/api/two") return res.writeHead(201).end("two")
     if (req.url === "/api/three") return res.writeHead(200).end("three")
+    if (req.url === "/api/missing") return res.writeHead(404).end("missing")
     if (req.url?.startsWith("/api/item")) return res.writeHead(200).end("item")
     if (req.url === "/api/users/1")
       return res
