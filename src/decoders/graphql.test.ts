@@ -49,6 +49,13 @@ describe("graphql", () => {
     ).toBe("query")
   })
 
+  it("picks the operation named by operationName, else the first", () => {
+    const query = "fragment F on User { id } query A { ...F } mutation B { x }"
+
+    expect(summary({ query, operationName: "B" })).toBe("mutation B")
+    expect(summary({ query })).toBe("query A")
+  })
+
   it("ignores JSON without a query", () => {
     expect(graphql.decode(post({ a: 1 }))).toBeUndefined()
   })
