@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { DECODE_LIMIT, decodeRequest } from "./registry"
+import { DECODE_LIMIT, decodeRequest, decoderFor } from "./registry"
 import type { Decoder, RequestView } from "./types"
 
 const req: RequestView = {
@@ -49,5 +49,15 @@ describe("decodeRequest", () => {
     expect(a.decode).not.toHaveBeenCalled()
     expect(decodeRequest(withBody(DECODE_LIMIT), [a])?.kind).toBe("a")
     expect(decodeRequest(req, [a])?.kind).toBe("a")
+  })
+})
+
+describe("decoderFor", () => {
+  it("finds a decoder by kind", () => {
+    const a = match("a")
+    const b = match("b")
+
+    expect(decoderFor("a", [b, a])).toBe(a)
+    expect(decoderFor("x", [a])).toBeUndefined()
   })
 })

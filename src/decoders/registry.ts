@@ -17,3 +17,10 @@ export function decodeRequest(
     }
   }
 }
+
+export function decoderFor(
+  kind: string,
+  decoders: Decoder[],
+): Decoder | undefined {
+  return decoders.find((d) => d.kind === kind)
+}
