@@ -6,6 +6,7 @@ import type { Store } from "./store"
 export type CaptureSource = {
   onRequestFinished(cb: (req: FinishedRequest) => void): () => void
   getHAR(): Promise<FinishedRequest[]>
+  onNavigated(cb: () => void): () => void
 }
 
 const key = (req: FinishedRequest) => `${req.url} ${req.startedDateTime}`
@@ -14,6 +15,7 @@ export function startCapture(
   source: CaptureSource,
   store: Store,
   decoders: Decoder[],
+  preserveLog: () => boolean,
 ): () => void {
   let id = 1
   const add = (req: FinishedRequest) =>
@@ -39,5 +41,11 @@ export function startCapture(
       buffer?.forEach(addLive)
       buffer = undefined
     })
-  return off
+  const offNavigated = source.onNavigated(() => {
+    if (!preserveLog()) store.clear()
+  })
+  return () => {
+    off()
+    offNavigated()
+  }
 }
