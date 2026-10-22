@@ -1,5 +1,6 @@
-import { type Accessor, createSignal, For, onCleanup, Show } from "solid-js"
+import { type Accessor, createSignal, onCleanup } from "solid-js"
 import type { Store } from "../capture/store"
+import { List } from "./list"
 
 export function App(props: {
   store: Store
@@ -8,6 +9,7 @@ export function App(props: {
 }) {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
+  const [selectedId, setSelectedId] = createSignal<number>()
 
   return (
     <main class="flex h-dvh flex-col font-mono text-xs">
@@ -29,33 +31,11 @@ export function App(props: {
           Clear
         </button>
       </header>
-      <ul class="flex-1 overflow-y-auto">
-        <For each={entries()}>
-          {(entry) => (
-            <li class="flex gap-2 border-b border-border px-2 py-1">
-              <span class="w-14 shrink-0">{entry.method}</span>
-              <span class="w-10 shrink-0">{entry.status}</span>
-              <Show
-                when={entry.decoded}
-                fallback={
-                  <span class="truncate" title={entry.url}>
-                    {entry.url}
-                  </span>
-                }
-              >
-                {(decoded) => (
-                  <>
-                    <span class="shrink-0">{decoded().kind}</span>
-                    <span class="truncate" title={entry.url}>
-                      {decoded().summary}
-                    </span>
-                  </>
-                )}
-              </Show>
-            </li>
-          )}
-        </For>
-      </ul>
+      <List
+        entries={entries()}
+        selectedId={selectedId()}
+        onSelect={setSelectedId}
+      />
     </main>
   )
 }

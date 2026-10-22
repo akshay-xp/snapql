@@ -106,3 +106,21 @@ for (const kind of ["light", "dark"] as const) {
     }
   })
 }
+
+test("rows select from the keyboard or by click", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const two = `POST 201 ${panel.origin}/api/two`
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([two]))
+    const [first] = await panel.rows()
+
+    await panel.press("ArrowDown")
+    expect(await panel.selectedRow()).toBe(first)
+
+    await panel.select(two)
+    expect(await panel.selectedRow()).toBe(two)
+  } finally {
+    await panel.close()
+  }
+})
