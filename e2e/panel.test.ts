@@ -549,7 +549,7 @@ test("a large session renders only the visible rows", async () => {
   }
 }, 60_000)
 
-test("dragging the divider resizes the detail pane", async () => {
+test("a tall panel stacks the list over the detail pane", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
@@ -557,9 +557,45 @@ test("dragging the divider resizes the detail pane", async () => {
       .poll(panel.rows)
       .toEqual(expect.arrayContaining(["/api/two POST"]))
     await panel.press("ArrowDown")
+
+    const { list, detail } = await panel.paneBoxes()
+    expect(detail.top).toBeGreaterThan(list.bottom)
+    expect(detail.left).toBe(list.left)
+    expect(await panel.attr("hr[aria-orientation]", "aria-orientation")).toBe(
+      "horizontal",
+    )
+
+    const height = (b: { top: number; bottom: number }) => b.bottom - b.top
+    const before = height(detail)
+    await panel.dragDivider(0, -50)
+    const grown = height((await panel.paneBoxes()).detail) - before
+    expect(Math.abs(grown - 50)).toBeLessThanOrEqual(1)
+    await panel.dragDivider(0, 10_000)
+    expect(height((await panel.paneBoxes()).detail)).toBe(200)
+
+    await panel.dock("bottom")
+    await expect
+      .poll(async () => {
+        const boxes = await panel.paneBoxes()
+        return boxes.detail.left >= boxes.list.right
+      })
+      .toBe(true)
+  } finally {
+    await panel.close()
+  }
+})
+
+test("dragging the divider resizes the detail pane", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.dock("bottom")
+    await panel.page.goto(panel.origin)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/two POST"]))
+    await panel.press("ArrowDown")
     const { detail } = await panel.paneWidths()
 
-    // Small enough to stay clear of the 200px minimum in the ~550px headless panel.
     await panel.dragDivider(-50)
 
     // The initial 50% width can be fractional; allow 1px of rounding.

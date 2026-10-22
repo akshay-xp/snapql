@@ -97,12 +97,14 @@ const testPage = `<!doctype html>
     .then(() => fetch("/api/two", { method: "POST" }))
 </script>`
 
+type Box = { top: number; bottom: number; left: number; right: number }
+
 export type Panel = {
   page: Page
   origin: string
   rows(): Promise<string[]>
   optionCount(): Promise<number>
-  dragDivider(dx: number): Promise<void>
+  dragDivider(dx: number, dy?: number): Promise<void>
   paneWidths(): Promise<{ list: number; detail: number }>
   selectedVisible(): Promise<boolean>
   press(key: string): Promise<void>
@@ -125,6 +127,10 @@ export type Panel = {
   clickButton(text: string): Promise<void>
   click(selector: string): Promise<void>
   pairs(): Promise<string>
+  dock(side: "right" | "bottom"): Promise<void>
+  // Visual review aid, not used by assertions.
+  screenshot(file: string): Promise<void>
+  paneBoxes(): Promise<{ list: Box; detail: Box }>
   stubClipboard(): Promise<void>
   copied(): Promise<string | undefined>
   togglePreserveLog(): Promise<void>
@@ -194,6 +200,18 @@ export async function openPanel(
   )
 
   return {
+    dock: (side: "right" | "bottom") =>
+      devtools.evaluate<void>(`(async () => {
+        const { DockController } = await import("./ui/legacy/legacy.js")
+        DockController.DockController.instance().setDockSide(${JSON.stringify(side)})
+      })()`),
+    screenshot: async (file: string) => {
+      const { data } = await devtools.send<{ data: string }>(
+        "Page.captureScreenshot",
+        { format: "png" },
+      )
+      await writeFile(file, Buffer.from(data, "base64"))
+    },
     page,
     origin,
     themeKind: () =>
@@ -226,16 +244,27 @@ export async function openPanel(
       panelFrame.evaluate<string[]>(
         `[...document.querySelectorAll('[role="option"]')].map(${rowText})`,
       ),
-    dragDivider: (dx: number) =>
+    dragDivider: (dx: number, dy = 0) =>
       panelFrame.evaluate<void>(`(() => {
-        const sep = document.querySelector('hr[aria-orientation="vertical"]')
+        const sep = document.querySelector("hr[aria-orientation]")
         const r = sep.getBoundingClientRect()
         const x = r.left + r.width / 2
         const y = r.top + r.height / 2
-        const at = (clientX) => ({ bubbles: true, clientX, clientY: y, pointerId: 1 })
-        sep.dispatchEvent(new PointerEvent("pointerdown", at(x)))
-        window.dispatchEvent(new PointerEvent("pointermove", at(x + ${dx})))
-        window.dispatchEvent(new PointerEvent("pointerup", at(x + ${dx})))
+        const at = (dx, dy) => ({ bubbles: true, clientX: x + dx, clientY: y + dy, pointerId: 1 })
+        sep.dispatchEvent(new PointerEvent("pointerdown", at(0, 0)))
+        window.dispatchEvent(new PointerEvent("pointermove", at(${dx}, ${dy})))
+        window.dispatchEvent(new PointerEvent("pointerup", at(${dx}, ${dy})))
+      })()`),
+    paneBoxes: () =>
+      panelFrame.evaluate<{ list: Box; detail: Box }>(`(() => {
+        const box = (el) => {
+          const r = el.getBoundingClientRect()
+          return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }
+        }
+        return {
+          list: box(document.querySelector('[role="listbox"]')),
+          detail: box(document.querySelector('[role="tablist"]').closest("section")),
+        }
       })()`),
     paneWidths: () =>
       panelFrame.evaluate<{ list: number; detail: number }>(`({
@@ -455,6 +484,13 @@ async function connect(port: string, match: (t: Target) => boolean) {
             fail(new Error(details.exception?.description ?? details.text))
           else done(msg.result?.result.value as T)
         }),
+      )
+    },
+    send<T>(method: string, params: object = {}): Promise<T> {
+      const id = ++nextId
+      ws.send(JSON.stringify({ id, method, params }))
+      return new Promise((done) =>
+        pending.set(id, (msg) => done(msg.result as T)),
       )
     },
     close: () => ws.close(),

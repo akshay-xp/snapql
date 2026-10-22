@@ -37,8 +37,10 @@ type Tab = (typeof tabs)[number]
 
 export function Detail(props: {
   entry: Entry
-  width: number | undefined
-  onResize: (clientX: number) => void
+  stacked: boolean
+  // Width side by side, height stacked; undefined means half the panel.
+  size: number | undefined
+  onResize: (clientX: number, clientY: number) => void
 }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
@@ -53,13 +55,19 @@ export function Detail(props: {
 
   return (
     <section
-      class="relative flex shrink-0 flex-col border-l border-border"
-      classList={{ "w-1/2": props.width === undefined }}
+      class="relative flex min-h-0 min-w-0 shrink-0 flex-col border-border"
+      classList={{
+        "border-t": props.stacked,
+        "border-l": !props.stacked,
+        "h-1/2": props.stacked && props.size === undefined,
+        "w-1/2": !props.stacked && props.size === undefined,
+      }}
       style={{
-        width: props.width === undefined ? undefined : `${props.width}px`,
+        [props.stacked ? "height" : "width"]:
+          props.size === undefined ? undefined : `${props.size}px`,
       }}
     >
-      <Splitter onDrag={props.onResize} />
+      <Splitter stacked={props.stacked} onDrag={props.onResize} />
       <div
         role="tablist"
         class="flex border-b border-border"
