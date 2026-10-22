@@ -27,12 +27,22 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 - `toFinishedRequest(req)`: Chrome devtools `Request` to `FinishedRequest`. `request.postData` becomes `requestBody` (`undefined` when absent or without `text`). `fetchBody` wraps the callback form of `getContent`, since the promise overload is not guaranteed in Firefox's `chrome.*` namespace.
 - `onRequestFinished(cb)`: subscribes to `chrome.devtools.network.onRequestFinished`, delivers mapped requests, returns an unsubscribe that removes the same listener.
-- Only requests finishing while the panel is open are seen (no HAR backfill until M1).
+- `getHAR()`: callback form of `chrome.devtools.network.getHAR`, entries mapped via `toFinishedRequest`. Chrome gives HAR entries the `Request` prototype, so `getContent` works on them (verified in e2e).
+- Firefox: HAR entries may lack `getContent`; harmless until something calls `getBody()` (M2). Check then.
 
 ## Wiring (`src/capture/capture.ts`, `src/panel/main.tsx`)
 
-- `startCapture(subscribe, store, decoders)`: assigns ids from 1 (never reused, also across `clear()`), decodes once via `decodeRequest(req, decoders)`, adds `toEntry(req, id, decoded)` to the store, returns the unsubscribe.
-- `main.tsx`: `createStore()`, `startCapture(onRequestFinished, store, decoders)`, renders `<App store={store} />`.
+- `CaptureSource`: `{ onRequestFinished(cb): () => void; getHAR(): Promise<FinishedRequest[]> }`. The adapter functions satisfy it; tests pass a fake.
+- `startCapture(source, store, decoders)`: assigns ids from 1 (never reused, also across `clear()`), decodes once via `decodeRequest(req, decoders)`, adds `toEntry(req, id, decoded)` to the store, returns the live unsubscribe.
+
+## Backfill
+
+- On start: subscribe live first, then `getHAR()`, so nothing finishing in between is missed.
+- Live requests are buffered until the HAR read settles; then HAR entries are added (ids first), then the buffer.
+- Dedupe key: `url + " " + startedDateTime`. Any live request matching a HAR key is dropped, buffered or not: Chrome delivers already-finished requests live after `getHAR` resolves (seen in e2e). Each key is forgotten on first match (a request finishes once), so the set never outgrows the HAR.
+- A rejected `getHAR` counts as empty; the buffer still flushes.
+- DevTools only records while its frontend is loaded; requests before DevTools opened are not in the HAR.
+- `main.tsx`: `createStore()`, `startCapture({ onRequestFinished, getHAR }, store, decoders)`, renders `<App store={store} />`.
 - `App` mirrors `store.snapshot()` into a Solid signal on each `subscribe` notification; the panel never calls `getBody()`.
 - Row: `METHOD STATUS KIND SUMMARY` when `decoded`, else `METHOD STATUS URL`; URL is the tooltip either way.
 - Capture runs in the panel page; devtools APIs are available there in Chrome. Firefox: pending manual verification.

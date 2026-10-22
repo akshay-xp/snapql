@@ -40,6 +40,7 @@
   - Small CDP client (`Runtime.evaluate` over WebSocket) on the `devtools://` target finds the tab id containing `SnapQL` and shows it; a second client on the `/panel.html` target reads `li` text and clicks Clear.
 - Relies on DevTools internals: `ui/legacy/legacy.js`, `InspectorView.instance()`, `tabbedPane.tabIds()`, `showPanel(id)`. A Playwright (bundled Chromium) upgrade can break it; fix the harness, not the tests.
 - No fixed sleeps: tests wait with `expect.poll`, harness with its internal `poll` helper (the only `setTimeout`).
+- `openPanel({ visitFirst: true })` loads the test page after DevTools is up but before the panel is shown (backfill test). DevTools must be loaded first or it records nothing.
 - Rows include the document and favicon requests, so assert with `arrayContaining` unless the panel was just cleared.
 
 ## CI
