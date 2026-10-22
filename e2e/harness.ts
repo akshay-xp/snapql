@@ -16,7 +16,10 @@ const testPage = `<!doctype html>
       fetch("/graphql", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ query: "query GetUser { user { id } }" }),
+        body: JSON.stringify({
+          query: "query GetUser { user { id } }",
+          variables: { id: "1" },
+        }),
       }),
     )
     .then(() =>
@@ -41,6 +44,7 @@ export type Panel = {
   select(row: string): Promise<void>
   selectedRow(): Promise<string | undefined>
   activeTab(): Promise<string | undefined>
+  openTab(name: string): Promise<void>
   detail(): Promise<string | null>
   themeKind(): Promise<string | undefined>
   devtoolsTheme(): Promise<"light" | "dark">
@@ -145,6 +149,10 @@ export async function openPanel(
       panelFrame.evaluate<string | undefined>(
         `document.querySelector('[role="tab"][aria-selected="true"]')?.textContent.trim()`,
       ),
+    openTab: (name: string) =>
+      panelFrame.evaluate<void>(
+        `[...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === ${JSON.stringify(name)}).click()`,
+      ),
     detail: () =>
       panelFrame.evaluate<string | null>(
         `document.querySelector('[role="tabpanel"]')?.innerText ?? null`,
@@ -184,7 +192,9 @@ function startServer(): Promise<Server> {
         .writeHead(200, { "content-type": "text/html" })
         .end(`<!doctype html><script>fetch("/api/three")</script>`)
     if (new URL(req.url ?? "", "http://x").pathname === "/graphql")
-      return res.writeHead(200).end('{"data":{}}')
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end('{"data":{}}')
     res.writeHead(200, { "content-type": "text/html" }).end(testPage)
   })
   return new Promise((done) =>

@@ -147,3 +147,38 @@ test("selecting opens the detail pane; Esc and Clear close it", async () => {
     await panel.close()
   }
 })
+
+test("Summary shows the request and its decoded data", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const row = "POST 200 graphql query GetUser"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+
+    await panel.select(row)
+
+    const detail = await panel.detail()
+    expect(detail).toContain("query GetUser { user { id } }")
+    expect(detail).toContain('"id": "1"')
+    expect(detail).toContain(`${panel.origin}/graphql`)
+  } finally {
+    await panel.close()
+  }
+})
+
+test("Body tab loads and pretty-prints the response", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const row = "POST 200 graphql query GetUser"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+
+    await panel.select(row)
+    await panel.openTab("Body")
+
+    expect(await panel.activeTab()).toBe("Body")
+    await expect.poll(panel.detail).toContain('{\n  "data": {}\n}')
+  } finally {
+    await panel.close()
+  }
+})
