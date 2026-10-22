@@ -21,7 +21,11 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## List (`src/panel/list.tsx`, `src/panel/keys.ts`)
 
 - `role="listbox"`, `tabIndex=0`, holds focus; rows are `role="option"` with `id="entry-<id>"` and `aria-selected`. The listbox's `aria-activedescendant` points at the selected row, so focus never moves to rows (survives virtualization later). Rows are therefore not focusable and have no key handlers (two Biome a11y rules suppressed with that reason).
-- Row: 28px (`h-7`). Method, status (`text-error` when `>= 400`), then `kind`, `title` and muted `detail` (when present) if decoded, else URL; URL is the tooltip. Selected row `bg-selected`.
+- Row: 28px (`h-7`), parts from `rowLabel(entry)` (`src/panel/row.ts`, pure), in order: title (`flex-1 truncate`, URL tooltip), detail, failure pill, kind tag.
+  - Decoded: the decoder's `title`, `detail`, `kind`. Undecoded: title = path + query (repeated calls to one endpoint stay distinguishable), detail = method, no kind.
+  - `failure`: status code when `>= 400`, `failed` when status is 0; pill `bg-error text-bg` (no extra token, passes contrast). No method/status columns.
+  - Kind tag `w-16` (64px), bordered; rendered empty with a transparent border when undecoded so tags align in a column.
+  - Selected row `bg-selected`; detail and tag drop `text-muted` there (muted on `selected` is under 4.5:1 in both themes).
 - Virtualized (`src/panel/virtual.ts`), no library. The listbox is the scroll container holding a spacer `div` of height `count * ROW_HEIGHT`; the rendered slice `[start, end)` sits in an inner `div` with `translateY(start * ROW_HEIGHT)`.
   - `ROW_HEIGHT = 24` in `list.tsx` must match the rows' `h-6` (border-box, border included). Overscan 10 rows each side.
   - `visibleRange(scrollTop, viewportHeight, rowHeight, count, overscan)` (pure): `start = max(0, floor(scrollTop/rowHeight) - overscan)`, `end = min(count, ceil((scrollTop+viewportHeight)/rowHeight) + overscan)`.
@@ -80,7 +84,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## Key files
 
 - `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`, `src/panel/splitter.tsx`
-- `src/panel/keys.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
+- `src/panel/keys.ts`, `src/panel/row.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
 - `src/panel/index.css`
 - `e2e/harness.ts`, `e2e/panel.test.ts`
 
