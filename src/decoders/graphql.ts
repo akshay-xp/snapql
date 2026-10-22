@@ -1,4 +1,5 @@
 import { parseJson } from "./json"
+import { fileRows, multipartParts, type Part } from "./multipart"
 import { count } from "./text"
 import type { Decoded, Decoder } from "./types"
 
@@ -14,12 +15,27 @@ const operationTypes = new Set(["query", "mutation", "subscription"])
 export const graphql: Decoder = {
   kind: "graphql",
   decode(req) {
+    const parts = req.requestBody && multipartParts(req.requestBody)
+    if (parts) return decodeUpload(parts)
     return decodeOperations(
       req.requestBody
         ? parseJson(req.requestBody.text)
         : fromParams(new URL(req.url).searchParams),
     )
   },
+}
+
+// GraphQL multipart request spec: operations JSON in a field, files beside it.
+function decodeUpload(parts: Part[]): Decoded | undefined {
+  const field = parts.find(
+    (p) => p.name === "operations" && p.filename === undefined,
+  )
+  const decoded = field && decodeOperations(parseJson(field.content))
+  if (!decoded) return
+  return {
+    summary: decoded.summary,
+    data: { ...(decoded.data as object), files: fileRows(parts) },
+  }
 }
 
 function decodeOperations(data: unknown): Decoded | undefined {
