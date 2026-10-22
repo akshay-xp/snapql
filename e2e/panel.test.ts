@@ -585,6 +585,37 @@ test("a tall panel stacks the list over the detail pane", async () => {
   }
 })
 
+test("the detail pane keeps one spacing rhythm", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.dock("bottom")
+    await panel.page.goto(`${panel.origin}/decoders`)
+    const row = "/api/me GET json"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+    await panel.select(row)
+
+    // The tab bar lines up with the search bar beside it.
+    expect(await panel.style('[role="tablist"]', "height")).toBe("40px")
+    expect(await panel.style("search", "height")).toBe("40px")
+    await panel.openTab("Headers")
+    expect(await panel.style('[role="tabpanel"]', "padding-top")).toBe("12px")
+    expect(await panel.style('[role="tabpanel"]', "row-gap")).toBe("16px")
+    expect(await panel.style('[role="tabpanel"] section', "margin-top")).toBe(
+      "0px",
+    )
+    expect(await panel.style('[role="tabpanel"] dd', "overflow-wrap")).toBe(
+      "anywhere",
+    )
+    await panel.openTab("Raw")
+    await expect.poll(panel.detail).toContain("HTTP/1.1 200")
+    expect(
+      await panel.style('[role="tabpanel"] [data-block] pre', "overflow-wrap"),
+    ).toBe("anywhere")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("dragging the divider resizes the detail pane", async () => {
   const panel = await openPanel()
   try {

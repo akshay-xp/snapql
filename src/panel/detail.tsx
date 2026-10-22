@@ -70,7 +70,7 @@ export function Detail(props: {
       <Splitter stacked={props.stacked} onDrag={props.onResize} />
       <div
         role="tablist"
-        class="flex border-b border-border"
+        class="flex h-10 shrink-0 overflow-x-auto border-b border-border px-1"
         onKeyDown={onTabKey}
       >
         <For each={tabs}>
@@ -82,7 +82,7 @@ export function Detail(props: {
               aria-selected={active() === tab}
               aria-controls={`panel-${id(tab)}`}
               tabIndex={active() === tab ? 0 : -1}
-              class="border-b-2 px-2 py-1"
+              class="shrink-0 border-b-2 px-2.5"
               classList={{
                 "border-accent": active() === tab,
                 "border-transparent text-muted": active() !== tab,
@@ -98,7 +98,7 @@ export function Detail(props: {
         role="tabpanel"
         id={`panel-${id(active())}`}
         aria-labelledby={`tab-${id(active())}`}
-        class="flex-1 overflow-auto p-2"
+        class="flex flex-1 flex-col gap-4 overflow-auto p-3"
       >
         <Switch>
           <Match when={active() === "Summary"}>
@@ -166,12 +166,12 @@ function RawPanel(props: { entry: Entry }) {
                 value={() => `${request}\n\n${response}`}
               />
             </Toolbar>
-            <h2 class="text-muted">Request</h2>
-            <pre class="font-mono mb-3 whitespace-pre-wrap break-all">
-              {request}
-            </pre>
-            <h2 class="text-muted">Response</h2>
-            <Text>{response}</Text>
+            <Section title="Request">
+              <Text>{request}</Text>
+            </Section>
+            <Section title="Response">
+              <Text>{response}</Text>
+            </Section>
           </>
         )
       }}
@@ -183,7 +183,7 @@ function TimingPanel(props: { entry: Entry }) {
   const ms = (n: number) => `${Math.round(n * 10) / 10} ms`
   return (
     <>
-      <p class="mb-2">Total {ms(props.entry.time)}</p>
+      <p>Total {ms(props.entry.time)}</p>
       <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-0.5">
         <For each={timingRows(props.entry.exchange.timings)}>
           {(row) => (
@@ -210,13 +210,15 @@ function Pairs(props: { title: string; pairs: NameValue[]; decode?: boolean }) {
       <Show when={props.pairs.length} fallback={<p class="text-muted">None</p>}>
         <dl
           data-section={props.title}
-          class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-0.5 font-mono"
+          class="grid grid-cols-[fit-content(40%)_minmax(0,1fr)] gap-x-4 gap-y-0.5 font-mono"
         >
           <For each={props.pairs}>
             {(pair) => (
               <>
-                <dt class="text-syntax-key">{pair.name}</dt>
-                <dd class="break-all">
+                <dt class="text-syntax-key [overflow-wrap:anywhere]">
+                  {pair.name}
+                </dt>
+                <dd class="[overflow-wrap:anywhere]">
                   <span
                     data-value
                     classList={{ "text-error": props.title === "errors" }}
@@ -266,7 +268,9 @@ function LoadedBody(props: {
 
 function Text(props: { children: string }) {
   return (
-    <pre class="font-mono whitespace-pre-wrap break-all">{props.children}</pre>
+    <pre class="font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">
+      {props.children}
+    </pre>
   )
 }
 
@@ -320,7 +324,7 @@ function Summary(props: { entry: Entry }) {
     <>
       <header class="flex flex-col gap-1">
         <div class="flex items-baseline gap-2">
-          <span class="break-all text-[15px] font-semibold">
+          <span class="text-[15px] font-semibold [overflow-wrap:anywhere]">
             {heading().title}
           </span>
           <Show when={heading().tag}>
@@ -374,7 +378,7 @@ function ResponseGroup(props: {
   return (
     <Show when={decoded()}>
       {(d) => (
-        <div class="mt-5">
+        <div class="flex flex-col gap-4">
           <h2 class="font-semibold">
             Response <span class="font-normal text-muted">· {d().summary}</span>
           </h2>
@@ -423,8 +427,8 @@ function Section(props: {
   children: JSX.Element
 }) {
   return (
-    <section class="mt-4 flex flex-col gap-1.5">
-      <div class="flex items-center justify-between">
+    <section class="flex flex-col gap-1.5">
+      <div class="flex h-6 items-center justify-between">
         <h2 class="font-semibold text-muted">{props.title}</h2>
         <Show when={props.copy}>
           {(copy) => (

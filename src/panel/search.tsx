@@ -7,7 +7,7 @@ export function SearchBox(props: {
   onQuery: (query: string) => void
 }) {
   return (
-    <div class="flex h-10 shrink-0 items-center border-b border-border px-2">
+    <search class="flex h-10 shrink-0 items-center border-b border-border px-2">
       <label class="flex h-7 flex-1 items-center gap-1.5 rounded-md bg-surface pr-0.5 pl-2 text-muted focus-within:ring-1 focus-within:ring-accent">
         <svg
           aria-hidden="true"
@@ -36,7 +36,7 @@ export function SearchBox(props: {
           </IconButton>
         </Show>
       </label>
-    </div>
+    </search>
   )
 }
 
