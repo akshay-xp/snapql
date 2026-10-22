@@ -5,6 +5,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## Layout (`src/panel/app.tsx`)
 
 - Header: title, Preserve log checkbox, Clear.
+- Type: UI text in Tailwind `font-sans` at 12px (`text-xs` on `main`); `font-mono` only on code and data: `<pre>` blocks (Body, Raw, Summary sections, Tokens), `Pairs` lists, Summary `<dd>` values.
 - Body: flex row. `List` left, `Detail` right when an entry is selected.
 - Divider (`src/panel/splitter.tsx`, `src/panel/splitter.ts`): an `<hr aria-orientation="vertical">` (implicit `separator` role; Biome prefers the native element) absolutely positioned over the detail pane's left border, so it takes no layout width and list + detail always fill the row.
   - Drag: `pointerdown` on the handle adds `pointermove`/`pointerup` listeners on `window` (drag survives leaving the handle; also works with the e2e's synthetic events), removed on release or unmount.
@@ -20,7 +21,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## List (`src/panel/list.tsx`, `src/panel/keys.ts`)
 
 - `role="listbox"`, `tabIndex=0`, holds focus; rows are `role="option"` with `id="entry-<id>"` and `aria-selected`. The listbox's `aria-activedescendant` points at the selected row, so focus never moves to rows (survives virtualization later). Rows are therefore not focusable and have no key handlers (two Biome a11y rules suppressed with that reason).
-- Row: 24px (`h-6`). Method, status (`text-error` when `>= 400`), then `kind`, `title` and muted `detail` (when present) if decoded, else URL; URL is the tooltip. Selected row `bg-selected`.
+- Row: 28px (`h-7`). Method, status (`text-error` when `>= 400`), then `kind`, `title` and muted `detail` (when present) if decoded, else URL; URL is the tooltip. Selected row `bg-selected`.
 - Virtualized (`src/panel/virtual.ts`), no library. The listbox is the scroll container holding a spacer `div` of height `count * ROW_HEIGHT`; the rendered slice `[start, end)` sits in an inner `div` with `translateY(start * ROW_HEIGHT)`.
   - `ROW_HEIGHT = 24` in `list.tsx` must match the rows' `h-6` (border-box, border included). Overscan 10 rows each side.
   - `visibleRange(scrollTop, viewportHeight, rowHeight, count, overscan)` (pure): `start = max(0, floor(scrollTop/rowHeight) - overscan)`, `end = min(count, ceil((scrollTop+viewportHeight)/rowHeight) + overscan)`.
@@ -30,7 +31,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## Detail (`src/panel/detail.tsx`, `src/panel/summary.ts`)
 
-- Tabs, in order: Summary, Body, Headers, Params/Cookies, Timing, Raw. `role="tablist"`, each tab `aria-selected`/`aria-controls`, id `tab-<slug>` (`Params/Cookies` becomes `params-cookies`); one `role="tabpanel"` for the active tab.
+- Active tab underlined in `border-accent`. Tabs, in order: Summary, Body, Headers, Params/Cookies, Timing, Raw. `role="tablist"`, each tab `aria-selected`/`aria-controls`, id `tab-<slug>` (`Params/Cookies` becomes `params-cookies`); one `role="tabpanel"` for the active tab.
 - Click switches. ←/→ on the tablist move via `nextTab(key, current, count)` (pure, wraps at both ends, per the WAI-ARIA tabs pattern) and focus the new tab. Only the active tab is in the Tab order (`tabIndex` 0, others -1), so Tab moves list, then active tab, then panel content.
 - Headers: request then response headers, `name: value`. Params/Cookies: query params, request cookies, response cookies, `name = value`; empty sections say "None". Both use `Pairs`.
 - Timing: total time, then `timingRows(timings)` (pure): one row per HAR phase in order, `ms` or `-` when n/a, a bar sized by `fraction` = ms / sum of measured phases (0 when nothing measured).
@@ -62,7 +63,10 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## Themes (`src/panel/themes.ts`, `src/panel/index.css`, `src/panel/main.tsx`)
 
-- Themes are data: `Theme = { id, name, kind, colors: Record<ColorToken, string> }`, tokens `bg, fg, muted, border, selected, error`. Ships `devtools-light`, `devtools-dark`; values copied from the DevTools document's `--sys-color-*` variables (source noted in the file).
+- Themes are data: `Theme = { id, name, kind, colors: Record<ColorToken, string> }`, tokens `bg, fg, muted, border, selected, error, surface, accent, success, syntax-key, syntax-string, syntax-number`. Ships `devtools-light`, `devtools-dark`.
+  - `bg`, `fg`, `selected`, `error` and dark `muted` copied from the DevTools document's `--sys-color-*` variables (source noted in the file).
+  - SnapQL's own: `border` (softer than DevTools' divider: dark `#3d3d3d`, light `#e3e3e3`), light `muted` `#5f6368` (DevTools' `#757575` is 4.14:1 on `surface`), `surface` (code blocks), `accent` (active tab underline), `success`, `syntax-*` (JSON/XML colors).
+  - `themes.test.ts` checks every text token (`fg`, `muted`, `error`, `success`, `accent`, `syntax-*`) is at least 4.5:1 on `bg` and `surface`. Dark `muted` on `selected` is 2.9:1, so selected rows must not rely on `muted`.
 - `defaultTheme(kind)` picks by DevTools kind; this is "auto" for a future VS Code-style picker (multiple light/dark themes, persisted choice). Adding a theme is one entry in `themes`.
 - `main.tsx` `applyTheme(theme)`: sets `themeVars(theme)` (`--theme-<token>`) on `<html>`, plus `data-theme=<id>` and `data-theme-kind=<kind>`.
 - `index.css` `@theme inline` maps Tailwind colors (`bg-bg`, `text-fg`, `border-border`, ...) to `--theme-*`. Components use tokens only, never a theme name. Biome needs `css.parser.tailwindDirectives` for this.
@@ -71,7 +75,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## E2E harness (`e2e/harness.ts`)
 
 - `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `dragDivider(dx)` dispatches pointerdown on the handle and pointermove/up on `window`; `paneWidths()` gives `{ list, detail }` (the headless panel is ~550px wide, so drags stay small); `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries End until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`).
-- `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`.
+- `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`, `style(selector, property)` (computed style of the first match, `""` if none).
 
 ## Key files
 
