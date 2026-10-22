@@ -1,6 +1,7 @@
 import type { Body, Entry } from "../capture/entry"
 import { baseMime } from "../decoders/text"
 import { prettyXml } from "../decoders/xml"
+import { decodeBase64 } from "./values"
 
 export type FormattedBody = { text: string; notes: string[] }
 
@@ -57,9 +58,3 @@ function prettyJson(text: string): string | undefined {
 
 const isTextMime = (mimeType: string) =>
   /^text\/|^multipart\/mixed$|[/+]json$|xml|javascript/.test(baseMime(mimeType))
-
-function decodeBase64(content: string): string {
-  return new TextDecoder().decode(
-    Uint8Array.from(atob(content), (c) => c.charCodeAt(0)),
-  )
-}
