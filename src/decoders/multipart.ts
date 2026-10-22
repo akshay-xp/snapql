@@ -51,9 +51,7 @@ export const multipart: Decoder = {
     const fields = parts
       .filter((p) => p.filename === undefined)
       .map((p) => ({ name: p.name, value: p.content }))
-    const files = parts
-      .filter((p) => p.filename !== undefined)
-      .map((p) => ({ name: p.name, value: fileValue(p) }))
+    const files = fileRows(parts)
     const summary = [
       fields.length ? count(fields.length, "field") : "",
       files.length ? count(files.length, "file") : "",
@@ -64,8 +62,13 @@ export const multipart: Decoder = {
   },
 }
 
+export const fileRows = (parts: Part[]) =>
+  parts
+    .filter((p) => p.filename !== undefined)
+    .map((p) => ({ name: p.name, value: fileValue(p) }))
+
 // Browsers may leave file contents out of the captured body.
-export function fileValue(p: Part): string {
+function fileValue(p: Part): string {
   const size = p.content
     ? count(new TextEncoder().encode(p.content).length, "byte")
     : "size unknown"

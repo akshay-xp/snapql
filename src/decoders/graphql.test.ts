@@ -167,4 +167,59 @@ describe("graphql", () => {
       graphql.decode(post([{ query: "query B { b }" }]))?.data,
     ).not.toHaveProperty("variables")
   })
+
+  describe("uploads", () => {
+    const query = "mutation Upload($file: Upload!) { upload(file: $file) }"
+    const upload = (operations: string, withOperations = true): RequestView => {
+      const field = (name: string, value: string) =>
+        `--X\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`
+      const text = [
+        withOperations ? field("operations", operations) : "",
+        field("map", '{"0":["variables.file"]}'),
+        '--X\r\nContent-Disposition: form-data; name="0"; filename="a.txt"\r\nContent-Type: text/plain\r\n\r\nhi\r\n',
+        "--X--",
+      ].join("")
+      return {
+        method: "POST",
+        url: "https://api.test/graphql",
+        status: 200,
+        mimeType: "",
+        requestBody: { mimeType: "multipart/form-data; boundary=X", text },
+      }
+    }
+    const files = [{ name: "0", value: "a.txt (text/plain, 2 bytes)" }]
+
+    it("summarizes the operations field and lists files", () => {
+      expect(
+        graphql.decode(
+          upload(JSON.stringify({ query, variables: { file: null } })),
+        ),
+      ).toEqual({
+        summary: "mutation Upload",
+        data: { query, variables: { file: null }, files },
+      })
+    })
+
+    it("handles batched operations", () => {
+      const batch = [
+        { query: "mutation A { a }" },
+        { query: "mutation B { b }" },
+      ]
+      expect(graphql.decode(upload(JSON.stringify(batch)))).toEqual({
+        summary: "2 operations: mutation A, mutation B",
+        data: {
+          operations: [
+            { name: "mutation A", value: "mutation A { a }" },
+            { name: "mutation B", value: "mutation B { b }" },
+          ],
+          files,
+        },
+      })
+    })
+
+    it("ignores multipart bodies without GraphQL operations", () => {
+      expect(graphql.decode(upload("", false))).toBeUndefined()
+      expect(graphql.decode(upload('{"foo":1}'))).toBeUndefined()
+    })
+  })
 })
