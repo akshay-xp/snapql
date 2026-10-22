@@ -6,8 +6,8 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 - No header bar.
 - Type: UI text in Tailwind `font-sans` at 12px (`text-xs` on `main`); `font-mono` only on code and data: `<pre>` blocks (Body, Raw, Summary sections, Tokens), `Pairs` lists, Summary `<dd>` values.
-- Body: flex row. Left `<section>` (`flex-1 flex-col`): `List`, or `Waiting` when the store is empty ("Waiting for requests", "Reload the page to capture its traffic."), then `Footer`. `Detail` right when an entry is selected.
-- Footer (`src/panel/footer.tsx`): icon buttons, each with `aria-label` = `title`: Clear; sort (`Newest first` / `Oldest first`, the current order, icon flips); Preserve log (`aria-pressed`, `text-accent` when on). Then the count, `count(n, "request")` (`0 requests`, `1 request`). Icons inline SVG, `aria-hidden`.
+- Body: flex row. Left `<section>` (`flex-1 flex-col`): `SearchBox`, then `Waiting` when the store is empty ("Waiting for requests", "Reload the page to capture its traffic."), else `NoMatches` when the filter hides everything, else `List`; then `Footer`. `Waiting` and `NoMatches` share the centered `Message` layout. `Detail` right when an entry is selected.
+- Footer (`src/panel/footer.tsx`): icon buttons, each with `aria-label` = `title`: Clear; sort (`Newest first` / `Oldest first`, the current order, icon flips); Preserve log (`aria-pressed`, `text-accent` when on). Then the count, `count(n, "request")` (`0 requests`, `1 request`), or `<shown> of <total>` while a query is set (`total` prop given only then). Icons inline SVG, `aria-hidden`.
 - Divider (`src/panel/splitter.tsx`, `src/panel/splitter.ts`): an `<hr aria-orientation="vertical">` (implicit `separator` role; Biome prefers the native element) absolutely positioned over the detail pane's left border, so it takes no layout width and list + detail always fill the row.
   - Drag: `pointerdown` on the handle adds `pointermove`/`pointerup` listeners on `window` (drag survives leaving the handle; also works with the e2e's synthetic events), removed on release or unmount.
   - `App` owns `detailWidth` (undefined = 50%, until the first drag; not persisted). Width = row's right edge minus pointer x, through `clampWidth(width, container, MIN_PANE)`: each side keeps at least `MIN_PANE` (200px); a row narrower than 400px splits in half.
@@ -18,7 +18,9 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - `entries`: Solid signal mirroring `store.snapshot()` on each store notification.
 - `selectedId`: signal in `App`. `selected()` derives the entry; an effect resets `selectedId` to `undefined` when the entry leaves the store (Clear, eviction, navigation), which closes the pane.
 - `preserveLog`: owned by `main.tsx` (see `docs/capture.md`).
-- `newestFirst`: signal in `App`, default `true`, not persisted. `App` passes `List` the reversed snapshot when on; `List` knows nothing of order, so ↑/↓/Home/End follow the displayed order.
+- `query`: signal in `App`, default `""`, not persisted.
+- `visible`: `createMemo` in `App`: entries filtered by `matchesQuery`, then reversed when `newestFirst`. `List`, `Footer`, the no-match check and `selected()` all read it.
+- `newestFirst`: signal in `App`, default `true`, not persisted. `App` passes `List` the reversed list when on; `List` knows nothing of order, so ↑/↓/Home/End follow the displayed order.
 
 ## List (`src/panel/list.tsx`, `src/panel/keys.ts`)
 
@@ -34,6 +36,14 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
   - `scrollTop` comes from `onScroll`, viewport height from a `ResizeObserver` on the listbox (disconnected on cleanup).
   - Keyboard moves call `scrollToRow(index, scrollTop, viewportHeight, rowHeight)` (pure: new `scrollTop` aligning the row's top or bottom edge, or `undefined` if fully visible) and set `scrollTop`, so the selected row is rendered and `aria-activedescendant` always resolves.
 - Keys (`nextIndex(key, current, count)`, pure): ↑/↓ move and clamp; ↓ with no selection selects the first row, ↑ the last; Home/End jump; empty list or other keys do nothing. Moving selects (like the Network panel), so there is no Enter. Esc deselects (closes the pane). Click selects.
+
+## Search (`src/panel/search.tsx`, `src/panel/filter.ts`)
+
+- `SearchBox`: `h-10` bar atop the list; `<input type="search" aria-label="Filter requests">` (native cancel button hidden) inside a `surface` pill with an accent focus ring; × `IconButton` (`Clear filter`) only while the query is non-empty.
+- `matchesQuery(entry, query)` (pure): case-insensitive substring over what the row shows (`rowLabel` title, detail, kind) plus the full URL; empty query matches all. Decoded rows don't show their method, so `POST` doesn't match a GraphQL row.
+- `highlight(text, query)` (pure): `{ text, hit }` segments, every occurrence, original casing, query matched literally (`indexOf`, no regex). `Marked` renders hits as `<mark>` (`bg-accent/30`); `List` passes title and detail through it.
+- No matches: `No requests match "<q>"` and a `Clear filter` text button that empties the query.
+- When the filter hides the selected entry, `selected()` (looked up in `visible`) becomes `undefined` and the existing effect clears `selectedId`; clearing the query does not reselect it.
 
 ## Detail (`src/panel/detail.tsx`, `src/panel/summary.ts`)
 
@@ -80,13 +90,13 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## E2E harness (`e2e/harness.ts`)
 
-- `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `dragDivider(dx)` dispatches pointerdown on the handle and pointermove/up on `window`; `paneWidths()` gives `{ list, detail }` (the headless panel is ~550px wide, so drags stay small); `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries Home (newest first) until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`), `text(selector)` (collapsed innerText or `null`), `attr(selector, name)`; `clear()`, `toggleSort()` and `togglePreserveLog()` click footer buttons by `aria-label`.
+- `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `dragDivider(dx)` dispatches pointerdown on the handle and pointermove/up on `window`; `paneWidths()` gives `{ list, detail }` (the headless panel is ~550px wide, so drags stay small); `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries Home (newest first) until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`), `text(selector)` (collapsed innerText or `null`), `attr(selector, name)`; `clear()`, `toggleSort()` and `togglePreserveLog()` click footer buttons by `aria-label`; `search(q)` sets the search input and dispatches `input`; `clearSearch()` clicks the × (`aria-label="Clear filter"`); `clickButton(text)` clicks a button by its text.
 - `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`, `style(selector, property)` (computed style of the first match, `""` if none).
 
 ## Key files
 
-- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/footer.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`, `src/panel/splitter.tsx`
-- `src/panel/keys.ts`, `src/panel/row.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
+- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/footer.tsx`, `src/panel/search.tsx`, `src/panel/icon-button.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`, `src/panel/splitter.tsx`
+- `src/panel/keys.ts`, `src/panel/row.ts`, `src/panel/filter.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
 - `src/panel/index.css`
 - `e2e/harness.ts`, `e2e/panel.test.ts`
 
