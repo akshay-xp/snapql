@@ -6,17 +6,17 @@ import {
   Show,
   Switch,
 } from "solid-js"
-import type { Entry } from "../capture/entry"
+import type { Entry, NameValue } from "../capture/entry"
 import { loadBody } from "./body"
 import { dataSections } from "./summary"
 
-const tabs = ["Summary", "Body"] as const
+const tabs = ["Summary", "Body", "Headers", "Params/Cookies"] as const
 type Tab = (typeof tabs)[number]
 
 export function Detail(props: { entry: Entry }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
-  const id = (tab: Tab) => tab.toLowerCase()
+  const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
 
   return (
     <section class="flex w-1/2 flex-col border-l border-border">
@@ -54,8 +54,62 @@ export function Detail(props: { entry: Entry }) {
           <Match when={active() === "Body"}>
             <BodyPanel entry={props.entry} />
           </Match>
+          <Match when={active() === "Headers"}>
+            <Pairs
+              title="Request headers"
+              pairs={props.entry.exchange.requestHeaders}
+              separator=": "
+            />
+            <Pairs
+              title="Response headers"
+              pairs={props.entry.exchange.responseHeaders}
+              separator=": "
+            />
+          </Match>
+          <Match when={active() === "Params/Cookies"}>
+            <Pairs
+              title="Query params"
+              pairs={props.entry.exchange.queryString}
+              separator=" = "
+            />
+            <Pairs
+              title="Request cookies"
+              pairs={props.entry.exchange.requestCookies}
+              separator=" = "
+            />
+            <Pairs
+              title="Response cookies"
+              pairs={props.entry.exchange.responseCookies}
+              separator=" = "
+            />
+          </Match>
         </Switch>
       </div>
+    </section>
+  )
+}
+
+function Pairs(props: {
+  title: string
+  pairs: NameValue[]
+  separator: string
+}) {
+  return (
+    <section class="mb-3">
+      <h2 class="text-muted">{props.title}</h2>
+      <Show when={props.pairs.length} fallback={<p class="text-muted">None</p>}>
+        <ul>
+          <For each={props.pairs}>
+            {(pair) => (
+              <li class="break-all">
+                {pair.name}
+                {props.separator}
+                {pair.value}
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
     </section>
   )
 }

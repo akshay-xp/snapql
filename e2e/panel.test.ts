@@ -182,3 +182,23 @@ test("Body tab loads and pretty-prints the response", async () => {
     await panel.close()
   }
 })
+
+test("Headers and Params/Cookies tabs list name/value pairs", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const post = "POST 200 graphql query GetUser"
+    const apq = "GET 200 graphql persisted GetUser"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([post, apq]))
+
+    await panel.select(post)
+    await panel.openTab("Headers")
+    expect(await panel.detail()).toMatch(/content-type: application\/json/i)
+
+    await panel.select(apq)
+    await panel.openTab("Params/Cookies")
+    expect(await panel.detail()).toContain("operationName = GetUser")
+  } finally {
+    await panel.close()
+  }
+})
