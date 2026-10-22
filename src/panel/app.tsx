@@ -17,6 +17,9 @@ export function App(props: {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
   const [selectedId, setSelectedId] = createSignal<number>()
+  // Undefined until the first drag: the pane takes half the width. Not persisted.
+  const [detailWidth, setDetailWidth] = createSignal<number>()
+  let row!: HTMLDivElement
   const selected = () => entries().find((e) => e.id === selectedId())
   // Clear, eviction or navigation can remove the selected entry; close with it.
   createEffect(() => {
@@ -43,13 +46,23 @@ export function App(props: {
           Clear
         </button>
       </header>
-      <div class="flex min-h-0 flex-1">
+      <div class="flex min-h-0 flex-1" ref={row}>
         <List
           entries={entries()}
           selectedId={selectedId()}
           onSelect={setSelectedId}
         />
-        <Show when={selected()}>{(entry) => <Detail entry={entry()} />}</Show>
+        <Show when={selected()}>
+          {(entry) => (
+            <Detail
+              entry={entry()}
+              width={detailWidth()}
+              onResize={(clientX) =>
+                setDetailWidth(row.getBoundingClientRect().right - clientX)
+              }
+            />
+          )}
+        </Show>
       </div>
     </main>
   )

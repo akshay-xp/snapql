@@ -283,3 +283,23 @@ test("a large session renders only the visible rows", async () => {
     await panel.close()
   }
 }, 60_000)
+
+test("dragging the divider resizes the detail pane", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([`POST 201 ${panel.origin}/api/two`]))
+    await panel.press("ArrowDown")
+    const { detail } = await panel.paneWidths()
+
+    await panel.dragDivider(-100)
+
+    // The initial 50% width can be fractional; allow 1px of rounding.
+    const grown = (await panel.paneWidths()).detail - detail
+    expect(Math.abs(grown - 100)).toBeLessThanOrEqual(1)
+  } finally {
+    await panel.close()
+  }
+})

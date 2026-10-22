@@ -51,6 +51,8 @@ export type Panel = {
   origin: string
   rows(): Promise<string[]>
   optionCount(): Promise<number>
+  dragDivider(dx: number): Promise<void>
+  paneWidths(): Promise<{ list: number; detail: number }>
   selectedVisible(): Promise<boolean>
   press(key: string): Promise<void>
   select(row: string): Promise<void>
@@ -148,6 +150,22 @@ export async function openPanel(
       panelFrame.evaluate<string[]>(
         `[...document.querySelectorAll('[role="option"]')].map(${rowText})`,
       ),
+    dragDivider: (dx: number) =>
+      panelFrame.evaluate<void>(`(() => {
+        const sep = document.querySelector('hr[aria-orientation="vertical"]')
+        const r = sep.getBoundingClientRect()
+        const x = r.left + r.width / 2
+        const y = r.top + r.height / 2
+        const at = (clientX) => ({ bubbles: true, clientX, clientY: y, pointerId: 1 })
+        sep.dispatchEvent(new PointerEvent("pointerdown", at(x)))
+        window.dispatchEvent(new PointerEvent("pointermove", at(x + ${dx})))
+        window.dispatchEvent(new PointerEvent("pointerup", at(x + ${dx})))
+      })()`),
+    paneWidths: () =>
+      panelFrame.evaluate<{ list: number; detail: number }>(`({
+        list: document.querySelector('[role="listbox"]').getBoundingClientRect().width,
+        detail: document.querySelector('[role="tablist"]').closest("section").getBoundingClientRect().width,
+      })`),
     optionCount: () =>
       panelFrame.evaluate<number>(
         `document.querySelectorAll('[role="option"]').length`,
