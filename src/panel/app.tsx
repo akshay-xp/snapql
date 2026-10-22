@@ -1,7 +1,11 @@
-import { createSignal, For, onCleanup, Show } from "solid-js"
+import { type Accessor, createSignal, For, onCleanup, Show } from "solid-js"
 import type { Store } from "../capture/store"
 
-export function App(props: { store: Store }) {
+export function App(props: {
+  store: Store
+  preserveLog: Accessor<boolean>
+  setPreserveLog: (on: boolean) => void
+}) {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
 

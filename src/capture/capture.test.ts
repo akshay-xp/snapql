@@ -17,15 +17,27 @@ function request(url: string): FinishedRequest {
 
 function fakeSource(har: Promise<FinishedRequest[]> = Promise.resolve([])) {
   const off = vi.fn()
+  const offNavigated = vi.fn()
   let emit: (req: FinishedRequest) => void = () => {}
+  let navigate = () => {}
   const source: CaptureSource = {
     onRequestFinished: (cb) => {
       emit = cb
       return off
     },
     getHAR: () => har,
+    onNavigated: (cb) => {
+      navigate = cb
+      return offNavigated
+    },
   }
-  return { source, off, emit: (req: FinishedRequest) => emit(req) }
+  return {
+    source,
+    off,
+    offNavigated,
+    emit: (req: FinishedRequest) => emit(req),
+    navigate: () => navigate(),
+  }
 }
 
 const urls = (store: ReturnType<typeof createStore>) =>
@@ -38,7 +50,7 @@ describe("startCapture", () => {
     const a = request("https://api.test/a")
     const b = request("https://api.test/b")
 
-    const stop = startCapture(source, store, [])
+    const stop = startCapture(source, store, [], () => false)
     emit(a)
     emit(b)
 
@@ -65,7 +77,7 @@ describe("startCapture", () => {
     }
     const a = request("https://api.test/a")
 
-    startCapture(source, store, [fake])
+    startCapture(source, store, [fake], () => false)
     emit(a)
     emit(request("https://api.test/b"))
 
@@ -91,7 +103,7 @@ describe("startCapture", () => {
       decode: () => ({ summary: "s", data: null }),
     }
 
-    startCapture(source, store, [fake])
+    startCapture(source, store, [fake], () => false)
     await vi.waitFor(() =>
       expect(urls(store)).toEqual([
         [1, "https://api.test/h1"],
@@ -110,7 +122,7 @@ describe("startCapture", () => {
     const { source, emit } = fakeSource(new Promise((r) => (resolve = r)))
     const l1 = { ...request("https://api.test/l1"), startedDateTime: "t1" }
 
-    startCapture(source, store, [])
+    startCapture(source, store, [], () => false)
     emit(l1)
     emit(request("https://api.test/l2"))
     await Promise.resolve()
@@ -131,7 +143,7 @@ describe("startCapture", () => {
     const store = createStore()
     const { source, emit } = fakeSource(Promise.reject(new Error("no HAR")))
 
-    startCapture(source, store, [])
+    startCapture(source, store, [], () => false)
     emit(request("https://api.test/l1"))
 
     await vi.waitFor(() =>
@@ -144,7 +156,7 @@ describe("startCapture", () => {
     const h1 = request("https://api.test/h1")
     const { source, emit } = fakeSource(Promise.resolve([h1]))
 
-    startCapture(source, store, [])
+    startCapture(source, store, [], () => false)
     await vi.waitFor(() => expect(store.snapshot()).toHaveLength(1))
     emit({ ...h1 })
     emit(request("https://api.test/l1"))
@@ -153,5 +165,27 @@ describe("startCapture", () => {
       [1, "https://api.test/h1"],
       [2, "https://api.test/l1"],
     ])
+  })
+
+  it("clears on navigation unless the log is preserved", async () => {
+    const store = createStore()
+    const { source, off, offNavigated, emit, navigate } = fakeSource()
+    let preserve = false
+
+    const stop = startCapture(source, store, [], () => preserve)
+    emit(request("https://api.test/a"))
+    emit(request("https://api.test/b"))
+    await vi.waitFor(() => expect(store.snapshot()).toHaveLength(2))
+    navigate()
+    expect(store.snapshot()).toEqual([])
+
+    preserve = true
+    emit(request("https://api.test/c"))
+    navigate()
+    expect(urls(store)).toEqual([[3, "https://api.test/c"]])
+
+    stop()
+    expect(off).toHaveBeenCalled()
+    expect(offNavigated).toHaveBeenCalled()
   })
 })
