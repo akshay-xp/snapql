@@ -2,6 +2,7 @@ import { createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import type { Entry } from "../capture/entry"
 import { nextIndex } from "./keys"
 import { rowLabel } from "./row"
+import { Marked } from "./search"
 import { scrollToRow, visibleRange } from "./virtual"
 
 // Must match the rows' h-7 class (border-box, so the border is included).
@@ -10,6 +11,7 @@ const OVERSCAN = 10
 
 export function List(props: {
   entries: readonly Entry[]
+  query: string
   selectedId: number | undefined
   onSelect: (id: number | undefined) => void
 }) {
@@ -83,15 +85,17 @@ export function List(props: {
                   onClick={() => props.onSelect(entry.id)}
                 >
                   <span class="min-w-0 flex-1 truncate" title={entry.url}>
-                    {label.title}
+                    <Marked text={label.title} query={props.query} />
                   </span>
                   <Show when={label.detail}>
-                    <span
-                      class="shrink-0"
-                      classList={{ "text-muted": !selected() }}
-                    >
-                      {label.detail}
-                    </span>
+                    {(detail) => (
+                      <span
+                        class="shrink-0"
+                        classList={{ "text-muted": !selected() }}
+                      >
+                        <Marked text={detail()} query={props.query} />
+                      </span>
+                    )}
                   </Show>
                   <Show when={label.failure}>
                     <span class="shrink-0 rounded bg-error px-1 font-semibold text-bg">

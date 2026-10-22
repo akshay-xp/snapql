@@ -90,6 +90,7 @@ test("the search box filters rows and highlights matches", async () => {
       .poll(panel.rows)
       .toEqual(["GetUser persisted graphql", "GetUser query graphql"])
     expect(await panel.text("footer")).toMatch(/^2 of \d+$/)
+    expect(await panel.text('[role="option"] mark')).toBe("GetUser")
 
     // Only what a row shows is searched: decoded rows don't show their method.
     await panel.search("POST")
@@ -97,6 +98,9 @@ test("the search box filters rows and highlights matches", async () => {
       .poll(panel.rows)
       .toEqual(expect.arrayContaining(["/api/two POST"]))
     expect(await panel.rows()).not.toContain("GetUser query graphql")
+    expect(await panel.text('[role="option"] span:nth-child(2) mark')).toBe(
+      "POST",
+    )
 
     await panel.clearSearch()
     await expect

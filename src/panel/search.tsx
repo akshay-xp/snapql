@@ -1,4 +1,5 @@
-import { Show } from "solid-js"
+import { For, Show } from "solid-js"
+import { highlight } from "./filter"
 import { IconButton } from "./icon-button"
 
 export function SearchBox(props: {
@@ -36,5 +37,21 @@ export function SearchBox(props: {
         </Show>
       </label>
     </div>
+  )
+}
+
+export function Marked(props: { text: string; query: string }) {
+  return (
+    <For each={highlight(props.text, props.query)}>
+      {(segment) =>
+        segment.hit ? (
+          <mark class="rounded-sm bg-accent/30 text-inherit">
+            {segment.text}
+          </mark>
+        ) : (
+          segment.text
+        )
+      }
+    </For>
   )
 }
