@@ -371,6 +371,11 @@ test("M3 decoders summarize their requests", async () => {
       '"alg": "HS256"',
     ])
       expect(me).toContain(text)
+    await panel.openTab("Params/Cookies")
+    const cookies = await panel.detail()
+    expect(cookies).toContain("greeting = hello%20world")
+    expect(cookies).toContain("\nhello world")
+    await panel.openTab("Summary")
 
     await panel.select("GET 200 trpc user.byId, post.list")
     const batch = await panel.detail()

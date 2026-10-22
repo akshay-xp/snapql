@@ -18,6 +18,7 @@ const jwt = `${b64url({ alg: "HS256", typ: "JWT" })}.${b64url({ sub: "42", name:
 const decodersPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
+  document.cookie = "greeting=hello%20world"
   fetch("/api/users/1")
   fetch("/api/form", { method: "POST", body: new URLSearchParams({ a: "1", b: "x y" }) })
   const upload = new FormData()

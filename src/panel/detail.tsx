@@ -16,7 +16,7 @@ import { rawRequest, rawResponse } from "./raw"
 import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
 import { timingRows } from "./timing"
-import { findTokens } from "./values"
+import { decodeValue, findTokens } from "./values"
 
 const tabs = [
   "Summary",
@@ -101,11 +101,13 @@ export function Detail(props: {
               title="Request headers"
               pairs={props.entry.exchange.requestHeaders}
               separator=": "
+              decode
             />
             <Pairs
               title="Response headers"
               pairs={props.entry.exchange.responseHeaders}
               separator=": "
+              decode
             />
           </Match>
           <Match when={active() === "Params/Cookies"}>
@@ -113,16 +115,19 @@ export function Detail(props: {
               title="Query params"
               pairs={props.entry.exchange.queryString}
               separator=" = "
+              decode
             />
             <Pairs
               title="Request cookies"
               pairs={props.entry.exchange.requestCookies}
               separator=" = "
+              decode
             />
             <Pairs
               title="Response cookies"
               pairs={props.entry.exchange.responseCookies}
               separator=" = "
+              decode
             />
           </Match>
           <Match when={active() === "Timing"}>
@@ -183,6 +188,7 @@ function Pairs(props: {
   title: string
   pairs: NameValue[]
   separator: string
+  decode?: boolean
 }) {
   return (
     <section class="mb-3">
@@ -195,6 +201,13 @@ function Pairs(props: {
                 {pair.name}
                 {props.separator}
                 {pair.value}
+                <Show when={props.decode && decodeValue(pair.value)}>
+                  {(decoded) => (
+                    <div class="whitespace-pre-wrap text-muted">
+                      {decoded()}
+                    </div>
+                  )}
+                </Show>
               </li>
             )}
           </For>
