@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
-import { BODY_LIMIT, formatBody } from "./body"
+import { describe, expect, it, vi } from "vitest"
+import { BODY_LIMIT, formatBody, loadBody } from "./body"
 
 const text = (content: string) => ({ content, encoding: "" })
 
@@ -40,5 +40,26 @@ describe("formatBody", () => {
     expect(formatted.notes).toEqual([
       `Truncated: showing 1 MB of ${content.length} characters`,
     ])
+  })
+})
+
+describe("loadBody", () => {
+  it("fetches once and formats", async () => {
+    const getBody = vi.fn(() => Promise.resolve(text('{"a":1}')))
+
+    await expect(loadBody({ getBody })).resolves.toEqual({
+      text: '{\n  "a": 1\n}',
+      notes: [],
+    })
+    expect(getBody).toHaveBeenCalledTimes(1)
+  })
+
+  it("turns a failed fetch into a note", async () => {
+    const getBody = () => Promise.reject(new Error("gone"))
+
+    await expect(loadBody({ getBody })).resolves.toEqual({
+      text: "",
+      notes: ["Body unavailable: gone"],
+    })
   })
 })
