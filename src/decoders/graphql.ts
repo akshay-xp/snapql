@@ -1,6 +1,10 @@
 import type { Decoder } from "./types"
 
-type GraphQLRequest = { query?: unknown; operationName?: string } | null
+type GraphQLRequest = {
+  query?: unknown
+  operationName?: string
+  extensions?: { persistedQuery?: { sha256Hash?: unknown } }
+} | null
 
 const operationTypes = new Set(["query", "mutation", "subscription"])
 
@@ -10,9 +14,16 @@ export const graphql: Decoder = {
     const data: GraphQLRequest | undefined = req.requestBody
       ? parseJson(req.requestBody.text)
       : Object.fromEntries(new URL(req.url).searchParams)
-    if (typeof data?.query !== "string") return
-    const summary = operationSummary(data.query, data.operationName)
-    return summary ? { summary, data } : undefined
+    if (typeof data?.query === "string") {
+      const summary = operationSummary(data.query, data.operationName)
+      return summary ? { summary, data } : undefined
+    }
+    const hash = data?.extensions?.persistedQuery?.sha256Hash
+    if (typeof hash !== "string") return
+    return {
+      summary: `persisted ${data?.operationName ?? hash.slice(0, 8)}`,
+      data,
+    }
   },
 }
 
