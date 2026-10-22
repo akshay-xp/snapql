@@ -80,7 +80,7 @@ export function List(props: {
                   id={`entry-${entry.id}`}
                   role="option"
                   aria-selected={selected()}
-                  class="flex h-7 cursor-default items-center gap-2 border-b border-border px-2"
+                  class="flex h-7 cursor-default items-center gap-2 border-b border-border px-2 font-mono"
                   classList={{ "bg-selected": selected() }}
                   onClick={() => props.onSelect(entry.id)}
                 >
@@ -104,7 +104,7 @@ export function List(props: {
                   </Show>
                   {/* Present but empty when undecoded, so tags align in a column. */}
                   <span
-                    class="w-16 shrink-0 rounded border text-center"
+                    class="w-[11ch] shrink-0 rounded border text-center"
                     classList={{
                       "border-border": !!label.kind,
                       "border-transparent": !label.kind,

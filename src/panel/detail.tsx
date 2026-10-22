@@ -183,13 +183,17 @@ function TimingPanel(props: { entry: Entry }) {
   const ms = (n: number) => `${Math.round(n * 10) / 10} ms`
   return (
     <>
-      <p>Total {ms(props.entry.time)}</p>
+      <p>
+        Total <span class="font-mono">{ms(props.entry.time)}</span>
+      </p>
       <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-0.5">
         <For each={timingRows(props.entry.exchange.timings)}>
           {(row) => (
             <>
-              <span class="text-muted">{row.phase}</span>
-              <span class="text-right">
+              <span data-phase class="text-muted">
+                {row.phase}
+              </span>
+              <span data-ms class="text-right font-mono">
                 {row.ms === undefined ? "-" : ms(row.ms)}
               </span>
               <div
@@ -322,7 +326,7 @@ function Summary(props: { entry: Entry }) {
 
   return (
     <>
-      <header class="flex flex-col gap-1">
+      <header class="flex flex-col gap-1 font-mono">
         <div class="flex items-baseline gap-2">
           <span class="text-[15px] font-semibold [overflow-wrap:anywhere]">
             {heading().title}
@@ -334,7 +338,7 @@ function Summary(props: { entry: Entry }) {
           </Show>
         </div>
         <div class="flex flex-wrap gap-x-1.5 text-muted">
-          <span class="font-mono" data-path title={props.entry.url}>
+          <span data-path title={props.entry.url}>
             {heading().method} {heading().path}
           </span>
           <span>·</span>
@@ -408,7 +412,11 @@ function Tokens(props: { entry: Entry }) {
               {token.source} <span class="text-muted">· unverified</span>
             </p>
             <Show when={token.jwt.expires}>
-              {(expires) => <p class="text-muted">expires {expires()}</p>}
+              {(expires) => (
+                <p class="text-muted">
+                  expires <span class="font-mono">{expires()}</span>
+                </p>
+              )}
             </Show>
             <h3 class="mt-1 text-muted">header</h3>
             <JsonTree value={token.jwt.header} />

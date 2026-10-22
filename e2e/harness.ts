@@ -131,6 +131,8 @@ export type Panel = {
   // Visual review aid, not used by assertions.
   screenshot(file: string): Promise<void>
   paneBoxes(): Promise<{ list: Box; detail: Box }>
+  // Text of matches whose content is wider than their box.
+  overflowing(selector: string): Promise<string[]>
   stubClipboard(): Promise<void>
   copied(): Promise<string | undefined>
   togglePreserveLog(): Promise<void>
@@ -255,6 +257,10 @@ export async function openPanel(
         window.dispatchEvent(new PointerEvent("pointermove", at(${dx}, ${dy})))
         window.dispatchEvent(new PointerEvent("pointerup", at(${dx}, ${dy})))
       })()`),
+    overflowing: (selector: string) =>
+      panelFrame.evaluate<string[]>(
+        `[...document.querySelectorAll(${JSON.stringify(selector)})].filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent)`,
+      ),
     paneBoxes: () =>
       panelFrame.evaluate<{ list: Box; detail: Box }>(`(() => {
         const box = (el) => {
