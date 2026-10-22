@@ -28,7 +28,6 @@ export type Exchange = {
 }
 
 export type FinishedRequest = RequestView & {
-  mimeType: string
   exchange: Exchange
   startedDateTime: string
   time: number

@@ -7,6 +7,7 @@ function post(body: unknown): RequestView {
     method: "POST",
     url: "https://api.test/graphql",
     status: 200,
+    mimeType: "",
     requestBody: { mimeType: "application/json", text: JSON.stringify(body) },
   }
 }
@@ -61,6 +62,7 @@ describe("graphql", () => {
       method: "GET",
       url: `https://api.test/graphql?${new URLSearchParams(params)}`,
       status: 200,
+      mimeType: "",
     })
     const query = "query GetUser { a } query Other { b }"
 
@@ -77,6 +79,7 @@ describe("graphql", () => {
       method: "GET",
       url: `https://api.test/graphql?${new URLSearchParams({ operationName: "GetUser", extensions })}`,
       status: 200,
+      mimeType: "",
     })
     const extensions = JSON.stringify({
       persistedQuery: { version: 1, sha256Hash: "abcdef1234567890" },
