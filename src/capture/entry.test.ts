@@ -57,4 +57,9 @@ describe("toEntry", () => {
     const exchange = { ...emptyExchange, statusText: "OK" }
     expect(toEntry(request({ exchange }), 1).exchange).toBe(exchange)
   })
+
+  it("carries the request body", () => {
+    const requestBody = { mimeType: "application/json", text: "{}" }
+    expect(toEntry(request({ requestBody }), 1).requestBody).toBe(requestBody)
+  })
 })
