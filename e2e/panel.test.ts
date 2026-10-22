@@ -292,6 +292,15 @@ test("Summary shows the request and its decoded data", async () => {
     expect(
       await panel.style('[role="tabpanel"] header [data-status]', "color"),
     ).toBe("rgb(129, 201, 149)")
+    expect(
+      await panel.style(
+        '[role="tabpanel"] section > [data-block]',
+        "background-color",
+      ),
+    ).toBe("rgb(31, 31, 31)")
+    expect(await panel.style('[role="tabpanel"] section > h2', "color")).toBe(
+      "rgb(143, 143, 143)",
+    )
     expect(detail).toContain('id: "1"')
 
     const caret = '[role="tabpanel"] button[aria-expanded]'
