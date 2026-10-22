@@ -16,3 +16,12 @@ export function nextIndex(
       return last
   }
 }
+
+export function nextTab(
+  key: string,
+  current: number,
+  count: number,
+): number | undefined {
+  if (key === "ArrowRight") return (current + 1) % count
+  if (key === "ArrowLeft") return (current - 1 + count) % count
+}
