@@ -1,6 +1,7 @@
 import {
   type Accessor,
   createEffect,
+  createMemo,
   createSignal,
   type JSX,
   onCleanup,
@@ -24,15 +25,16 @@ export function App(props: {
   const [selectedId, setSelectedId] = createSignal<number>()
   const [newestFirst, setNewestFirst] = createSignal(true)
   const [query, setQuery] = createSignal("")
-  const visible = () => {
+  const visible = createMemo(() => {
     const shown = entries().filter((e) => matchesQuery(e, query()))
     return newestFirst() ? shown.reverse() : shown
-  }
+  })
   // Undefined until the first drag: the pane takes half the width. Not persisted.
   const [detailWidth, setDetailWidth] = createSignal<number>()
   let row!: HTMLDivElement
-  const selected = () => entries().find((e) => e.id === selectedId())
-  // Clear, eviction or navigation can remove the selected entry; close with it.
+  const selected = () => visible().find((e) => e.id === selectedId())
+  // Clear, eviction, navigation or the filter can remove the selected entry;
+  // close with it.
   createEffect(() => {
     if (selectedId() !== undefined && !selected()) setSelectedId(undefined)
   })
