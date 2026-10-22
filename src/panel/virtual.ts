@@ -12,3 +12,15 @@ export function visibleRange(
   )
   return { start, end }
 }
+
+export function scrollToRow(
+  index: number,
+  scrollTop: number,
+  viewportHeight: number,
+  rowHeight: number,
+): number | undefined {
+  const top = index * rowHeight
+  const bottom = top + rowHeight
+  if (top < scrollTop) return top
+  if (bottom > scrollTop + viewportHeight) return bottom - viewportHeight
+}
