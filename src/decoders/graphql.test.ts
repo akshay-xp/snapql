@@ -72,6 +72,21 @@ describe("graphql", () => {
     ).toBe("query Other")
   })
 
+  it("summarizes persisted queries sent by hash", () => {
+    const extensions = {
+      persistedQuery: { version: 1, sha256Hash: "abcdef1234567890" },
+    }
+    const named = { operationName: "GetUser", extensions }
+
+    expect(graphql.decode(post(named))).toEqual({
+      summary: "persisted GetUser",
+      data: named,
+    })
+    expect(summary({ extensions })).toBe("persisted abcdef12")
+    expect(summary({ query: "query A { a }", extensions })).toBe("query A")
+    expect(graphql.decode(post({ extensions: {} }))).toBeUndefined()
+  })
+
   it("ignores JSON without a query", () => {
     expect(graphql.decode(post({ a: 1 }))).toBeUndefined()
   })
