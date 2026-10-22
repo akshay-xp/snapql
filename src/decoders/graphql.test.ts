@@ -222,4 +222,47 @@ describe("graphql", () => {
       expect(graphql.decode(upload('{"foo":1}'))).toBeUndefined()
     })
   })
+
+  describe("decodeResponse", () => {
+    const decoded = { kind: "graphql", summary: "query Broken", data: {} }
+    const response = (body: unknown) =>
+      graphql.decodeResponse?.(
+        typeof body === "string" ? body : JSON.stringify(body),
+        decoded,
+      )
+
+    it("lists errors by path, plus data", () => {
+      expect(
+        response({
+          data: { user: null },
+          errors: [
+            { message: "boom", path: ["user", "posts", 0] },
+            { message: "bad" },
+          ],
+        }),
+      ).toEqual({
+        summary: "2 errors",
+        data: {
+          errors: [
+            { name: "user.posts.0", value: "boom" },
+            { name: "(root)", value: "bad" },
+          ],
+          data: { user: null },
+        },
+      })
+      expect(response({ errors: [{ message: "x" }] })?.summary).toBe("1 error")
+    })
+
+    it("shows data alone when there are no errors", () => {
+      expect(response({ data: { a: 1 } })).toEqual({
+        summary: "no errors",
+        data: { data: { a: 1 } },
+      })
+    })
+
+    it("ignores non-GraphQL responses", () => {
+      expect(response("nope")).toBeUndefined()
+      expect(response({ foo: 1 })).toBeUndefined()
+    })
+  })
 })

@@ -23,6 +23,29 @@ export const graphql: Decoder = {
         : fromParams(new URL(req.url).searchParams),
     )
   },
+  decodeResponse(text) {
+    const res = parseJson(text) as GraphQLResponse | undefined
+    if (typeof res !== "object" || res === null) return
+    if (!("data" in res) && !("errors" in res)) return
+    const errors = Array.isArray(res.errors) ? res.errors : []
+    return {
+      summary: errors.length ? count(errors.length, "error") : "no errors",
+      data: {
+        ...(errors.length && {
+          errors: errors.map((e) => ({
+            name: e.path?.join(".") || "(root)",
+            value: String(e.message),
+          })),
+        }),
+        ...("data" in res && { data: res.data }),
+      },
+    }
+  },
+}
+
+type GraphQLResponse = {
+  data?: unknown
+  errors?: { message?: unknown; path?: (string | number)[] }[]
 }
 
 // GraphQL multipart request spec: operations JSON in a field, files beside it.
