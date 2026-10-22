@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { type FinishedRequest, toEntry } from "./entry"
+import { emptyExchange } from "./test-helpers"
 
 function request(overrides: Partial<FinishedRequest> = {}): FinishedRequest {
   return {
@@ -9,6 +10,7 @@ function request(overrides: Partial<FinishedRequest> = {}): FinishedRequest {
     startedDateTime: "2026-10-22T10:00:00.000Z",
     time: 12.5,
     mimeType: "",
+    exchange: emptyExchange,
     fetchBody: () => Promise.resolve({ content: "", encoding: "" }),
     ...overrides,
   }
@@ -49,5 +51,10 @@ describe("toEntry", () => {
     expect(toEntry(request({ mimeType: "text/html" }), 1).mimeType).toBe(
       "text/html",
     )
+  })
+
+  it("carries the exchange", () => {
+    const exchange = { ...emptyExchange, statusText: "OK" }
+    expect(toEntry(request({ exchange }), 1).exchange).toBe(exchange)
   })
 })

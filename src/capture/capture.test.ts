@@ -3,6 +3,7 @@ import type { Decoder } from "../decoders/types"
 import { type CaptureSource, startCapture } from "./capture"
 import type { FinishedRequest } from "./entry"
 import { createStore } from "./store"
+import { emptyExchange } from "./test-helpers"
 
 function request(url: string): FinishedRequest {
   return {
@@ -12,6 +13,7 @@ function request(url: string): FinishedRequest {
     startedDateTime: "2026-10-22T10:00:00.000Z",
     time: 1,
     mimeType: "",
+    exchange: emptyExchange,
     fetchBody: vi.fn(() => Promise.resolve({ content: "", encoding: "" })),
   }
 }

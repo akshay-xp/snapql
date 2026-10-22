@@ -1,8 +1,13 @@
-import type { Body, FinishedRequest } from "../capture/entry"
+import type { Body, FinishedRequest, NameValue } from "../capture/entry"
 
 export function createPanel(title: string, iconPath: string, pagePath: string) {
   chrome.devtools.panels.create(title, iconPath, pagePath)
 }
+
+const pairs = (list?: NameValue[]): NameValue[] =>
+  (list ?? []).map(({ name, value }) => ({ name, value }))
+
+const ms = (n?: number) => n ?? -1
 
 export function toFinishedRequest(
   req: chrome.devtools.network.Request,
@@ -13,6 +18,25 @@ export function toFinishedRequest(
     url: req.request.url,
     status: req.response.status,
     mimeType: req.response.content?.mimeType ?? "",
+    exchange: {
+      requestHeaders: pairs(req.request.headers),
+      responseHeaders: pairs(req.response.headers),
+      queryString: pairs(req.request.queryString),
+      requestCookies: pairs(req.request.cookies),
+      responseCookies: pairs(req.response.cookies),
+      httpVersion: req.response.httpVersion ?? "",
+      statusText: req.response.statusText ?? "",
+      size: ms(req.response.content?.size),
+      timings: {
+        blocked: ms(req.timings?.blocked),
+        dns: ms(req.timings?.dns),
+        connect: ms(req.timings?.connect),
+        ssl: ms(req.timings?.ssl),
+        send: ms(req.timings?.send),
+        wait: ms(req.timings?.wait),
+        receive: ms(req.timings?.receive),
+      },
+    },
     requestBody:
       postData?.text === undefined
         ? undefined

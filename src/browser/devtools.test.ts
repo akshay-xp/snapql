@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { emptyExchange } from "../capture/test-helpers"
 import {
   getHAR,
   getTheme,
@@ -48,6 +49,65 @@ describe("toFinishedRequest", () => {
       postData,
     )
     expect(toFinishedRequest(chromeRequest()).requestBody).toBeUndefined()
+  })
+})
+
+describe("exchange", () => {
+  it("maps headers, params, cookies, version, status text, size and timings", () => {
+    const base = chromeRequest()
+    const req = {
+      ...base,
+      getContent: base.getContent,
+      request: {
+        ...base.request,
+        headers: [
+          { name: "content-type", value: "application/json", comment: "x" },
+        ],
+        queryString: [{ name: "a", value: "1" }],
+        cookies: [{ name: "sid", value: "s", path: "/" }],
+      },
+      response: {
+        ...base.response,
+        headers: [{ name: "x-id", value: "9" }],
+        cookies: [{ name: "t", value: "u", httpOnly: true }],
+        statusText: "Created",
+        httpVersion: "HTTP/1.1",
+        content: { mimeType: "application/json", size: 2 },
+      },
+      timings: {
+        blocked: 1,
+        dns: -1,
+        connect: 2,
+        ssl: -1,
+        send: 3,
+        wait: 5,
+        receive: 4,
+      },
+    } as unknown as chrome.devtools.network.Request
+
+    expect(toFinishedRequest(req).exchange).toEqual({
+      requestHeaders: [{ name: "content-type", value: "application/json" }],
+      responseHeaders: [{ name: "x-id", value: "9" }],
+      queryString: [{ name: "a", value: "1" }],
+      requestCookies: [{ name: "sid", value: "s" }],
+      responseCookies: [{ name: "t", value: "u" }],
+      httpVersion: "HTTP/1.1",
+      statusText: "Created",
+      size: 2,
+      timings: {
+        blocked: 1,
+        dns: -1,
+        connect: 2,
+        ssl: -1,
+        send: 3,
+        wait: 5,
+        receive: 4,
+      },
+    })
+  })
+
+  it("defaults missing fields", () => {
+    expect(toFinishedRequest(chromeRequest()).exchange).toEqual(emptyExchange)
   })
 })
 

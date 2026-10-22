@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { toEntry } from "./entry"
 import { createStore } from "./store"
+import { emptyExchange } from "./test-helpers"
 
 function entry(id: number) {
   return toEntry(
@@ -11,6 +12,7 @@ function entry(id: number) {
       startedDateTime: "2026-10-22T10:00:00.000Z",
       time: 1,
       mimeType: "",
+      exchange: emptyExchange,
       fetchBody: () => Promise.resolve({ content: "", encoding: "" }),
     },
     id,
