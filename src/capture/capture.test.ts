@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import type { Decoder } from "../decoders/types"
 import { startCapture } from "./capture"
 import type { FinishedRequest } from "./entry"
 import { createStore } from "./store"
@@ -26,7 +27,7 @@ describe("startCapture", () => {
     const a = request("https://api.test/a")
     const b = request("https://api.test/b")
 
-    const stop = startCapture(subscribe, store)
+    const stop = startCapture(subscribe, store, [])
     emit(a)
     emit(b)
 
@@ -39,5 +40,34 @@ describe("startCapture", () => {
 
     stop()
     expect(off).toHaveBeenCalled()
+  })
+
+  it("stores each request's decode result", () => {
+    const store = createStore()
+    let emit: (req: FinishedRequest) => void = () => {}
+    const fake: Decoder = {
+      kind: "fake",
+      decode: (req) =>
+        req.url.endsWith("/a") ? { summary: "a", data: null } : undefined,
+    }
+    const a = request("https://api.test/a")
+    const b = request("https://api.test/b")
+
+    startCapture(
+      (cb) => {
+        emit = cb
+        return () => {}
+      },
+      store,
+      [fake],
+    )
+    emit(a)
+    emit(b)
+
+    expect(store.snapshot().map((e) => e.decoded)).toEqual([
+      { kind: "fake", summary: "a", data: null },
+      undefined,
+    ])
+    expect(a.fetchBody).not.toHaveBeenCalled()
   })
 })
