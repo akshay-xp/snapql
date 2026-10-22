@@ -1,7 +1,7 @@
+import { baseMime } from "./text"
 import type { Decoder } from "./types"
 
-const isJsonMime = (mimeType: string) =>
-  /(\/|\+)json$/.test(mimeType.split(";")[0].trim())
+const isJsonMime = (mimeType: string) => /(\/|\+)json$/.test(baseMime(mimeType))
 
 export const json: Decoder = {
   kind: "json",
