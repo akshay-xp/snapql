@@ -353,7 +353,9 @@ function Sections(props: { data: unknown }) {
           <section class="mt-3">
             <h2 class="text-muted">{section.name}</h2>
             <pre class="font-mono whitespace-pre-wrap break-all">
-              {section.text}
+              {"text" in section
+                ? section.text
+                : JSON.stringify(section.json, null, 2)}
             </pre>
           </section>
         )
