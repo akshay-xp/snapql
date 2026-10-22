@@ -5,6 +5,7 @@ import {
   createSignal,
   type JSX,
   onCleanup,
+  onMount,
   Show,
 } from "solid-js"
 import type { Store } from "../capture/store"
@@ -13,7 +14,7 @@ import { matchesQuery } from "./filter"
 import { Footer } from "./footer"
 import { List } from "./list"
 import { SearchBox } from "./search"
-import { clampWidth } from "./splitter"
+import { clampSize, isStacked } from "./splitter"
 
 export function App(props: {
   store: Store
@@ -29,9 +30,18 @@ export function App(props: {
     const shown = entries().filter((e) => matchesQuery(e, query()))
     return newestFirst() ? shown.reverse() : shown
   })
-  // Undefined until the first drag: the pane takes half the width. Not persisted.
+  // Undefined until the first drag: the pane takes half the panel. Not persisted.
   const [detailWidth, setDetailWidth] = createSignal<number>()
+  const [detailHeight, setDetailHeight] = createSignal<number>()
+  const [stacked, setStacked] = createSignal(false)
   let row!: HTMLDivElement
+  onMount(() => {
+    const observer = new ResizeObserver(() =>
+      setStacked(isStacked(row.clientWidth, row.clientHeight)),
+    )
+    observer.observe(row)
+    onCleanup(() => observer.disconnect())
+  })
   const selected = () => visible().find((e) => e.id === selectedId())
   // Clear, eviction, navigation or the filter can remove the selected entry;
   // close with it.
@@ -41,8 +51,12 @@ export function App(props: {
 
   return (
     <main class="flex h-dvh flex-col font-sans text-xs">
-      <div class="flex min-h-0 flex-1" ref={row}>
-        <section class="flex min-w-0 flex-1 flex-col">
+      <div
+        class="flex min-h-0 flex-1"
+        classList={{ "flex-col": stacked() }}
+        ref={row}
+      >
+        <section class="flex min-h-0 min-w-0 flex-1 flex-col">
           <SearchBox query={query()} onQuery={setQuery} />
           <Show when={entries().length} fallback={<Waiting />}>
             <Show
@@ -73,10 +87,13 @@ export function App(props: {
           {(entry) => (
             <Detail
               entry={entry()}
-              width={detailWidth()}
-              onResize={(clientX) => {
+              stacked={stacked()}
+              size={stacked() ? detailHeight() : detailWidth()}
+              onResize={(clientX, clientY) => {
                 const box = row.getBoundingClientRect()
-                setDetailWidth(clampWidth(box.right - clientX, box.width))
+                if (stacked())
+                  setDetailHeight(clampSize(box.bottom - clientY, box.height))
+                else setDetailWidth(clampSize(box.right - clientX, box.width))
               }}
             />
           )}
