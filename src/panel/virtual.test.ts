@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { visibleRange } from "./virtual"
+import { scrollToRow, visibleRange } from "./virtual"
 
 describe("visibleRange", () => {
   it.each([
@@ -14,4 +14,15 @@ describe("visibleRange", () => {
       expect(visibleRange(scrollTop, 240, 24, count, overscan)).toEqual(range)
     },
   )
+})
+
+describe("scrollToRow", () => {
+  it.each([
+    [5, 0, undefined],
+    [20, 0, 264],
+    [3, 200, 72],
+    [9, 0, undefined],
+  ])("row %s at scrollTop %s gives %s", (index, scrollTop, expected) => {
+    expect(scrollToRow(index, scrollTop, 240, 24)).toBe(expected)
+  })
 })
