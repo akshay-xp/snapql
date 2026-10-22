@@ -3,6 +3,7 @@ import { graphql } from "./graphql"
 import { json } from "./json"
 import { multipart } from "./multipart"
 import type { Decoder } from "./types"
+import { soap, xml } from "./xml"
 
 // Most specific first; json is the catch-all and stays last.
-export const decoders: Decoder[] = [graphql, multipart, form, json]
+export const decoders: Decoder[] = [graphql, soap, xml, multipart, form, json]

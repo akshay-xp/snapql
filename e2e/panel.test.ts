@@ -321,6 +321,7 @@ test("M3 decoders summarize their requests", async () => {
           "GET 200 json /api/users/1",
           "POST 200 form 2 fields",
           "POST 200 multipart 1 field, 1 file",
+          "POST 200 soap GetPrice",
         ]),
       )
 
@@ -333,6 +334,11 @@ test("M3 decoders summarize their requests", async () => {
     const upload = await panel.detail()
     expect(upload).toContain("a = 1")
     expect(upload).toContain("f = f.txt (text/plain, ")
+
+    await panel.select("POST 200 soap GetPrice")
+    expect(await panel.detail()).toContain("<m:Item>Apples</m:Item>")
+    await panel.openTab("Body")
+    await expect.poll(panel.detail).toContain("\n  <soap:Body>")
   } finally {
     await panel.close()
   }
