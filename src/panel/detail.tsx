@@ -9,8 +9,9 @@ import {
 import type { Entry, NameValue } from "../capture/entry"
 import { loadBody } from "./body"
 import { dataSections } from "./summary"
+import { timingRows } from "./timing"
 
-const tabs = ["Summary", "Body", "Headers", "Params/Cookies"] as const
+const tabs = ["Summary", "Body", "Headers", "Params/Cookies", "Timing"] as const
 type Tab = (typeof tabs)[number]
 
 export function Detail(props: { entry: Entry }) {
@@ -83,9 +84,37 @@ export function Detail(props: { entry: Entry }) {
               separator=" = "
             />
           </Match>
+          <Match when={active() === "Timing"}>
+            <TimingPanel entry={props.entry} />
+          </Match>
         </Switch>
       </div>
     </section>
+  )
+}
+
+function TimingPanel(props: { entry: Entry }) {
+  const ms = (n: number) => `${Math.round(n * 10) / 10} ms`
+  return (
+    <>
+      <p class="mb-2">Total {ms(props.entry.time)}</p>
+      <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-0.5">
+        <For each={timingRows(props.entry.exchange.timings)}>
+          {(row) => (
+            <>
+              <span class="text-muted">{row.phase}</span>
+              <span class="text-right">
+                {row.ms === undefined ? "-" : ms(row.ms)}
+              </span>
+              <div
+                class="h-2 bg-selected"
+                style={{ width: `${row.fraction * 100}%` }}
+              />
+            </>
+          )}
+        </For>
+      </div>
+    </>
   )
 }
 

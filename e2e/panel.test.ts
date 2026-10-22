@@ -202,3 +202,19 @@ test("Headers and Params/Cookies tabs list name/value pairs", async () => {
     await panel.close()
   }
 })
+
+test("Timing tab lists HAR phases", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const post = "POST 200 graphql query GetUser"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([post]))
+
+    await panel.select(post)
+    await panel.openTab("Timing")
+
+    expect(await panel.detail()).toMatch(/wait\s+[\d.]+ ms/)
+  } finally {
+    await panel.close()
+  }
+})
