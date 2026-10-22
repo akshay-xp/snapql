@@ -51,3 +51,19 @@ test("decoded requests show their kind and summary", async () => {
     await panel.close()
   }
 })
+
+test("requests made before the panel opened are backfilled", async () => {
+  const panel = await openPanel({ visitFirst: true })
+  try {
+    await expect
+      .poll(panel.rows)
+      .toEqual(
+        expect.arrayContaining([
+          `GET 200 ${panel.origin}/api/one`,
+          `POST 201 ${panel.origin}/api/two`,
+        ]),
+      )
+  } finally {
+    await panel.close()
+  }
+})
