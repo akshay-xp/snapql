@@ -21,14 +21,18 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## Detail (`src/panel/detail.tsx`, `src/panel/summary.ts`)
 
-- `role="tablist"` from the `tabs` list (Summary, Body; more in #16), each `aria-selected`/`aria-controls`; one `role="tabpanel"` for the active tab. Click switches.
+- Tabs, in order: Summary, Body, Headers, Params/Cookies, Timing, Raw. `role="tablist"`, each tab `aria-selected`/`aria-controls`, id `tab-<slug>` (`Params/Cookies` becomes `params-cookies`); one `role="tabpanel"` for the active tab.
+- Click switches. ←/→ on the tablist move via `nextTab(key, current, count)` (pure, wraps at both ends, per the WAI-ARIA tabs pattern) and focus the new tab. Only the active tab is in the Tab order (`tabIndex` 0, others -1), so Tab moves list, then active tab, then panel content.
+- Headers: request then response headers, `name: value`. Params/Cookies: query params, request cookies, response cookies, `name = value`; empty sections say "None". Both use `Pairs`.
+- Timing: total time, then `timingRows(timings)` (pure): one row per HAR phase in order, `ms` or `-` when n/a, a bar sized by `fraction` = ms / sum of measured phases (0 when nothing measured).
+- Raw: `rawRequest(entry)` (`METHOD path?query VERSION`, headers, blank line, body) and `rawResponse(entry, body)` (`VERSION STATUS TEXT`, headers, blank line, body); version falls back to `HTTP/1.1`.
 - Active tab is a signal in `Detail`; it survives selection changes because the `Show` around `Detail` is not keyed.
 - Summary: `<dl>` of Method, URL, Status, Kind, Summary, Started (ISO), Time (ms, rounded); Kind/Summary only when decoded.
 - `dataSections(decoded.data)`: plain-object fields become labelled `<pre>` blocks, strings as-is (e.g. GraphQL query text), others pretty JSON (variables). Non-object data is one `data` block; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
 
 ## Body (`src/panel/body.ts`)
 
-- `BodyPanel` renders only while Body is active and runs `createResource(entry, loadBody)`, so bodies load on demand. `loadBody` is the panel's only `getBody()` caller (`grep -rn getBody src/panel` hits only `body.ts` and its test); `getBody` itself memoizes, so revisiting the tab does not refetch.
+- `LoadedBody` (used by Body and Raw) mounts only while its tab is active and runs `createResource(entry, loadBody)`, so bodies load on demand. Body uses `pretty: true`; Raw uses `formatBody`'s `{ pretty: false }` (truncation and base64 note still apply). The fetcher is wrapped because `createResource` passes its own info object as a second argument. `loadBody` is the panel's only `getBody()` caller (`grep -rn getBody src/panel` hits only `body.ts` and its test); `getBody` itself memoizes, so revisiting the tab does not refetch.
 - `formatBody(body)`: `{ text, notes }`.
   - Over `BODY_LIMIT` (1024 * 1024 characters): first `BODY_LIMIT` chars, note `Truncated: showing 1 MB of <n> characters`, never parsed.
   - `base64`: note `base64-encoded, <n> bytes` (decoded size) plus raw base64; never parsed.
@@ -46,13 +50,13 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## E2E harness (`e2e/harness.ts`)
 
-- `rows()` reads `[role="option"]` text. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `detail()` (tabpanel text or `null`).
+- `rows()` reads `[role="option"]` text. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`).
 - `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`.
 
 ## Key files
 
 - `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`
-- `src/panel/keys.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/themes.ts` (+ `.test.ts`)
+- `src/panel/keys.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
 - `src/panel/index.css`
 - `e2e/harness.ts`, `e2e/panel.test.ts`
 
