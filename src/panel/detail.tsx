@@ -11,6 +11,7 @@ import { decoders } from "../decoders"
 import { decoderFor } from "../decoders/registry"
 import type { DecodedResponse } from "../decoders/types"
 import { loadBody } from "./body"
+import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
 import { rawRequest, rawResponse } from "./raw"
 import { Splitter } from "./splitter.tsx"
@@ -352,11 +353,13 @@ function Sections(props: { data: unknown }) {
         ) : (
           <section class="mt-3">
             <h2 class="text-muted">{section.name}</h2>
-            <pre class="font-mono whitespace-pre-wrap break-all">
-              {"text" in section
-                ? section.text
-                : JSON.stringify(section.json, null, 2)}
-            </pre>
+            {"text" in section ? (
+              <pre class="font-mono whitespace-pre-wrap break-all">
+                {section.text}
+              </pre>
+            ) : (
+              <JsonTree value={section.json} />
+            )}
           </section>
         )
       }
