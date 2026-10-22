@@ -124,6 +124,7 @@ export type Panel = {
   clearSearch(): Promise<void>
   clickButton(text: string): Promise<void>
   click(selector: string): Promise<void>
+  pairs(): Promise<string>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
@@ -297,6 +298,10 @@ export async function openPanel(
     clearSearch: () =>
       panelFrame.evaluate<void>(
         `document.querySelector('button[aria-label="Clear filter"]').click()`,
+      ),
+    pairs: () =>
+      panelFrame.evaluate<string>(
+        `[...document.querySelectorAll('[role="tabpanel"] dt')].map((dt) => dt.textContent + " = " + dt.nextElementSibling.querySelector("[data-value]").textContent).join("\\n")`,
       ),
     click: (selector: string) =>
       panelFrame.evaluate<void>(

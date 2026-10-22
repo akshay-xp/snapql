@@ -357,7 +357,7 @@ test("UI text is sans and code is monospace", async () => {
       "monospace",
     )
     await panel.openTab("Headers")
-    expect(await panel.style('[role="tabpanel"] li', "font-family")).toContain(
+    expect(await panel.style('[role="tabpanel"] dd', "font-family")).toContain(
       "monospace",
     )
   } finally {
@@ -416,11 +416,11 @@ test("Headers and Params/Cookies tabs list name/value pairs", async () => {
 
     await panel.select(post)
     await panel.openTab("Headers")
-    expect(await panel.detail()).toMatch(/content-type: application\/json/i)
+    expect(await panel.pairs()).toMatch(/content-type = application\/json/i)
 
     await panel.select(apq)
     await panel.openTab("Params/Cookies")
-    expect(await panel.detail()).toContain("operationName = GetUser")
+    expect(await panel.pairs()).toContain("operationName = GetUser")
   } finally {
     await panel.close()
   }
@@ -566,29 +566,29 @@ test("M3 decoders summarize their requests", async () => {
     ).toBe("rgb(242, 184, 181)")
 
     await panel.select("/api/form 2 fields form")
-    const detail = await panel.detail()
-    expect(detail).toContain("a = 1")
-    expect(detail).toContain("b = x y")
+    const form = await panel.pairs()
+    expect(form).toContain("a = 1")
+    expect(form).toContain("b = x y")
 
     await panel.select("/api/upload 1 field, 1 file multipart")
-    const upload = await panel.detail()
+    const upload = await panel.pairs()
     expect(upload).toContain("a = 1")
     expect(upload).toContain("f = f.txt (text/plain, ")
 
     await panel.select("A, B 2 ops graphql")
-    expect(await panel.detail()).toContain("query A = query A { a }")
+    expect(await panel.pairs()).toContain("query A = query A { a }")
 
     await panel.select("Upload mutation graphql")
-    expect(await panel.detail()).toContain("0 = a.txt (text/plain, ")
+    expect(await panel.pairs()).toContain("0 = a.txt (text/plain, ")
 
     await panel.select("Broken query graphql")
-    for (const text of [
-      "Response",
-      "2 errors",
-      "user.posts.0 = boom",
-      "(root) = bad",
-    ])
+    for (const text of ["Response", "2 errors"])
       await expect.poll(panel.detail).toContain(text)
+    for (const pair of ["user.posts.0 = boom", "(root) = bad"])
+      await expect.poll(panel.pairs).toContain(pair)
+    expect(
+      await panel.style('[data-section="errors"] [data-value]', "color"),
+    ).toBe("rgb(242, 184, 181)")
 
     await panel.select("Deferred query graphql")
     for (const text of ["no errors", 'id: "1"', 'name: "Ada"', "parts"])
@@ -605,13 +605,12 @@ test("M3 decoders summarize their requests", async () => {
     ])
       expect(me).toContain(text)
     await panel.openTab("Params/Cookies")
-    const cookies = await panel.detail()
-    expect(cookies).toContain("greeting = hello%20world")
-    expect(cookies).toContain("\nhello world")
+    expect(await panel.pairs()).toContain("greeting = hello%20world")
+    expect(await panel.detail()).toContain("\nhello world")
     await panel.openTab("Summary")
 
     await panel.select("user.byId, post.list 2 procedures trpc")
-    const batch = await panel.detail()
+    const batch = await panel.pairs()
     expect(batch).toContain('user.byId = {"id":1}')
     expect(batch).toContain("post.list = {}")
 

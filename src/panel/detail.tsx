@@ -103,13 +103,11 @@ export function Detail(props: {
             <Pairs
               title="Request headers"
               pairs={props.entry.exchange.requestHeaders}
-              separator=": "
               decode
             />
             <Pairs
               title="Response headers"
               pairs={props.entry.exchange.responseHeaders}
-              separator=": "
               decode
             />
           </Match>
@@ -117,19 +115,16 @@ export function Detail(props: {
             <Pairs
               title="Query params"
               pairs={props.entry.exchange.queryString}
-              separator=" = "
               decode
             />
             <Pairs
               title="Request cookies"
               pairs={props.entry.exchange.requestCookies}
-              separator=" = "
               decode
             />
             <Pairs
               title="Response cookies"
               pairs={props.entry.exchange.responseCookies}
-              separator=" = "
               decode
             />
           </Match>
@@ -185,36 +180,39 @@ function TimingPanel(props: { entry: Entry }) {
   )
 }
 
-function Pairs(props: {
-  title: string
-  pairs: NameValue[]
-  separator: string
-  decode?: boolean
-}) {
+function Pairs(props: { title: string; pairs: NameValue[]; decode?: boolean }) {
   return (
-    <section class="mb-3">
-      <h2 class="text-muted">{props.title}</h2>
+    <Section title={props.title}>
       <Show when={props.pairs.length} fallback={<p class="text-muted">None</p>}>
-        <ul class="font-mono">
+        <dl
+          data-section={props.title}
+          class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-0.5 font-mono"
+        >
           <For each={props.pairs}>
             {(pair) => (
-              <li class="break-all">
-                {pair.name}
-                {props.separator}
-                {pair.value}
-                <Show when={props.decode && decodeValue(pair.value)}>
-                  {(decoded) => (
-                    <div class="whitespace-pre-wrap text-muted">
-                      {decoded()}
-                    </div>
-                  )}
-                </Show>
-              </li>
+              <>
+                <dt class="text-syntax-key">{pair.name}</dt>
+                <dd class="break-all">
+                  <span
+                    data-value
+                    classList={{ "text-error": props.title === "errors" }}
+                  >
+                    {pair.value}
+                  </span>
+                  <Show when={props.decode && decodeValue(pair.value)}>
+                    {(decoded) => (
+                      <div class="whitespace-pre-wrap text-muted">
+                        {decoded()}
+                      </div>
+                    )}
+                  </Show>
+                </dd>
+              </>
             )}
           </For>
-        </ul>
+        </dl>
       </Show>
-    </section>
+    </Section>
   )
 }
 
@@ -395,9 +393,7 @@ function Sections(props: { data: unknown }) {
     <For each={dataSections(props.data)}>
       {(section) =>
         "rows" in section ? (
-          <div class="mt-3">
-            <Pairs title={section.name} pairs={section.rows} separator=" = " />
-          </div>
+          <Pairs title={section.name} pairs={section.rows} />
         ) : (
           <Section title={section.name}>
             {"text" in section ? (
