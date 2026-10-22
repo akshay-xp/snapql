@@ -37,7 +37,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - Raw: `rawRequest(entry)` (`METHOD path?query VERSION`, headers, blank line, body) and `rawResponse(entry, body)` (`VERSION STATUS TEXT`, headers, blank line, body); version falls back to `HTTP/1.1`.
 - Active tab is a signal in `Detail`; it survives selection changes because the `Show` around `Detail` is not keyed.
 - Summary: `<dl>` of Method, URL, Status, Kind, Summary, Started (ISO), Time (ms, rounded); Kind/Summary only when decoded.
-- `dataSections(decoded.data)`: plain-object fields become labelled `<pre>` blocks, strings as-is (e.g. GraphQL query text), others pretty JSON (variables). Non-object data is one `data` block; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
+- `dataSections(decoded.data)`: a field holding a non-empty array of `{ name: string, value: string }` becomes a rows section, rendered with `Pairs` as `name = value` (decoders use this for form fields, parts, calls). Other plain-object fields become labelled `<pre>` blocks, strings as-is (e.g. GraphQL query text), others pretty JSON (variables). Non-object data is one `data` block; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
 
 ## Body (`src/panel/body.ts`)
 
