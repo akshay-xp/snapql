@@ -73,12 +73,13 @@ No capture, store, or UI change.
 ## GraphQL (`src/decoders/graphql.ts`)
 
 - Kind `graphql`. Input: JSON request body, or `query`/`operationName` URL params when there is no body.
-- Matches a plain object with a string `query`, or an APQ request (below). Non-JSON bodies and batched arrays don't match (batching is M3).
+- Matches a plain object with a string `query`, or an APQ request (below), or a batch of them. Non-JSON bodies don't match.
 - Summary `<type> <name>`: `query GetUser`, `mutation AddTodo`, `subscription OnTick`. Anonymous: `<type>`. Shorthand `{ ... }`: `query`.
 - APQ (Automatic Persisted Queries): no `query` text but a string `extensions.persistedQuery.sha256Hash`, in the POST body or a JSON-encoded `extensions` GET param. Summary `persisted <operationName>`, or `persisted <first 8 hash chars>` without a name. When query text is present it takes precedence. An unparseable `extensions` param means no match.
 - Multiple operations: the one named by `operationName`, else the first. `fragment` definitions are skipped.
 - Hand-written tokenizer (no `graphql` dep): tracks brace depth; strings, block strings, and `#` comments are skipped so their contents never count.
 - `data` is the parsed body (or the URL params object).
+- Batch: non-empty array body where every item is an operation or APQ (one bad item means no match). Summary `<n> operations: <op>, <op>` (`1 operation: ...`), each op summarized as above. `data`: `{ operations: NameValue[] }`, name = op summary, value = query text (APQ: the hash); plus `variables: NameValue[]` for ops that have variables (value = JSON), omitted when none do.
 
 ## Key files
 
