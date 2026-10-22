@@ -21,9 +21,20 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## Detail (`src/panel/detail.tsx`, `src/panel/summary.ts`)
 
-- `role="tablist"` with one tab, Summary (`aria-selected`, `aria-controls`), and its `role="tabpanel"`. More tabs arrive in #15/#16.
+- `role="tablist"` from the `tabs` list (Summary, Body; more in #16), each `aria-selected`/`aria-controls`; one `role="tabpanel"` for the active tab. Click switches.
+- Active tab is a signal in `Detail`; it survives selection changes because the `Show` around `Detail` is not keyed.
 - Summary: `<dl>` of Method, URL, Status, Kind, Summary, Started (ISO), Time (ms, rounded); Kind/Summary only when decoded.
 - `dataSections(decoded.data)`: plain-object fields become labelled `<pre>` blocks, strings as-is (e.g. GraphQL query text), others pretty JSON (variables). Non-object data is one `data` block; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
+
+## Body (`src/panel/body.ts`)
+
+- `BodyPanel` renders only while Body is active and runs `createResource(entry, loadBody)`, so bodies load on demand. `loadBody` is the panel's only `getBody()` caller (`grep -rn getBody src/panel` hits only `body.ts` and its test); `getBody` itself memoizes, so revisiting the tab does not refetch.
+- `formatBody(body)`: `{ text, notes }`.
+  - Over `BODY_LIMIT` (1024 * 1024 characters): first `BODY_LIMIT` chars, note `Truncated: showing 1 MB of <n> characters`, never parsed.
+  - `base64`: note `base64-encoded, <n> bytes` (decoded size) plus raw base64; never parsed.
+  - Otherwise: pretty JSON if it parses, else text as-is. Detection is by parse only: a JSON mime type adds nothing (unparseable JSON shows as text either way), so `formatBody` takes no mime type.
+- Failed fetch: `{ text: "", notes: ["Body unavailable: <message>"] }`.
+- Chrome reports bodies of responses without a text-like `content-type` as base64; the e2e server sends `application/json` for `/graphql`.
 
 ## Themes (`src/panel/themes.ts`, `src/panel/index.css`, `src/panel/main.tsx`)
 
@@ -35,13 +46,13 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## E2E harness (`e2e/harness.ts`)
 
-- `rows()` reads `[role="option"]` text. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `detail()` (tabpanel text or `null`).
+- `rows()` reads `[role="option"]` text. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `detail()` (tabpanel text or `null`).
 - `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`.
 
 ## Key files
 
 - `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`
-- `src/panel/keys.ts`, `src/panel/summary.ts`, `src/panel/themes.ts` (+ `.test.ts`)
+- `src/panel/keys.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/themes.ts` (+ `.test.ts`)
 - `src/panel/index.css`
 - `e2e/harness.ts`, `e2e/panel.test.ts`
 

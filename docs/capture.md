@@ -4,8 +4,8 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 ## Types (`src/capture/entry.ts`)
 
-- `FinishedRequest`: input from the browser adapter. `RequestView` (`method`, `url`, `status`, `requestBody?`) plus `startedDateTime` (ISO string), `time` (ms), `fetchBody()`.
-- `Entry`: what the store holds. `id`, `method`, `url`, `status`, `startedAt` (epoch ms), `time`, `decoded?` (`DecodeResult`), `getBody()`.
+- `FinishedRequest`: input from the browser adapter. `RequestView` (`method`, `url`, `status`, `requestBody?`) plus `mimeType` (response `content.mimeType`, `""` if absent), `startedDateTime` (ISO string), `time` (ms), `fetchBody()`.
+- `Entry`: what the store holds. `id`, `method`, `url`, `status`, `startedAt` (epoch ms), `time`, `mimeType`, `decoded?` (`DecodeResult`), `getBody()`.
 - `Body`: `{ content, encoding }`; `encoding` is `""` or `"base64"`, as reported by the browser.
 - `toEntry(req, id, decoded?)`: maps one to the other. Capture owns `FinishedRequest` so this module never references `chrome.*`, not even in types.
 
