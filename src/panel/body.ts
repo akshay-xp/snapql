@@ -56,7 +56,7 @@ function prettyJson(text: string): string | undefined {
 }
 
 const isTextMime = (mimeType: string) =>
-  /^text\/|[/+]json$|xml|javascript/.test(baseMime(mimeType))
+  /^text\/|^multipart\/mixed$|[/+]json$|xml|javascript/.test(baseMime(mimeType))
 
 function decodeBase64(content: string): string {
   return new TextDecoder().decode(
