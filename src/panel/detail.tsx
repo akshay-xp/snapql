@@ -62,7 +62,10 @@ export function Detail(props: { entry: Entry }) {
 
 // Rendered only while the Body tab is active, so the body loads on demand.
 function BodyPanel(props: { entry: Entry }) {
-  const [body] = createResource(() => props.entry, loadBody)
+  const [body] = createResource(
+    () => props.entry,
+    (entry) => loadBody(entry),
+  )
   return (
     <Show when={body()}>
       {(b) => (
