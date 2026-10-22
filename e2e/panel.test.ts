@@ -326,6 +326,7 @@ test("M3 decoders summarize their requests", async () => {
           "GET 200 trpc user.byId, post.list",
           "POST 200 graphql 2 operations: query A, query B",
           "POST 200 graphql mutation Upload",
+          "POST 200 graphql query Broken",
         ]),
       )
 
@@ -344,6 +345,15 @@ test("M3 decoders summarize their requests", async () => {
 
     await panel.select("POST 200 graphql mutation Upload")
     expect(await panel.detail()).toContain("0 = a.txt (text/plain, ")
+
+    await panel.select("POST 200 graphql query Broken")
+    for (const text of [
+      "Response",
+      "2 errors",
+      "user.posts.0 = boom",
+      "(root) = bad",
+    ])
+      await expect.poll(panel.detail).toContain(text)
 
     await panel.select("GET 200 trpc user.byId, post.list")
     const batch = await panel.detail()

@@ -29,6 +29,11 @@ const decodersPage = `<!doctype html>
   gqlUpload.append("map", '{"0":["variables.file"]}')
   gqlUpload.append("0", new Blob(["hi"], { type: "text/plain" }), "a.txt")
   fetch("/graphql", { method: "POST", body: gqlUpload })
+  fetch("/api/gql-errors", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: '{"query":"query Broken { user { posts { id } } }"}',
+  })
   fetch("/api/trpc/user.byId,post.list?batch=1&input=" + encodeURIComponent('{"0":{"id":1},"1":{}}'))
   fetch("/api/rpc", {
     method: "POST",
@@ -274,6 +279,12 @@ function startServer(): Promise<Server> {
         .end('{"id":1}')
     if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
     if (req.url === "/api/upload") return res.writeHead(200).end("ok")
+    if (req.url === "/api/gql-errors")
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end(
+          '{"data":{"user":null},"errors":[{"message":"boom","path":["user","posts",0]},{"message":"bad"}]}',
+        )
     if (req.url?.startsWith("/api/trpc/"))
       return res
         .writeHead(200, { "content-type": "application/json" })
