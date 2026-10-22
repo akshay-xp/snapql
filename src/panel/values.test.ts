@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { decodeJwt } from "./values"
+import { decodeJwt, findTokens } from "./values"
 
 const b64url = (text: string) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(text)))
@@ -48,5 +48,42 @@ describe("decodeJwt", () => {
       jwt(header, [1]),
     ])
       expect(decodeJwt(value)).toBeUndefined()
+  })
+})
+
+describe("findTokens", () => {
+  const token = jwt(header, { sub: "42" })
+  const decoded = decodeJwt(token)
+  const pair = (name: string, value: string) => ({ name, value })
+
+  it("finds JWTs in the Authorization header, cookies and query", () => {
+    expect(
+      findTokens({
+        requestHeaders: [
+          pair("Authorization", "Basic abc"),
+          pair("authorization", `Bearer ${token}`),
+          pair("x-token", token),
+        ],
+        requestCookies: [pair("theme", "dark"), pair("session", token)],
+        responseCookies: [pair("refresh", token)],
+        queryString: [pair("token", token)],
+      }),
+    ).toEqual([
+      { source: "Authorization header", jwt: decoded },
+      { source: "cookie session", jwt: decoded },
+      { source: "set-cookie refresh", jwt: decoded },
+      { source: "query token", jwt: decoded },
+    ])
+  })
+
+  it("finds nothing in an exchange without JWTs", () => {
+    expect(
+      findTokens({
+        requestHeaders: [],
+        requestCookies: [],
+        responseCookies: [],
+        queryString: [],
+      }),
+    ).toEqual([])
   })
 })
