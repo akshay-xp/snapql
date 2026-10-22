@@ -16,12 +16,13 @@ export const jsonrpc: Decoder = {
     const data = req.requestBody && parseJson(req.requestBody.text)
     if (isCall(data))
       return {
-        summary: data.method,
+        title: data.method,
         data: { method: data.method, params: data.params },
       }
     if (!Array.isArray(data) || !data.length || !data.every(isCall)) return
     return {
-      summary: count(data.length, "call"),
+      title: data.map((c) => c.method).join(", "),
+      detail: count(data.length, "call"),
       data: {
         calls: data.map((c) => ({
           name: c.method,
