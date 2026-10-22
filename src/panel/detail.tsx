@@ -346,7 +346,6 @@ function ResponseGroup(props: {
 
 function Tokens(props: { entry: Entry }) {
   const tokens = () => findTokens(props.entry.exchange)
-  const json = (value: unknown) => JSON.stringify(value, null, 2)
   return (
     <Show when={tokens().length}>
       <section class="mt-3">
@@ -359,13 +358,9 @@ function Tokens(props: { entry: Entry }) {
                 {(expires) => <p class="text-muted">expires {expires()}</p>}
               </Show>
               <h3 class="text-muted">header</h3>
-              <pre class="font-mono whitespace-pre-wrap break-all">
-                {json(token.jwt.header)}
-              </pre>
+              <JsonTree value={token.jwt.header} />
               <h3 class="text-muted">payload</h3>
-              <pre class="font-mono whitespace-pre-wrap break-all">
-                {json(token.jwt.payload)}
-              </pre>
+              <JsonTree value={token.jwt.payload} />
             </div>
           )}
         </For>

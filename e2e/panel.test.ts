@@ -577,8 +577,8 @@ test("M3 decoders summarize their requests", async () => {
       "Tokens",
       "Authorization header · unverified",
       "expires 2033-05-18T03:33:20.000Z",
-      '"sub": "42"',
-      '"alg": "HS256"',
+      'sub: "42"',
+      'alg: "HS256"',
     ])
       expect(me).toContain(text)
     await panel.openTab("Params/Cookies")
