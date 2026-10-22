@@ -16,5 +16,5 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "scripts", "*.config.ts"]
+  "include": ["src", "scripts", "e2e", "*.config.ts"]
 }
