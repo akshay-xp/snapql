@@ -19,6 +19,7 @@ DevTools extension that makes network traffic human readable. v0.2.0 (live on th
 3. Response bodies load only on demand.
 4. The entry store is capped; oldest entries evicted first.
 5. No runtime dependencies beyond Solid without explicit justification.
+6. Decoders read only the request side and run once per entry, at capture.
 
 ## Roadmap
 
@@ -28,3 +29,4 @@ GitHub milestones M0 (foundation) to M7 (1.0 release).
 
 - `docs/build.md`: scripts, manifests, per-browser output.
 - `docs/capture.md`: entry model, capped store, lazy bodies.
+- `docs/decoders.md`: decoder contract, registry, GraphQL rules.
