@@ -32,7 +32,7 @@
 ## E2E
 
 - Chromium only. Firefox e2e deferred (not automatable).
-- `e2e/harness.ts` exposes one function, `openPanel()`, returning `{ page, origin, rows(), clear(), togglePreserveLog(), close() }`.
+- `e2e/harness.ts` exposes one function, `openPanel()`, returning `{ page, origin, rows(), clear(), togglePreserveLog(), close() }` plus selection, detail and theme helpers (see `docs/panel.md`).
 - How it works:
   - `node:http` test server on port 0: `/` is a page that fetches `GET /api/one` then `POST /api/two` (200, 201).
   - Playwright `launchPersistentContext` (`channel: "chromium"`, headless) loads `dist/chrome` with `--auto-open-devtools-for-tabs` and `--remote-debugging-port=0`.
