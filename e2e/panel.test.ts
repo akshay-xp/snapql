@@ -349,15 +349,15 @@ test("selected rows keep full-contrast text and tags align", async () => {
     expect(await part("nth-child(2)")).toBe(await part("nth-child(1)"))
     const tag = () =>
       panel.style('[aria-selected="true"] > span:last-child', "width")
-    expect(await tag()).toBe("64px")
+    const graphqlTag = await tag()
     await panel.select("/api/one GET")
-    expect(await tag()).toBe("64px")
+    expect(await tag()).toBe(graphqlTag)
   } finally {
     await panel.close()
   }
 })
 
-test("UI text is sans and code is monospace", async () => {
+test("labels are sans and request data is monospace", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
@@ -365,18 +365,29 @@ test("UI text is sans and code is monospace", async () => {
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
     await panel.select(row)
 
-    expect(await panel.style("main", "font-family")).not.toContain("monospace")
+    const mono = async (selector: string) =>
+      (await panel.style(selector, "font-family")).includes("monospace")
     expect(await panel.style("main", "font-size")).toBe("12px")
-    expect(await panel.style('[role="tab"]', "font-family")).not.toContain(
-      "monospace",
-    )
-    expect(await panel.style('[role="tabpanel"] pre', "font-family")).toContain(
-      "monospace",
-    )
+    for (const label of [
+      "main",
+      '[role="tab"]',
+      '[role="tabpanel"] section h2',
+      "footer span",
+      'input[aria-label="Filter requests"]',
+    ])
+      expect(await mono(label), label).toBe(false)
+    for (const data of [
+      '[role="option"]',
+      '[role="tabpanel"] header',
+      '[role="tabpanel"] pre',
+    ])
+      expect(await mono(data), data).toBe(true)
+
     await panel.openTab("Headers")
-    expect(await panel.style('[role="tabpanel"] dd', "font-family")).toContain(
-      "monospace",
-    )
+    expect(await mono('[role="tabpanel"] dd')).toBe(true)
+    await panel.openTab("Timing")
+    expect(await mono('[role="tabpanel"] [data-ms]')).toBe(true)
+    expect(await mono('[role="tabpanel"] [data-phase]')).toBe(false)
   } finally {
     await panel.close()
   }
@@ -664,6 +675,11 @@ test("M3 decoders summarize their requests", async () => {
           "/api/missing GET 404",
         ]),
       )
+
+    // Kind tags fit their text, including the longest kind, "multipart".
+    expect(
+      await panel.overflowing('[role="option"] > span:last-child'),
+    ).toEqual([])
 
     await panel.select("/api/missing GET 404")
     expect(await panel.text('[role="tabpanel"] header')).toContain(
