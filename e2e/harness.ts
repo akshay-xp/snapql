@@ -19,6 +19,11 @@ const decodersPage = `<!doctype html>
   upload.append("a", "1")
   upload.append("f", new Blob(["hi"], { type: "text/plain" }), "f.txt")
   fetch("/api/upload", { method: "POST", body: upload })
+  fetch("/api/soap", {
+    method: "POST",
+    headers: { "content-type": "text/xml; charset=utf-8" },
+    body: '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Header><a:Auth/></soap:Header><soap:Body><m:GetPrice><m:Item>Apples</m:Item></m:GetPrice></soap:Body></soap:Envelope>',
+  })
 </script>`
 
 // No favicon request, so the last row is the last item.
@@ -253,6 +258,12 @@ function startServer(): Promise<Server> {
         .end('{"id":1}')
     if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
     if (req.url === "/api/upload") return res.writeHead(200).end("ok")
+    if (req.url === "/api/soap")
+      return res
+        .writeHead(200, { "content-type": "text/xml" })
+        .end(
+          '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><m:GetPriceResponse><m:Price>1.90</m:Price></m:GetPriceResponse></soap:Body></soap:Envelope>',
+        )
     if (req.url === "/decoders")
       return res
         .writeHead(200, { "content-type": "text/html" })
