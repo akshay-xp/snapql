@@ -51,6 +51,7 @@ export type Panel = {
   origin: string
   rows(): Promise<string[]>
   optionCount(): Promise<number>
+  selectedVisible(): Promise<boolean>
   press(key: string): Promise<void>
   select(row: string): Promise<void>
   selectedRow(): Promise<string | undefined>
@@ -151,6 +152,12 @@ export async function openPanel(
       panelFrame.evaluate<number>(
         `document.querySelectorAll('[role="option"]').length`,
       ),
+    selectedVisible: () =>
+      panelFrame.evaluate<boolean>(`(() => {
+        const list = document.querySelector('[role="listbox"]').getBoundingClientRect()
+        const row = document.querySelector('[role="option"][aria-selected="true"]')?.getBoundingClientRect()
+        return !!row && row.top >= list.top && row.bottom <= list.bottom
+      })()`),
     press: (key: string) =>
       panelFrame.evaluate<void>(`(() => {
         const list = document.querySelector('[role="listbox"]')
