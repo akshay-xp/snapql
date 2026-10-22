@@ -40,6 +40,8 @@ export type Panel = {
   press(key: string): Promise<void>
   select(row: string): Promise<void>
   selectedRow(): Promise<string | undefined>
+  activeTab(): Promise<string | undefined>
+  detail(): Promise<string | null>
   themeKind(): Promise<string | undefined>
   devtoolsTheme(): Promise<"light" | "dark">
   cssVar(name: string): Promise<string>
@@ -138,6 +140,14 @@ export async function openPanel(
     select: (row: string) =>
       panelFrame.evaluate<void>(
         `[...document.querySelectorAll('[role="option"]')].find((o) => (${rowText})(o) === ${JSON.stringify(row)}).click()`,
+      ),
+    activeTab: () =>
+      panelFrame.evaluate<string | undefined>(
+        `document.querySelector('[role="tab"][aria-selected="true"]')?.textContent.trim()`,
+      ),
+    detail: () =>
+      panelFrame.evaluate<string | null>(
+        `document.querySelector('[role="tabpanel"]')?.innerText ?? null`,
       ),
     selectedRow: () =>
       panelFrame.evaluate<string | undefined>(`(() => {

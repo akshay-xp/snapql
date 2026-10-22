@@ -8,6 +8,7 @@ export function List(props: {
   onSelect: (id: number | undefined) => void
 }) {
   const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") return props.onSelect(undefined)
     const current = props.entries.findIndex((x) => x.id === props.selectedId)
     const next = nextIndex(
       e.key,

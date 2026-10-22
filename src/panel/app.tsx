@@ -1,5 +1,12 @@
-import { type Accessor, createSignal, onCleanup } from "solid-js"
+import {
+  type Accessor,
+  createEffect,
+  createSignal,
+  onCleanup,
+  Show,
+} from "solid-js"
 import type { Store } from "../capture/store"
+import { Detail } from "./detail"
 import { List } from "./list"
 
 export function App(props: {
@@ -10,6 +17,11 @@ export function App(props: {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
   const [selectedId, setSelectedId] = createSignal<number>()
+  const selected = () => entries().find((e) => e.id === selectedId())
+  // Clear, eviction or navigation can remove the selected entry; close with it.
+  createEffect(() => {
+    if (selectedId() !== undefined && !selected()) setSelectedId(undefined)
+  })
 
   return (
     <main class="flex h-dvh flex-col font-mono text-xs">
@@ -31,11 +43,14 @@ export function App(props: {
           Clear
         </button>
       </header>
-      <List
-        entries={entries()}
-        selectedId={selectedId()}
-        onSelect={setSelectedId}
-      />
+      <div class="flex min-h-0 flex-1">
+        <List
+          entries={entries()}
+          selectedId={selectedId()}
+          onSelect={setSelectedId}
+        />
+        <Show when={selected()}>{(entry) => <Detail entry={entry()} />}</Show>
+      </div>
     </main>
   )
 }

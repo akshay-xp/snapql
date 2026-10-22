@@ -124,3 +124,26 @@ test("rows select from the keyboard or by click", async () => {
     await panel.close()
   }
 })
+
+test("selecting opens the detail pane; Esc and Clear close it", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([`POST 201 ${panel.origin}/api/two`]))
+
+    await panel.press("ArrowDown")
+    expect(await panel.activeTab()).toBe("Summary")
+    expect(await panel.detail()).not.toBeNull()
+
+    await panel.press("Escape")
+    expect(await panel.detail()).toBeNull()
+
+    await panel.press("ArrowDown")
+    await panel.clear()
+    await expect.poll(panel.detail).toBeNull()
+  } finally {
+    await panel.close()
+  }
+})
