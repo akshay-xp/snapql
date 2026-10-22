@@ -107,6 +107,15 @@ test("the search box filters rows and highlights matches", async () => {
       .poll(panel.rows)
       .toEqual(expect.arrayContaining(["/api/one GET"]))
     expect(await panel.text("footer")).toMatch(/^\d+ requests$/)
+
+    await panel.search("zzz")
+    await expect.poll(panel.rows).toEqual([])
+    expect(await panel.text("main")).toContain('No requests match "zzz"')
+    expect(await panel.text("main")).not.toContain("Waiting for requests")
+    await panel.clickButton("Clear filter")
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/one GET"]))
   } finally {
     await panel.close()
   }

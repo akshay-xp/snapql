@@ -2,6 +2,7 @@ import {
   type Accessor,
   createEffect,
   createSignal,
+  type JSX,
   onCleanup,
   Show,
 } from "solid-js"
@@ -42,12 +43,19 @@ export function App(props: {
         <section class="flex min-w-0 flex-1 flex-col">
           <SearchBox query={query()} onQuery={setQuery} />
           <Show when={entries().length} fallback={<Waiting />}>
-            <List
-              entries={visible()}
-              query={query()}
-              selectedId={selectedId()}
-              onSelect={setSelectedId}
-            />
+            <Show
+              when={visible().length}
+              fallback={
+                <NoMatches query={query()} onClear={() => setQuery("")} />
+              }
+            >
+              <List
+                entries={visible()}
+                query={query()}
+                selectedId={selectedId()}
+                onSelect={setSelectedId}
+              />
+            </Show>
           </Show>
           <Footer
             count={visible().length}
@@ -76,9 +84,17 @@ export function App(props: {
   )
 }
 
-function Waiting() {
+function Message(props: { children: JSX.Element }) {
   return (
     <div class="flex flex-1 flex-col items-center justify-center gap-1.5 p-4 text-center">
+      {props.children}
+    </div>
+  )
+}
+
+function Waiting() {
+  return (
+    <Message>
       <svg
         aria-hidden="true"
         width="28"
@@ -95,6 +111,21 @@ function Waiting() {
       </svg>
       <p class="text-[13px] font-semibold">Waiting for requests</p>
       <p class="text-muted">Reload the page to capture its traffic.</p>
-    </div>
+    </Message>
+  )
+}
+
+function NoMatches(props: { query: string; onClear: () => void }) {
+  return (
+    <Message>
+      <p class="text-[13px] font-semibold">No requests match "{props.query}"</p>
+      <button
+        type="button"
+        class="text-accent underline"
+        onClick={props.onClear}
+      >
+        Clear filter
+      </button>
+    </Message>
   )
 }
