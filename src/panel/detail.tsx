@@ -10,6 +10,7 @@ import type { Entry, NameValue } from "../capture/entry"
 import { loadBody } from "./body"
 import { nextTab } from "./keys"
 import { rawRequest, rawResponse } from "./raw"
+import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
 import { timingRows } from "./timing"
 
@@ -23,7 +24,11 @@ const tabs = [
 ] as const
 type Tab = (typeof tabs)[number]
 
-export function Detail(props: { entry: Entry }) {
+export function Detail(props: {
+  entry: Entry
+  width: number | undefined
+  onResize: (clientX: number) => void
+}) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
   const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
@@ -36,7 +41,14 @@ export function Detail(props: { entry: Entry }) {
   }
 
   return (
-    <section class="flex w-1/2 flex-col border-l border-border">
+    <section
+      class="relative flex shrink-0 flex-col border-l border-border"
+      classList={{ "w-1/2": props.width === undefined }}
+      style={{
+        width: props.width === undefined ? undefined : `${props.width}px`,
+      }}
+    >
+      <Splitter onDrag={props.onResize} />
       <div
         role="tablist"
         class="flex border-b border-border"
