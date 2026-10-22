@@ -20,7 +20,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## List (`src/panel/list.tsx`, `src/panel/keys.ts`)
 
 - `role="listbox"`, `tabIndex=0`, holds focus; rows are `role="option"` with `id="entry-<id>"` and `aria-selected`. The listbox's `aria-activedescendant` points at the selected row, so focus never moves to rows (survives virtualization later). Rows are therefore not focusable and have no key handlers (two Biome a11y rules suppressed with that reason).
-- Row: 24px (`h-6`). Method, status (`text-error` when `>= 400`), then `kind` + `summary` if decoded, else URL; URL is the tooltip. Selected row `bg-selected`.
+- Row: 24px (`h-6`). Method, status (`text-error` when `>= 400`), then `kind`, `title` and muted `detail` (when present) if decoded, else URL; URL is the tooltip. Selected row `bg-selected`.
 - Virtualized (`src/panel/virtual.ts`), no library. The listbox is the scroll container holding a spacer `div` of height `count * ROW_HEIGHT`; the rendered slice `[start, end)` sits in an inner `div` with `translateY(start * ROW_HEIGHT)`.
   - `ROW_HEIGHT = 24` in `list.tsx` must match the rows' `h-6` (border-box, border included). Overscan 10 rows each side.
   - `visibleRange(scrollTop, viewportHeight, rowHeight, count, overscan)` (pure): `start = max(0, floor(scrollTop/rowHeight) - overscan)`, `end = min(count, ceil((scrollTop+viewportHeight)/rowHeight) + overscan)`.
@@ -36,7 +36,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - Timing: total time, then `timingRows(timings)` (pure): one row per HAR phase in order, `ms` or `-` when n/a, a bar sized by `fraction` = ms / sum of measured phases (0 when nothing measured).
 - Raw: `rawRequest(entry)` (`METHOD path?query VERSION`, headers, blank line, body) and `rawResponse(entry, body)` (`VERSION STATUS TEXT`, headers, blank line, body); version falls back to `HTTP/1.1`.
 - Active tab is a signal in `Detail`; it survives selection changes because the `Show` around `Detail` is not keyed.
-- Summary: `<dl>` of Method, URL, Status, Kind, Summary, Started (ISO), Time (ms, rounded); Kind/Summary only when decoded.
+- Summary: `<dl>` of Method, URL, Status, Kind, Title, Detail, Started (ISO), Time (ms, rounded); Kind/Title/Detail only when present.
 - `dataSections(decoded.data)`: a field holding a non-empty array of `{ name: string, value: string }` becomes a rows section, rendered with `Pairs` as `name = value` (decoders use this for form fields, parts, calls). Other plain-object fields become labelled `<pre>` blocks, strings as-is (e.g. GraphQL query text), others pretty JSON (variables). Non-object data is one `data` block; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
 - Response group: when `decoderFor(decoded.kind, decoders)` has `decodeResponse` (`decoders` imported from `src/decoders/index.ts`), `ResponseGroup` loads `loadBody(entry, { pretty: false })` and renders `Response`, the response summary and `Sections` (the same `dataSections` rendering). Mounted only inside Summary, so the body loads only while Summary is shown for such an entry. Nothing renders when `decodeResponse` returns `undefined`.
 
