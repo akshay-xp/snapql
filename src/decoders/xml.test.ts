@@ -46,13 +46,13 @@ describe("xml", () => {
     const body =
       '<?xml version="1.0"?><!-- c --><!DOCTYPE r><ns:Order id="1"><Item/></ns:Order>'
     expect(xml.decode(post(body))).toEqual({
-      summary: "Order",
+      title: "Order",
       data: { xml: prettyXml(body) },
     })
   })
 
   it("matches a body starting with < whatever the mime", () => {
-    expect(xml.decode(post("  <Order/>", "text/plain"))?.summary).toBe("Order")
+    expect(xml.decode(post("  <Order/>", "text/plain"))?.title).toBe("Order")
   })
 
   it("ignores non-XML", () => {
@@ -68,7 +68,7 @@ const soap11 =
 describe("soap", () => {
   it("names a SOAP 1.1 call by its Body operation, skipping Header", () => {
     expect(soap.decode(post(soap11, "text/xml"))).toEqual({
-      summary: "GetPrice",
+      title: "GetPrice",
       data: { xml: prettyXml(soap11) },
     })
   })
@@ -77,10 +77,10 @@ describe("soap", () => {
     const soap12 =
       '<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope"><env:Body><GetStock/></env:Body></env:Envelope>'
     expect(
-      soap.decode(post(soap12, "application/soap+xml; charset=utf-8"))?.summary,
+      soap.decode(post(soap12, "application/soap+xml; charset=utf-8"))?.title,
     ).toBe("GetStock")
     expect(
-      soap.decode(post("<Envelope><Body><Ping/></Body></Envelope>"))?.summary,
+      soap.decode(post("<Envelope><Body><Ping/></Body></Envelope>"))?.title,
     ).toBe("Ping")
   })
 

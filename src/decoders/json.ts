@@ -8,7 +8,7 @@ export const json: Decoder = {
   decode(req) {
     const data = req.requestBody ? parseJson(req.requestBody.text) : undefined
     if (data === undefined && !isJsonMime(req.mimeType)) return
-    return { summary: new URL(req.url).pathname, data }
+    return { title: new URL(req.url).pathname, detail: req.method, data }
   },
 }
 

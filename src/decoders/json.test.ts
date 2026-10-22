@@ -24,15 +24,16 @@ describe("json", () => {
           requestBody: body('{"a":1}'),
         }),
       ),
-    ).toEqual({ summary: "/api/users", data: { a: 1 } })
+    ).toEqual({ title: "/api/users", detail: "POST", data: { a: 1 } })
   })
 
   it("matches a JSON response mime type", () => {
     expect(
       json.decode(req({ mimeType: "application/json; charset=utf-8" })),
-    ).toEqual({ summary: "/api/users/1", data: undefined })
+    ).toEqual({ title: "/api/users/1", detail: "GET", data: undefined })
     expect(json.decode(req({ mimeType: "application/problem+json" }))).toEqual({
-      summary: "/api/users/1",
+      title: "/api/users/1",
+      detail: "GET",
       data: undefined,
     })
   })
