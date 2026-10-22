@@ -38,6 +38,38 @@ describe("formatBody", () => {
     ])
   })
 
+  it("decodes base64 bodies with text-like mime types", () => {
+    const base64 = (content: string) => ({ content, encoding: "base64" })
+    expect(
+      formatBody(base64(btoa('{"a":1}')), {
+        mimeType: "application/json; charset=utf-8",
+      }),
+    ).toEqual({ text: '{\n  "a": 1\n}', notes: [] })
+    expect(formatBody(base64("w6k="), { mimeType: "text/plain" })).toEqual({
+      text: "é",
+      notes: [],
+    })
+    for (const mimeType of [
+      "application/problem+json",
+      "image/svg+xml",
+      "application/javascript",
+    ])
+      expect(formatBody(base64(btoa("x")), { mimeType }).text).toBe("x")
+    expect(
+      formatBody(base64(btoa('{"a":1}')), {
+        mimeType: "application/json",
+        pretty: false,
+      }).text,
+    ).toBe('{"a":1}')
+  })
+
+  it("keeps other base64 bodies raw with a note", () => {
+    const body = { content: "aGk=", encoding: "base64" }
+    const raw = { text: "aGk=", notes: ["base64-encoded, 2 bytes"] }
+    expect(formatBody(body, { mimeType: "image/png" })).toEqual(raw)
+    expect(formatBody(body)).toEqual(raw)
+  })
+
   it("truncates bodies over the limit without pretty-printing", () => {
     const content = `[${"1,".repeat((BODY_LIMIT + 8) / 2)}1]`
 
