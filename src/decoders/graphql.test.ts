@@ -31,6 +31,24 @@ describe("graphql", () => {
     )
   })
 
+  it("summarizes anonymous and shorthand operations", () => {
+    expect(summary({ query: "query { user { id } }" })).toBe("query")
+    expect(summary({ query: "query ($id: ID) { user(id: $id) { id } }" })).toBe(
+      "query",
+    )
+    expect(summary({ query: "{ user { id } }" })).toBe("query")
+    expect(summary({ query: "{ mutation { id } }" })).toBe("query")
+  })
+
+  it("ignores braces and keywords in strings and comments", () => {
+    expect(
+      summary({
+        query:
+          '# mutation Fake\n{ a(s: "} mutation B {") } mutation Real { b }',
+      }),
+    ).toBe("query")
+  })
+
   it("ignores JSON without a query", () => {
     expect(graphql.decode(post({ a: 1 }))).toBeUndefined()
   })
