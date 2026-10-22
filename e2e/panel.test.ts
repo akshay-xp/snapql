@@ -297,6 +297,7 @@ test("a large session renders only the visible rows", async () => {
 
     await expect.poll(panel.optionCount).toBeGreaterThan(0)
     expect(await panel.optionCount()).toBeLessThan(100)
+    expect(await panel.style('[role="option"]', "height")).toBe("28px")
 
     // Capture can trail the page, so retry End until the last item is in.
     await expect
