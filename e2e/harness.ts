@@ -9,6 +9,11 @@ const extensionDir = resolve("dist/chrome")
 
 const rowText = `(o) => o.innerText.replace(/\\s+/g, " ").trim()`
 
+const b64url = (value: unknown) =>
+  Buffer.from(JSON.stringify(value)).toString("base64url")
+
+const jwt = `${b64url({ alg: "HS256", typ: "JWT" })}.${b64url({ sub: "42", name: "Ada", exp: 2000000000 })}.sig`
+
 // One request per M3 decoder; issues add theirs here.
 const decodersPage = `<!doctype html>
 <link rel="icon" href="data:,">
@@ -39,6 +44,7 @@ const decodersPage = `<!doctype html>
     headers: { "content-type": "application/json" },
     body: '{"query":"query Deferred { user { id ... @defer { name } } }"}',
   })
+  fetch("/api/me", { headers: { Authorization: "Bearer ${jwt}" } })
   fetch("/api/trpc/user.byId,post.list?batch=1&input=" + encodeURIComponent('{"0":{"id":1},"1":{}}'))
   fetch("/api/rpc", {
     method: "POST",
@@ -284,6 +290,10 @@ function startServer(): Promise<Server> {
         .end('{"id":1}')
     if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
     if (req.url === "/api/upload") return res.writeHead(200).end("ok")
+    if (req.url === "/api/me")
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end('{"id":42}')
     if (req.url === "/api/gql-errors")
       return res
         .writeHead(200, { "content-type": "application/json" })

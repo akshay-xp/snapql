@@ -328,6 +328,7 @@ test("M3 decoders summarize their requests", async () => {
           "POST 200 graphql mutation Upload",
           "POST 200 graphql query Broken",
           "POST 200 graphql query Deferred",
+          "GET 200 json /api/me",
         ]),
       )
 
@@ -359,6 +360,17 @@ test("M3 decoders summarize their requests", async () => {
     await panel.select("POST 200 graphql query Deferred")
     for (const text of ["no errors", '"id": "1"', '"name": "Ada"', "parts"])
       await expect.poll(panel.detail).toContain(text)
+
+    await panel.select("GET 200 json /api/me")
+    const me = await panel.detail()
+    for (const text of [
+      "Tokens",
+      "Authorization header · unverified",
+      "expires 2033-05-18T03:33:20.000Z",
+      '"sub": "42"',
+      '"alg": "HS256"',
+    ])
+      expect(me).toContain(text)
 
     await panel.select("GET 200 trpc user.byId, post.list")
     const batch = await panel.detail()
