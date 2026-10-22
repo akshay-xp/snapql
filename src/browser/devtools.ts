@@ -12,6 +12,7 @@ export function toFinishedRequest(
     method: req.request.method,
     url: req.request.url,
     status: req.response.status,
+    mimeType: req.response.content?.mimeType ?? "",
     requestBody:
       postData?.text === undefined
         ? undefined

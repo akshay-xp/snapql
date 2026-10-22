@@ -8,6 +8,7 @@ function request(overrides: Partial<FinishedRequest> = {}): FinishedRequest {
     status: 200,
     startedDateTime: "2026-10-22T10:00:00.000Z",
     time: 12.5,
+    mimeType: "",
     fetchBody: () => Promise.resolve({ content: "", encoding: "" }),
     ...overrides,
   }
@@ -42,5 +43,11 @@ describe("toEntry", () => {
     expect(fetchBody).toHaveBeenCalledTimes(1)
     expect(first).toBe(body)
     expect(second).toBe(body)
+  })
+
+  it("carries the response mime type", () => {
+    expect(toEntry(request({ mimeType: "text/html" }), 1).mimeType).toBe(
+      "text/html",
+    )
   })
 })
