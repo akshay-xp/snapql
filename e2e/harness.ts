@@ -45,6 +45,7 @@ export type Panel = {
   selectedRow(): Promise<string | undefined>
   activeTab(): Promise<string | undefined>
   openTab(name: string): Promise<void>
+  pressTab(key: string): Promise<void>
   detail(): Promise<string | null>
   themeKind(): Promise<string | undefined>
   devtoolsTheme(): Promise<"light" | "dark">
@@ -153,6 +154,12 @@ export async function openPanel(
       panelFrame.evaluate<void>(
         `[...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === ${JSON.stringify(name)}).click()`,
       ),
+    pressTab: (key: string) =>
+      panelFrame.evaluate<void>(`(() => {
+        const tab = document.querySelector('[role="tab"][aria-selected="true"]')
+        tab.focus()
+        tab.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true }))
+      })()`),
     detail: () =>
       panelFrame.evaluate<string | null>(
         `document.querySelector('[role="tabpanel"]')?.innerText ?? null`,
