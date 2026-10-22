@@ -350,6 +350,30 @@ test("UI text is sans and code is monospace", async () => {
   }
 })
 
+test("JSON bodies render as a tree with Expand all", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/decoders`)
+    const row = "/api/users/1 GET json"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+    await panel.select(row)
+    await panel.openTab("Body")
+
+    await expect.poll(panel.detail).toContain("geo: {…} 1 key")
+    const body = (await panel.detail()) ?? ""
+    expect(body).not.toContain("lat: 1")
+    expect(body).toContain(`"${"b".repeat(200)}"…show more`)
+    expect(body).not.toContain("b".repeat(201))
+
+    await panel.clickButton("show more")
+    expect(await panel.detail()).toContain("b".repeat(250))
+    await panel.clickButton("Expand all")
+    expect(await panel.detail()).toContain("lat: 1")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Body tab loads and pretty-prints the response", async () => {
   const panel = await openPanel()
   try {
@@ -361,7 +385,7 @@ test("Body tab loads and pretty-prints the response", async () => {
     await panel.openTab("Body")
 
     expect(await panel.activeTab()).toBe("Body")
-    await expect.poll(panel.detail).toContain('{\n  "data": {}\n}')
+    await expect.poll(panel.detail).toContain("data: {}")
   } finally {
     await panel.close()
   }

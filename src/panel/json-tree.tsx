@@ -91,12 +91,7 @@ function Node(props: {
 
 function Leaf(props: { value: unknown }) {
   const v = props.value
-  if (typeof v === "string")
-    return (
-      <span data-json="string" class="text-syntax-string">
-        {JSON.stringify(clip(v).head)}
-      </span>
-    )
+  if (typeof v === "string") return <StringLeaf value={v} />
   if (v === null)
     return (
       <span data-json="null" class="text-muted">
@@ -113,5 +108,27 @@ function Leaf(props: { value: unknown }) {
     <span data-json="number" class="text-syntax-number">
       {String(v)}
     </span>
+  )
+}
+
+function StringLeaf(props: { value: string }) {
+  const [full, setFull] = createSignal(false)
+  const clipped = () => clip(props.value)
+  return (
+    <>
+      <span data-json="string" class="text-syntax-string">
+        {JSON.stringify(full() ? props.value : clipped().head)}
+      </span>
+      <Show when={clipped().clipped && !full()}>
+        …
+        <button
+          type="button"
+          class="font-sans text-accent"
+          onClick={() => setFull(true)}
+        >
+          show more
+        </button>
+      </Show>
+    </>
   )
 }
