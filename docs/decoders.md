@@ -7,6 +7,7 @@ Turn a request into a protocol `kind` and a one-line `summary` for the panel row
 - `RequestView`: `method`, `url`, `status`, `mimeType`, `requestBody?: { mimeType, text }`. `mimeType` is the response content type: metadata known at capture, so decoders may use it; response bodies are never read while decoding.
 - `Decoder`: `{ kind, decode(req): Decoded | undefined }`. One call covers detect, decode, summarize, so the body is parsed once.
 - `Decoded`: `{ summary, data }`; `data` is the parsed request (decoder-specific).
+- `decodeResponse?(text, decoded)`: optional; `Decoded | undefined` from the raw response text and the stored `DecodeResult`. Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand.
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
 - No headers or query params in `RequestView`: GET params come from `url`. Add when a decoder needs them.
 
@@ -82,6 +83,7 @@ No capture, store, or UI change.
 - `data` is the parsed body (or the URL params object).
 - Batch: non-empty array body where every item is an operation or APQ (one bad item means no match). Summary `<n> operations: <op>, <op>` (`1 operation: ...`), each op summarized as above. `data`: `{ operations: NameValue[] }`, name = op summary, value = query text (APQ: the hash); plus `variables: NameValue[]` for ops that have variables (value = JSON), omitted when none do.
 - Uploads (GraphQL multipart request spec): a `multipart/form-data` body with a non-file `operations` field is decoded from that JSON (single or batch, as above); `data` gains `files: NameValue[]` from the file parts. Without a GraphQL `operations` field it doesn't match, so `multipart` takes it.
+- `decodeResponse`: JSON object with `data` or `errors` (else `undefined`). Summary `<n> errors` / `1 error` / `no errors`. `data`: `errors: NameValue[]` (name = `path` joined with `.`, or `(root)`; value = message) when non-empty, plus `data` when present.
 
 ## Key files
 
