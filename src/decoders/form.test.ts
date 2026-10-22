@@ -18,7 +18,8 @@ function post(
 describe("form", () => {
   it("counts and decodes fields", () => {
     expect(form.decode(post("a=1&b=x%20y"))).toEqual({
-      summary: "2 fields",
+      title: "/login",
+      detail: "2 fields",
       data: {
         fields: [
           { name: "a", value: "1" },
@@ -29,7 +30,7 @@ describe("form", () => {
   })
 
   it("uses the singular and decodes plus as space", () => {
-    expect(form.decode(post("c="))?.summary).toBe("1 field")
+    expect(form.decode(post("c="))?.detail).toBe("1 field")
     expect(form.decode(post("q=a+b"))?.data).toEqual({
       fields: [{ name: "q", value: "a b" }],
     })

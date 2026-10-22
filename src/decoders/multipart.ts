@@ -52,13 +52,13 @@ export const multipart: Decoder = {
       .filter((p) => p.filename === undefined)
       .map((p) => ({ name: p.name, value: p.content }))
     const files = fileRows(parts)
-    const summary = [
+    const detail = [
       fields.length ? count(fields.length, "field") : "",
       files.length ? count(files.length, "file") : "",
     ]
       .filter(Boolean)
       .join(", ")
-    return { summary, data: { fields, files } }
+    return { title: new URL(req.url).pathname, detail, data: { fields, files } }
   },
 }
 

@@ -63,7 +63,8 @@ const file = (headers: string, content: string) =>
 describe("multipart", () => {
   it("counts fields and files and lists them as rows", () => {
     expect(multipart.decode(post(body))).toEqual({
-      summary: "2 fields, 1 file",
+      title: "/upload",
+      detail: "2 fields, 1 file",
       data: {
         fields: [
           { name: "a", value: "1" },
@@ -92,14 +93,13 @@ describe("multipart", () => {
   it("summarizes only the counts present", () => {
     const field =
       '--X\r\nContent-Disposition: form-data; name="a"\r\n\r\n1\r\n--X--'
-    expect(multipart.decode(post(field))?.summary).toBe("1 field")
-    expect(multipart.decode(post(file("", "x")))?.summary).toBe("1 file")
+    expect(multipart.decode(post(field))?.detail).toBe("1 field")
+    expect(multipart.decode(post(file("", "x")))?.detail).toBe("1 file")
   })
 
   it("reads a quoted boundary", () => {
     expect(
-      multipart.decode(post(body, 'multipart/form-data; boundary="X"'))
-        ?.summary,
+      multipart.decode(post(body, 'multipart/form-data; boundary="X"'))?.detail,
     ).toBe("2 fields, 1 file")
   })
 

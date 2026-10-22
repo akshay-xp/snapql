@@ -14,6 +14,10 @@ export const form: Decoder = {
       name,
       value,
     }))
-    return { summary: count(fields.length, "field"), data: { fields } }
+    return {
+      title: new URL(req.url).pathname,
+      detail: count(fields.length, "field"),
+      data: { fields },
+    }
   },
 }

@@ -84,7 +84,7 @@ export const xml: Decoder = {
   kind: "xml",
   decode(req) {
     const doc = elements(req)
-    return doc && { summary: doc.names[0], data: { xml: prettyXml(doc.text) } }
+    return doc && { title: doc.names[0], data: { xml: prettyXml(doc.text) } }
   },
 }
 
@@ -96,6 +96,6 @@ export const soap: Decoder = {
     const body = doc.names.indexOf("Body")
     const operation = body > 0 ? doc.names[body + 1] : undefined
     if (!operation) return
-    return { summary: operation, data: { xml: prettyXml(doc.text) } }
+    return { title: operation, data: { xml: prettyXml(doc.text) } }
   },
 }
