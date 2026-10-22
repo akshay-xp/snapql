@@ -7,6 +7,7 @@ import {
 } from "solid-js"
 import type { Store } from "../capture/store"
 import { Detail } from "./detail"
+import { Footer } from "./footer"
 import { List } from "./list"
 import { clampWidth } from "./splitter"
 
@@ -29,30 +30,20 @@ export function App(props: {
 
   return (
     <main class="flex h-dvh flex-col font-sans text-xs">
-      <header class="flex items-center gap-2 border-b border-border p-2">
-        <h1 class="font-semibold">SnapQL</h1>
-        <label class="ml-auto flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={props.preserveLog()}
-            onChange={(e) => props.setPreserveLog(e.currentTarget.checked)}
-          />
-          Preserve log
-        </label>
-        <button
-          type="button"
-          class="rounded border border-border px-2 py-0.5 hover:bg-selected"
-          onClick={() => props.store.clear()}
-        >
-          Clear
-        </button>
-      </header>
       <div class="flex min-h-0 flex-1" ref={row}>
-        <List
-          entries={entries()}
-          selectedId={selectedId()}
-          onSelect={setSelectedId}
-        />
+        <section class="flex min-w-0 flex-1 flex-col">
+          <List
+            entries={entries()}
+            selectedId={selectedId()}
+            onSelect={setSelectedId}
+          />
+          <Footer
+            count={entries().length}
+            onClear={() => props.store.clear()}
+            preserveLog={props.preserveLog()}
+            onPreserveLog={props.setPreserveLog}
+          />
+        </section>
         <Show when={selected()}>
           {(entry) => (
             <Detail

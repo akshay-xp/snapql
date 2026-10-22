@@ -116,6 +116,8 @@ export type Panel = {
   devtoolsTheme(): Promise<"light" | "dark">
   cssVar(name: string): Promise<string>
   style(selector: string, property: string): Promise<string>
+  text(selector: string): Promise<string | null>
+  attr(selector: string, name: string): Promise<string | null>
   clear(): Promise<void>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
@@ -203,6 +205,15 @@ export async function openPanel(
         const el = document.querySelector(${JSON.stringify(selector)})
         return el ? getComputedStyle(el).getPropertyValue(${JSON.stringify(property)}) : ""
       })()`),
+    text: (selector: string) =>
+      panelFrame.evaluate<string | null>(`(() => {
+        const el = document.querySelector(${JSON.stringify(selector)})
+        return el ? (${rowText})(el) : null
+      })()`),
+    attr: (selector: string, name: string) =>
+      panelFrame.evaluate<string | null>(
+        `document.querySelector(${JSON.stringify(selector)})?.getAttribute(${JSON.stringify(name)}) ?? null`,
+      ),
     rows: () =>
       panelFrame.evaluate<string[]>(
         `[...document.querySelectorAll('[role="option"]')].map(${rowText})`,
@@ -270,11 +281,11 @@ export async function openPanel(
       })()`),
     clear: () =>
       panelFrame.evaluate<void>(
-        `[...document.querySelectorAll("button")].find((b) => b.textContent === "Clear").click()`,
+        `document.querySelector('button[aria-label="Clear"]').click()`,
       ),
     togglePreserveLog: () =>
       panelFrame.evaluate<void>(
-        `[...document.querySelectorAll("label")].find((l) => l.textContent.trim() === "Preserve log").querySelector("input").click()`,
+        `document.querySelector('button[aria-label="Preserve log"]').click()`,
       ),
     close: async () => {
       devtools.close()
