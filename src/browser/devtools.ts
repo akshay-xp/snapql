@@ -48,3 +48,9 @@ export function getHAR(): Promise<FinishedRequest[]> {
     ),
   )
 }
+
+export function onNavigated(cb: () => void): () => void {
+  const listener = () => cb()
+  chrome.devtools.network.onNavigated.addListener(listener)
+  return () => chrome.devtools.network.onNavigated.removeListener(listener)
+}

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { getHAR, onRequestFinished, toFinishedRequest } from "./devtools"
+import {
+  getHAR,
+  onNavigated,
+  onRequestFinished,
+  toFinishedRequest,
+} from "./devtools"
 
 function chromeRequest(postData?: { mimeType: string; text: string }) {
   return {
@@ -94,5 +99,29 @@ describe("getHAR", () => {
       url: "https://api.test/graphql",
       status: 201,
     })
+  })
+})
+
+describe("onNavigated", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("calls back on navigation and removes the same listener", () => {
+    const addListener = vi.fn()
+    const removeListener = vi.fn()
+    vi.stubGlobal("chrome", {
+      devtools: { network: { onNavigated: { addListener, removeListener } } },
+    })
+    const cb = vi.fn()
+
+    const off = onNavigated(cb)
+    const listener = addListener.mock.calls[0][0]
+    listener("https://x/")
+
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    off()
+    expect(removeListener).toHaveBeenCalledWith(listener)
   })
 })
