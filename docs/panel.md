@@ -40,6 +40,13 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - `dataSections(decoded.data)`: a field holding a non-empty array of `{ name: string, value: string }` becomes a rows section, rendered with `Pairs` as `name = value` (decoders use this for form fields, parts, calls). Other plain-object fields become labelled `<pre>` blocks, strings as-is (e.g. GraphQL query text), others pretty JSON (variables). Non-object data is one `data` block; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
 - Response group: when `decoderFor(decoded.kind, decoders)` has `decodeResponse` (`decoders` imported from `src/decoders/index.ts`), `ResponseGroup` loads `loadBody(entry, { pretty: false })` and renders `Response`, the response summary and `Sections` (the same `dataSections` rendering). Mounted only inside Summary, so the body loads only while Summary is shown for such an entry. Nothing renders when `decodeResponse` returns `undefined`.
 
+## Values (`src/panel/values.ts`)
+
+- Pure helpers for header, cookie and param values; `decodeBase64` (UTF-8) lives here and is shared with `body.ts`.
+- `decodeJwt(value)`: three base64url segments (`[\w-]`; signature may be empty), header and payload must decode to plain JSON objects and the header needs a string `alg`; returns `{ header, payload, expires? }` with `expires` = `exp` as ISO. Anything else `undefined`. Never verified.
+- `findTokens(exchange)`: JWTs in order from `Authorization: Bearer` (case-insensitive), request cookies (`cookie <name>`), response cookies (`set-cookie <name>`), query params (`query <name>`); non-JWT values skipped.
+- Summary `Tokens` section (after decoded data, before Response), only when tokens exist: `<source> · unverified`, `expires <iso>` when present, `header` and `payload` as pretty JSON.
+
 ## Body (`src/panel/body.ts`)
 
 - `LoadedBody` (used by Body and Raw) mounts only while its tab is active and runs `createResource(entry, loadBody)`, so bodies load on demand. Body uses `pretty: true`; Raw uses `formatBody`'s `{ pretty: false }` (truncation and base64 note still apply). The fetcher is wrapped because `createResource` passes its own info object as a second argument. `loadBody` is the panel's only `getBody()` caller (`grep -rn getBody src/panel` hits only `body.ts` and its test); `getBody` itself memoizes, so revisiting the tab does not refetch.
