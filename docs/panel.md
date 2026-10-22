@@ -44,7 +44,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 - `LoadedBody` (used by Body and Raw) mounts only while its tab is active and runs `createResource(entry, loadBody)`, so bodies load on demand. Body uses `pretty: true`; Raw uses `formatBody`'s `{ pretty: false }` (truncation and base64 note still apply). The fetcher is wrapped because `createResource` passes its own info object as a second argument. `loadBody` is the panel's only `getBody()` caller (`grep -rn getBody src/panel` hits only `body.ts` and its test); `getBody` itself memoizes, so revisiting the tab does not refetch.
 - `formatBody(body, { pretty, mimeType })`: `{ text, notes }`. `loadBody` passes `entry.mimeType`.
-  - base64 with a text-like mime (`text/*`, `/json`, `+json`, contains `xml` or `javascript`): decoded as UTF-8 first, then treated as text (limit counts decoded chars).
+  - base64 with a text-like mime (`text/*`, `multipart/mixed`, `/json`, `+json`, contains `xml` or `javascript`): decoded as UTF-8 first, then treated as text (limit counts decoded chars). Chrome already sends `multipart/mixed` (incremental GraphQL) as text; the rule covers browsers that report it as base64.
   - Over `BODY_LIMIT` (1024 * 1024 characters): first `BODY_LIMIT` chars, note `Truncated: showing 1 MB of <n> characters`, never parsed.
   - Other `base64`: note `base64-encoded, <n> bytes` (decoded size) plus raw base64; never parsed.
   - Otherwise: pretty JSON if it parses, else `prettyXml` (from `src/decoders/xml.ts`; balanced XML indented, anything else, including HTML, as-is). Detection is by parse only; `mimeType` is used only for base64.
