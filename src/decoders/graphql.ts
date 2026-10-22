@@ -1,3 +1,4 @@
+import { parseJson } from "./json"
 import type { Decoder } from "./types"
 
 type GraphQLRequest = {
@@ -12,7 +13,7 @@ export const graphql: Decoder = {
   kind: "graphql",
   decode(req) {
     const data = req.requestBody
-      ? parseJson(req.requestBody.text)
+      ? (parseJson(req.requestBody.text) as GraphQLRequest | undefined)
       : fromParams(new URL(req.url).searchParams)
     if (typeof data?.query === "string") {
       const summary = operationSummary(data.query, data.operationName)
@@ -35,16 +36,11 @@ function fromParams(params: URLSearchParams): GraphQLRequest {
   const extensions = params.get("extensions")
   return {
     ...Object.fromEntries(params),
-    extensions: extensions === null ? undefined : parseJson(extensions),
+    extensions:
+      extensions === null
+        ? undefined
+        : (parseJson(extensions) as NonNullable<GraphQLRequest>["extensions"]),
   } as GraphQLRequest
-}
-
-function parseJson(text: string): GraphQLRequest | undefined {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return undefined
-  }
 }
 
 type Operation = { type: string; name?: string }
