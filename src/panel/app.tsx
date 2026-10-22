@@ -19,6 +19,7 @@ export function App(props: {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
   const [selectedId, setSelectedId] = createSignal<number>()
+  const [newestFirst, setNewestFirst] = createSignal(true)
   // Undefined until the first drag: the pane takes half the width. Not persisted.
   const [detailWidth, setDetailWidth] = createSignal<number>()
   let row!: HTMLDivElement
@@ -33,13 +34,15 @@ export function App(props: {
       <div class="flex min-h-0 flex-1" ref={row}>
         <section class="flex min-w-0 flex-1 flex-col">
           <List
-            entries={entries()}
+            entries={newestFirst() ? [...entries()].reverse() : entries()}
             selectedId={selectedId()}
             onSelect={setSelectedId}
           />
           <Footer
             count={entries().length}
             onClear={() => props.store.clear()}
+            newestFirst={newestFirst()}
+            onSort={() => setNewestFirst(!newestFirst())}
             preserveLog={props.preserveLog()}
             onPreserveLog={props.setPreserveLog}
           />

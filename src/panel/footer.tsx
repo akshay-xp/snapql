@@ -4,6 +4,8 @@ import { count } from "../decoders/text"
 export function Footer(props: {
   count: number
   onClear: () => void
+  newestFirst: boolean
+  onSort: () => void
   preserveLog: boolean
   onPreserveLog: (on: boolean) => void
 }) {
@@ -12,6 +14,18 @@ export function Footer(props: {
       <IconButton label="Clear" onClick={props.onClear}>
         <circle cx="12" cy="12" r="9" />
         <path d="m5.6 5.6 12.8 12.8" />
+      </IconButton>
+      <IconButton
+        label={props.newestFirst ? "Newest first" : "Oldest first"}
+        onClick={props.onSort}
+      >
+        <path
+          d={
+            props.newestFirst
+              ? "M7 20V4M3 8l4-4 4 4M14 6h7M14 12h5M14 18h3"
+              : "M7 4v16M3 16l4 4 4-4M14 6h3M14 12h5M14 18h7"
+          }
+        />
       </IconButton>
       <IconButton
         label="Preserve log"
