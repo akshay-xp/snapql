@@ -63,3 +63,21 @@ const toThemeKind = (name: string | undefined): ThemeKind =>
 export function getTheme(): ThemeKind {
   return toThemeKind(chrome.devtools.panels.themeName)
 }
+
+type ThemeEvent = chrome.events.Event<(name: string) => void>
+
+export function onThemeChanged(cb: (kind: ThemeKind) => void): () => void {
+  // Firefox only; Chrome has no theme event, so follow the OS, which DevTools
+  // tracks when set to its system theme.
+  const event = (chrome.devtools.panels as { onThemeChanged?: ThemeEvent })
+    .onThemeChanged
+  if (event) {
+    const listener = (name: string) => cb(toThemeKind(name))
+    event.addListener(listener)
+    return () => event.removeListener(listener)
+  }
+  const query = matchMedia("(prefers-color-scheme: dark)")
+  const handler = (e: { matches: boolean }) => cb(e.matches ? "dark" : "light")
+  query.addEventListener("change", handler)
+  return () => query.removeEventListener("change", handler)
+}
