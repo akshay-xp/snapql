@@ -1,3 +1,6 @@
+import { baseMime, count } from "./text"
+import type { Decoder } from "./types"
+
 export type Part = {
   name: string
   filename?: string
@@ -29,4 +32,36 @@ export function parseMultipart(text: string, boundary: string): Part[] {
 
 function param(headers: string, key: string): string | undefined {
   return headers.match(new RegExp(`[;\\s]${key}="([^"]*)"`, "i"))?.[1]
+}
+
+export const multipart: Decoder = {
+  kind: "multipart",
+  decode(req) {
+    const body = req.requestBody
+    if (!body || baseMime(body.mimeType) !== "multipart/form-data") return
+    const boundary = body.mimeType.match(/boundary="?([^";]+)"?/i)?.[1]
+    if (!boundary) return
+    const parts = parseMultipart(body.text, boundary)
+    const fields = parts
+      .filter((p) => p.filename === undefined)
+      .map((p) => ({ name: p.name, value: p.content }))
+    const files = parts
+      .filter((p) => p.filename !== undefined)
+      .map((p) => ({ name: p.name, value: fileValue(p) }))
+    const summary = [
+      fields.length ? count(fields.length, "field") : "",
+      files.length ? count(files.length, "file") : "",
+    ]
+      .filter(Boolean)
+      .join(", ")
+    return { summary, data: { fields, files } }
+  },
+}
+
+// Browsers may leave file contents out of the captured body.
+function fileValue(p: Part): string {
+  const size = p.content
+    ? count(new TextEncoder().encode(p.content).length, "byte")
+    : "size unknown"
+  return `${p.filename} (${p.type ?? "application/octet-stream"}, ${size})`
 }
