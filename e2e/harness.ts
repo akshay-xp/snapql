@@ -125,6 +125,8 @@ export type Panel = {
   clickButton(text: string): Promise<void>
   click(selector: string): Promise<void>
   pairs(): Promise<string>
+  stubClipboard(): Promise<void>
+  copied(): Promise<string | undefined>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
@@ -299,6 +301,11 @@ export async function openPanel(
       panelFrame.evaluate<void>(
         `document.querySelector('button[aria-label="Clear filter"]').click()`,
       ),
+    stubClipboard: () =>
+      panelFrame.evaluate<void>(
+        `navigator.clipboard.writeText = async (text) => { window.__copied = text }`,
+      ),
+    copied: () => panelFrame.evaluate<string | undefined>("window.__copied"),
     pairs: () =>
       panelFrame.evaluate<string>(
         `[...document.querySelectorAll('[role="tabpanel"] dt')].map((dt) => dt.textContent + " = " + dt.nextElementSibling.querySelector("[data-value]").textContent).join("\\n")`,
