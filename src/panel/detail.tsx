@@ -16,6 +16,7 @@ import { rawRequest, rawResponse } from "./raw"
 import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
 import { timingRows } from "./timing"
+import { findTokens } from "./values"
 
 const tabs = [
   "Summary",
@@ -262,6 +263,7 @@ function Summary(props: { entry: Entry }) {
         </For>
       </dl>
       <Sections data={props.entry.decoded?.data} />
+      <Tokens entry={props.entry} />
       <Show when={decodeResponse()}>
         {(decode) => <ResponseGroup entry={props.entry} decode={decode()} />}
       </Show>
@@ -291,6 +293,36 @@ function ResponseGroup(props: {
           <Sections data={d().data} />
         </section>
       )}
+    </Show>
+  )
+}
+
+function Tokens(props: { entry: Entry }) {
+  const tokens = () => findTokens(props.entry.exchange)
+  const json = (value: unknown) => JSON.stringify(value, null, 2)
+  return (
+    <Show when={tokens().length}>
+      <section class="mt-3">
+        <h2 class="font-bold">Tokens</h2>
+        <For each={tokens()}>
+          {(token) => (
+            <div class="mt-2">
+              <p>{token.source} · unverified</p>
+              <Show when={token.jwt.expires}>
+                {(expires) => <p class="text-muted">expires {expires()}</p>}
+              </Show>
+              <h3 class="text-muted">header</h3>
+              <pre class="whitespace-pre-wrap break-all">
+                {json(token.jwt.header)}
+              </pre>
+              <h3 class="text-muted">payload</h3>
+              <pre class="whitespace-pre-wrap break-all">
+                {json(token.jwt.payload)}
+              </pre>
+            </div>
+          )}
+        </For>
+      </section>
     </Show>
   )
 }
