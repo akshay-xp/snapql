@@ -43,6 +43,19 @@ describe("formatBody", () => {
   })
 })
 
+describe("formatBody without pretty-printing", () => {
+  it("leaves JSON as-is but still truncates", () => {
+    expect(formatBody(text('{"a":1}'), { pretty: false })).toEqual({
+      text: '{"a":1}',
+      notes: [],
+    })
+    const big = "x".repeat(BODY_LIMIT + 1)
+    expect(formatBody(text(big), { pretty: false }).text).toHaveLength(
+      BODY_LIMIT,
+    )
+  })
+})
+
 describe("loadBody", () => {
   it("fetches once and formats", async () => {
     const getBody = vi.fn(() => Promise.resolve(text('{"a":1}')))
@@ -60,6 +73,14 @@ describe("loadBody", () => {
     await expect(loadBody({ getBody })).resolves.toEqual({
       text: "",
       notes: ["Body unavailable: gone"],
+    })
+  })
+
+  it("passes format options through", async () => {
+    const getBody = () => Promise.resolve(text('{"a":1}'))
+    await expect(loadBody({ getBody }, { pretty: false })).resolves.toEqual({
+      text: '{"a":1}',
+      notes: [],
     })
   })
 })

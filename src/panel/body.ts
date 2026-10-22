@@ -2,12 +2,15 @@ import type { Body, Entry } from "../capture/entry"
 
 export type FormattedBody = { text: string; notes: string[] }
 
+export type FormatOptions = { pretty?: boolean }
+
 // The panel's only getBody() caller, so bodies load only where this is used.
 export async function loadBody(
   entry: Pick<Entry, "getBody">,
+  options?: FormatOptions,
 ): Promise<FormattedBody> {
   try {
-    return formatBody(await entry.getBody())
+    return formatBody(await entry.getBody(), options)
   } catch (err) {
     return { text: "", notes: [`Body unavailable: ${(err as Error).message}`] }
   }
@@ -16,7 +19,10 @@ export async function loadBody(
 // Bigger bodies are cut and never parsed, so a huge payload can't freeze the panel.
 export const BODY_LIMIT = 1024 * 1024
 
-export function formatBody(body: Body): FormattedBody {
+export function formatBody(
+  body: Body,
+  { pretty = true }: FormatOptions = {},
+): FormattedBody {
   const base64 = body.encoding === "base64"
   const notes = base64
     ? [`base64-encoded, ${base64Bytes(body.content)} bytes`]
@@ -25,7 +31,7 @@ export function formatBody(body: Body): FormattedBody {
     notes.push(`Truncated: showing 1 MB of ${body.content.length} characters`)
     return { text: body.content.slice(0, BODY_LIMIT), notes }
   }
-  if (base64) return { text: body.content, notes }
+  if (base64 || !pretty) return { text: body.content, notes }
   return { text: prettyJson(body.content) ?? body.content, notes }
 }
 
