@@ -84,6 +84,7 @@ No capture, store, or UI change.
 - Batch: non-empty array body where every item is an operation or APQ (one bad item means no match). Summary `<n> operations: <op>, <op>` (`1 operation: ...`), each op summarized as above. `data`: `{ operations: NameValue[] }`, name = op summary, value = query text (APQ: the hash); plus `variables: NameValue[]` for ops that have variables (value = JSON), omitted when none do.
 - Uploads (GraphQL multipart request spec): a `multipart/form-data` body with a non-file `operations` field is decoded from that JSON (single or batch, as above); `data` gains `files: NameValue[]` from the file parts. Without a GraphQL `operations` field it doesn't match, so `multipart` takes it.
 - `decodeResponse`: JSON object with `data` or `errors` (else `undefined`). Summary `<n> errors` / `1 error` / `no errors`. `data`: `errors: NameValue[]` (name = `path` joined with `.`, or `(root)`; value = message) when non-empty, plus `data` when present.
+- Incremental responses (`@defer`/`@stream`, multipart/mixed): text starting with `--`. Delimiter = first line starting `--`; each part's JSON is its first `{` to last `}`. Merge: clone of the first part's `data`; each `incremental[]` item's `data` assigned onto the object at its `path`, `items` appended to the list at `path` minus its last segment. Errors collected from every part and item. Same output shape plus `parts: <n>`. Only the `incremental[]` format; the older top-level `path`/`data` and newer `pending`/`id` formats are not handled.
 
 ## Key files
 
