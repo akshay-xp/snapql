@@ -7,6 +7,8 @@ import { chromium, type Page } from "playwright"
 
 const extensionDir = resolve("dist/chrome")
 
+const rowText = `(o) => o.innerText.replace(/\\s+/g, " ").trim()`
+
 const testPage = `<!doctype html>
 <script>
   fetch("/api/one")
@@ -35,6 +37,9 @@ export type Panel = {
   page: Page
   origin: string
   rows(): Promise<string[]>
+  press(key: string): Promise<void>
+  select(row: string): Promise<void>
+  selectedRow(): Promise<string | undefined>
   themeKind(): Promise<string | undefined>
   devtoolsTheme(): Promise<"light" | "dark">
   cssVar(name: string): Promise<string>
@@ -122,8 +127,25 @@ export async function openPanel(
       ),
     rows: () =>
       panelFrame.evaluate<string[]>(
-        `[...document.querySelectorAll("li")].map((li) => li.innerText.replace(/\\s+/g, " ").trim())`,
+        `[...document.querySelectorAll('[role="option"]')].map(${rowText})`,
       ),
+    press: (key: string) =>
+      panelFrame.evaluate<void>(`(() => {
+        const list = document.querySelector('[role="listbox"]')
+        list.focus()
+        list.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true }))
+      })()`),
+    select: (row: string) =>
+      panelFrame.evaluate<void>(
+        `[...document.querySelectorAll('[role="option"]')].find((o) => (${rowText})(o) === ${JSON.stringify(row)}).click()`,
+      ),
+    selectedRow: () =>
+      panelFrame.evaluate<string | undefined>(`(() => {
+        const list = document.querySelector('[role="listbox"]')
+        const option = document.querySelector('[role="option"][aria-selected="true"]')
+        if (!option || list.getAttribute("aria-activedescendant") !== option.id) return undefined
+        return (${rowText})(option)
+      })()`),
     clear: () =>
       panelFrame.evaluate<void>(
         `[...document.querySelectorAll("button")].find((b) => b.textContent === "Clear").click()`,
