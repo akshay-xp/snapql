@@ -7,6 +7,9 @@ import {
   Switch,
 } from "solid-js"
 import type { Entry, NameValue } from "../capture/entry"
+import { decoders } from "../decoders"
+import { decoderFor } from "../decoders/registry"
+import type { Decoded } from "../decoders/types"
 import { loadBody } from "./body"
 import { nextTab } from "./keys"
 import { rawRequest, rawResponse } from "./raw"
@@ -227,6 +230,12 @@ function LoadedBody(props: {
 }
 
 function Summary(props: { entry: Entry }) {
+  const decodeResponse = () => {
+    const decoded = props.entry.decoded
+    if (!decoded) return
+    const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
+    return decode && ((text: string) => decode(text, decoded))
+  }
   const fields = () => {
     const e = props.entry
     return [
@@ -252,24 +261,55 @@ function Summary(props: { entry: Entry }) {
           )}
         </For>
       </dl>
-      <For each={dataSections(props.entry.decoded?.data)}>
-        {(section) =>
-          "rows" in section ? (
-            <div class="mt-3">
-              <Pairs
-                title={section.name}
-                pairs={section.rows}
-                separator=" = "
-              />
-            </div>
-          ) : (
-            <section class="mt-3">
-              <h2 class="text-muted">{section.name}</h2>
-              <pre class="whitespace-pre-wrap break-all">{section.text}</pre>
-            </section>
-          )
-        }
-      </For>
+      <Sections data={props.entry.decoded?.data} />
+      <Show when={decodeResponse()}>
+        {(decode) => <ResponseGroup entry={props.entry} decode={decode()} />}
+      </Show>
     </>
+  )
+}
+
+// Mounted only while Summary is shown, so the response body loads on demand.
+function ResponseGroup(props: {
+  entry: Entry
+  decode: (text: string) => Decoded | undefined
+}) {
+  const [body] = createResource(
+    () => props.entry,
+    (entry) => loadBody(entry, { pretty: false }),
+  )
+  const decoded = () => {
+    const b = body()
+    return b && props.decode(b.text)
+  }
+  return (
+    <Show when={decoded()}>
+      {(d) => (
+        <section class="mt-3">
+          <h2 class="font-bold">Response</h2>
+          <p>{d().summary}</p>
+          <Sections data={d().data} />
+        </section>
+      )}
+    </Show>
+  )
+}
+
+function Sections(props: { data: unknown }) {
+  return (
+    <For each={dataSections(props.data)}>
+      {(section) =>
+        "rows" in section ? (
+          <div class="mt-3">
+            <Pairs title={section.name} pairs={section.rows} separator=" = " />
+          </div>
+        ) : (
+          <section class="mt-3">
+            <h2 class="text-muted">{section.name}</h2>
+            <pre class="whitespace-pre-wrap break-all">{section.text}</pre>
+          </section>
+        )
+      }
+    </For>
   )
 }
