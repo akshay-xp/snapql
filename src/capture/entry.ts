@@ -1,9 +1,8 @@
+import type { RequestView } from "../decoders/types"
+
 export type Body = { content: string; encoding: string }
 
-export type FinishedRequest = {
-  method: string
-  url: string
-  status: number
+export type FinishedRequest = RequestView & {
   startedDateTime: string
   time: number
   fetchBody: () => Promise<Body>
