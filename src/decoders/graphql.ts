@@ -1,7 +1,7 @@
 import { parseJson } from "./json"
 import { fileRows, multipartParts, type Part } from "./multipart"
 import { count } from "./text"
-import type { Decoded, Decoder } from "./types"
+import type { Decoded, DecodedResponse, Decoder } from "./types"
 
 type GraphQLRequest = {
   query?: unknown
@@ -57,7 +57,7 @@ function responseResult(
   data: unknown,
   hasData: boolean,
   extra?: object,
-): Decoded {
+): DecodedResponse {
   return {
     summary: errors.length ? count(errors.length, "error") : "no errors",
     data: {
@@ -124,20 +124,20 @@ function decodeUpload(parts: Part[]): Decoded | undefined {
   const decoded = field && decodeOperations(parseJson(field.content))
   if (!decoded) return
   return {
-    summary: decoded.summary,
+    ...decoded,
     data: { ...(decoded.data as object), files: fileRows(parts) },
   }
 }
 
 function decodeOperations(data: unknown): Decoded | undefined {
   if (!Array.isArray(data)) {
-    const summary = summarize(data as GraphQLRequest)
-    return summary ? { summary, data } : undefined
+    const op = label(data as GraphQLRequest)
+    return op && { ...op, data }
   }
   const ops = data as NonNullable<GraphQLRequest>[]
-  const summaries = ops.map(summarize)
-  if (!ops.length || !summaries.every((s) => s)) return
-  const name = (i: number) => summaries[i] as string
+  const labels = ops.map(label)
+  if (!ops.length || !labels.every((l): l is Label => l !== undefined)) return
+  const name = (i: number) => `${labels[i].detail} ${labels[i].title}`
   const operations = ops.map((op, i) => ({
     name: name(i),
     value: typeof op.query === "string" ? op.query : (apqHash(op) ?? ""),
@@ -148,17 +148,20 @@ function decodeOperations(data: unknown): Decoded | undefined {
       : [{ name: name(i), value: JSON.stringify(op.variables) }],
   )
   return {
-    summary: `${count(ops.length, "operation")}: ${summaries.join(", ")}`,
+    title: labels.map((l) => l.title).join(", "),
+    detail: count(ops.length, "op"),
     data: variables.length ? { operations, variables } : { operations },
   }
 }
 
-function summarize(data: GraphQLRequest): string | undefined {
+type Label = { title: string; detail: string }
+
+function label(data: GraphQLRequest): Label | undefined {
   if (typeof data?.query === "string")
-    return operationSummary(data.query, data.operationName)
+    return operationLabel(data.query, data.operationName)
   const hash = apqHash(data)
   if (hash === undefined) return
-  return `persisted ${data?.operationName ?? hash.slice(0, 8)}`
+  return { title: data?.operationName ?? hash.slice(0, 8), detail: "persisted" }
 }
 
 function apqHash(data: GraphQLRequest): string | undefined {
@@ -183,13 +186,13 @@ function fromParams(params: URLSearchParams): GraphQLRequest {
 
 type Operation = { type: string; name?: string }
 
-function operationSummary(
+function operationLabel(
   document: string,
   operationName?: string,
-): string | undefined {
+): Label | undefined {
   const ops = operations(document)
   const op = ops.find((o) => o.name === operationName) ?? ops[0]
-  return op && (op.name ? `${op.type} ${op.name}` : op.type)
+  return op && { title: op.name ?? "anonymous", detail: op.type }
 }
 
 function operations(document: string): Operation[] {

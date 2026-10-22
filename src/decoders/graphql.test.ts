@@ -12,49 +12,54 @@ function post(body: unknown): RequestView {
   }
 }
 
-function summary(body: unknown) {
-  return graphql.decode(post(body))?.summary
+function label(body: unknown) {
+  const decoded = graphql.decode(post(body))
+  return decoded && { title: decoded.title, detail: decoded.detail }
 }
+
+const op = (title: string, detail: string) => ({ title, detail })
 
 describe("graphql", () => {
   it("summarizes named operations by type and name", () => {
     const body = { query: "query GetUser { user { id } }" }
 
     expect(graphql.decode(post(body))).toEqual({
-      summary: "query GetUser",
+      title: "GetUser",
+      detail: "query",
       data: body,
     })
-    expect(summary({ query: "mutation AddTodo { add { id } }" })).toBe(
-      "mutation AddTodo",
+    expect(label({ query: "mutation AddTodo { add { id } }" })).toEqual(
+      op("AddTodo", "mutation"),
     )
-    expect(summary({ query: "subscription OnTick { tick }" })).toBe(
-      "subscription OnTick",
+    expect(label({ query: "subscription OnTick { tick }" })).toEqual(
+      op("OnTick", "subscription"),
     )
   })
 
   it("summarizes anonymous and shorthand operations", () => {
-    expect(summary({ query: "query { user { id } }" })).toBe("query")
-    expect(summary({ query: "query ($id: ID) { user(id: $id) { id } }" })).toBe(
-      "query",
-    )
-    expect(summary({ query: "{ user { id } }" })).toBe("query")
-    expect(summary({ query: "{ mutation { id } }" })).toBe("query")
+    const anonymous = op("anonymous", "query")
+    expect(label({ query: "query { user { id } }" })).toEqual(anonymous)
+    expect(
+      label({ query: "query ($id: ID) { user(id: $id) { id } }" }),
+    ).toEqual(anonymous)
+    expect(label({ query: "{ user { id } }" })).toEqual(anonymous)
+    expect(label({ query: "{ mutation { id } }" })).toEqual(anonymous)
   })
 
   it("ignores braces and keywords in strings and comments", () => {
     expect(
-      summary({
+      label({
         query:
           '# mutation Fake\n{ a(s: "} mutation B {") } mutation Real { b }',
       }),
-    ).toBe("query")
+    ).toEqual(op("anonymous", "query"))
   })
 
   it("picks the operation named by operationName, else the first", () => {
     const query = "fragment F on User { id } query A { ...F } mutation B { x }"
 
-    expect(summary({ query, operationName: "B" })).toBe("mutation B")
-    expect(summary({ query })).toBe("query A")
+    expect(label({ query, operationName: "B" })).toEqual(op("B", "mutation"))
+    expect(label({ query })).toEqual(op("A", "query"))
   })
 
   it("decodes GET requests from query params", () => {
@@ -66,12 +71,10 @@ describe("graphql", () => {
     })
     const query = "query GetUser { a } query Other { b }"
 
-    expect(graphql.decode(get({ query }))).toMatchObject({
-      summary: "query GetUser",
-    })
+    expect(graphql.decode(get({ query }))).toMatchObject(op("GetUser", "query"))
     expect(
-      graphql.decode(get({ query, operationName: "Other" }))?.summary,
-    ).toBe("query Other")
+      graphql.decode(get({ query, operationName: "Other" })),
+    ).toMatchObject(op("Other", "query"))
   })
 
   it("decodes persisted queries sent as GET params", () => {
@@ -85,7 +88,9 @@ describe("graphql", () => {
       persistedQuery: { version: 1, sha256Hash: "abcdef1234567890" },
     })
 
-    expect(graphql.decode(get(extensions))?.summary).toBe("persisted GetUser")
+    expect(graphql.decode(get(extensions))).toMatchObject(
+      op("GetUser", "persisted"),
+    )
     expect(graphql.decode(get("not-json"))).toBeUndefined()
   })
 
@@ -96,11 +101,14 @@ describe("graphql", () => {
     const named = { operationName: "GetUser", extensions }
 
     expect(graphql.decode(post(named))).toEqual({
-      summary: "persisted GetUser",
+      title: "GetUser",
+      detail: "persisted",
       data: named,
     })
-    expect(summary({ extensions })).toBe("persisted abcdef12")
-    expect(summary({ query: "query A { a }", extensions })).toBe("query A")
+    expect(label({ extensions })).toEqual(op("abcdef12", "persisted"))
+    expect(label({ query: "query A { a }", extensions })).toEqual(
+      op("A", "query"),
+    )
     expect(graphql.decode(post({ extensions: {} }))).toBeUndefined()
   })
 
@@ -126,7 +134,8 @@ describe("graphql", () => {
         post([{ query: "query A { a }" }, { query: "mutation B { b }" }]),
       ),
     ).toEqual({
-      summary: "2 operations: query A, mutation B",
+      title: "A, B",
+      detail: "2 ops",
       data: {
         operations: [
           { name: "query A", value: "query A { a }" },
@@ -134,7 +143,22 @@ describe("graphql", () => {
         ],
       },
     })
-    expect(summary([{ query: "query A { a }" }])).toBe("1 operation: query A")
+    expect(label([{ query: "query A { a }" }])).toEqual(op("A", "1 op"))
+  })
+
+  it("titles anonymous batch items as anonymous", () => {
+    expect(
+      graphql.decode(post([{ query: "{ a }" }, { query: "query B { b }" }])),
+    ).toEqual({
+      title: "anonymous, B",
+      detail: "2 ops",
+      data: {
+        operations: [
+          { name: "query anonymous", value: "{ a }" },
+          { name: "query B", value: "query B { b }" },
+        ],
+      },
+    })
   })
 
   it("summarizes APQ items in a batch by name, valued by hash", () => {
@@ -143,14 +167,15 @@ describe("graphql", () => {
       extensions: { persistedQuery: { sha256Hash: "abc123ff00" } },
     }
     expect(graphql.decode(post([apq]))).toEqual({
-      summary: "1 operation: persisted X",
+      title: "X",
+      detail: "1 op",
       data: { operations: [{ name: "persisted X", value: "abc123ff00" }] },
     })
   })
 
   it("ignores empty batches and batches with non-GraphQL items", () => {
-    expect(summary([])).toBeUndefined()
-    expect(summary([{ query: "query A { a }" }, { foo: 1 }])).toBeUndefined()
+    expect(label([])).toBeUndefined()
+    expect(label([{ query: "query A { a }" }, { foo: 1 }])).toBeUndefined()
   })
 
   it("lists variables of batched operations that have them", () => {
@@ -195,7 +220,8 @@ describe("graphql", () => {
           upload(JSON.stringify({ query, variables: { file: null } })),
         ),
       ).toEqual({
-        summary: "mutation Upload",
+        title: "Upload",
+        detail: "mutation",
         data: { query, variables: { file: null }, files },
       })
     })
@@ -206,7 +232,8 @@ describe("graphql", () => {
         { query: "mutation B { b }" },
       ]
       expect(graphql.decode(upload(JSON.stringify(batch)))).toEqual({
-        summary: "2 operations: mutation A, mutation B",
+        title: "A, B",
+        detail: "2 ops",
         data: {
           operations: [
             { name: "mutation A", value: "mutation A { a }" },
@@ -224,7 +251,12 @@ describe("graphql", () => {
   })
 
   describe("decodeResponse", () => {
-    const decoded = { kind: "graphql", summary: "query Broken", data: {} }
+    const decoded = {
+      kind: "graphql",
+      title: "Broken",
+      detail: "query",
+      data: {},
+    }
     const response = (body: unknown) =>
       graphql.decodeResponse?.(
         typeof body === "string" ? body : JSON.stringify(body),
