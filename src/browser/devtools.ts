@@ -35,3 +35,16 @@ export function onRequestFinished(
   return () =>
     chrome.devtools.network.onRequestFinished.removeListener(listener)
 }
+
+export function getHAR(): Promise<FinishedRequest[]> {
+  return new Promise((resolve) =>
+    chrome.devtools.network.getHAR((har) =>
+      resolve(
+        // Chrome gives HAR entries the Request prototype, so getContent is there.
+        (har.entries as chrome.devtools.network.Request[]).map(
+          toFinishedRequest,
+        ),
+      ),
+    ),
+  )
+}
