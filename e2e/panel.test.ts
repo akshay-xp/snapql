@@ -121,6 +121,27 @@ test("the search box filters rows and highlights matches", async () => {
   }
 })
 
+test("filtering out the selected request closes the pane", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const two = "/api/two POST"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([two]))
+    await panel.select(two)
+    expect(await panel.detail()).not.toBeNull()
+
+    await panel.search("getuser")
+    await expect.poll(panel.detail).toBeNull()
+    expect(await panel.selectedRow()).toBeUndefined()
+
+    await panel.clearSearch()
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([two]))
+    expect(await panel.selectedRow()).toBeUndefined()
+  } finally {
+    await panel.close()
+  }
+})
+
 test("decoded requests show their kind and summary", async () => {
   const panel = await openPanel()
   try {
