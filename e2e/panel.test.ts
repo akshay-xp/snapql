@@ -33,3 +33,20 @@ test("clear empties the panel and later requests still appear", async () => {
     await panel.close()
   }
 })
+
+test("decoded requests show their kind and summary", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    await expect
+      .poll(panel.rows)
+      .toEqual(
+        expect.arrayContaining([
+          "POST 200 graphql query GetUser",
+          `GET 200 ${panel.origin}/api/one`,
+        ]),
+      )
+  } finally {
+    await panel.close()
+  }
+})

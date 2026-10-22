@@ -9,7 +9,15 @@ const extensionDir = resolve("dist/chrome")
 
 const testPage = `<!doctype html>
 <script>
-  fetch("/api/one").then(() => fetch("/api/two", { method: "POST" }))
+  fetch("/api/one")
+    .then(() =>
+      fetch("/graphql", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: "query GetUser { user { id } }" }),
+      }),
+    )
+    .then(() => fetch("/api/two", { method: "POST" }))
 </script>`
 
 export type Panel = {
@@ -85,6 +93,7 @@ function startServer(): Promise<Server> {
   const server = createServer((req, res) => {
     if (req.url === "/api/one") return res.writeHead(200).end("one")
     if (req.url === "/api/two") return res.writeHead(201).end("two")
+    if (req.url === "/graphql") return res.writeHead(200).end('{"data":{}}')
     res.writeHead(200, { "content-type": "text/html" }).end(testPage)
   })
   return new Promise((done) =>

@@ -1,4 +1,4 @@
-import { createSignal, For, onCleanup } from "solid-js"
+import { createSignal, For, onCleanup, Show } from "solid-js"
 import type { Store } from "../capture/store"
 
 export function App(props: { store: Store }) {
@@ -23,9 +23,23 @@ export function App(props: { store: Store }) {
             <li class="flex gap-2 border-b border-gray-100 px-2 py-1">
               <span class="w-14 shrink-0">{entry.method}</span>
               <span class="w-10 shrink-0">{entry.status}</span>
-              <span class="truncate" title={entry.url}>
-                {entry.url}
-              </span>
+              <Show
+                when={entry.decoded}
+                fallback={
+                  <span class="truncate" title={entry.url}>
+                    {entry.url}
+                  </span>
+                }
+              >
+                {(decoded) => (
+                  <>
+                    <span class="shrink-0">{decoded().kind}</span>
+                    <span class="truncate" title={entry.url}>
+                      {decoded().summary}
+                    </span>
+                  </>
+                )}
+              </Show>
             </li>
           )}
         </For>
