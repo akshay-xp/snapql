@@ -3,6 +3,7 @@ import type { DecodeResult, RequestView } from "../decoders/types"
 export type Body = { content: string; encoding: string }
 
 export type FinishedRequest = RequestView & {
+  mimeType: string
   startedDateTime: string
   time: number
   fetchBody: () => Promise<Body>
@@ -15,6 +16,7 @@ export type Entry = {
   status: number
   startedAt: number
   time: number
+  mimeType: string
   decoded?: DecodeResult
   getBody: () => Promise<Body>
 }
@@ -32,6 +34,7 @@ export function toEntry(
     status: req.status,
     startedAt: Date.parse(req.startedDateTime),
     time: req.time,
+    mimeType: req.mimeType,
     decoded,
     getBody: () => {
       body ??= req.fetchBody()

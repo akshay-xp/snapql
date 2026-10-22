@@ -11,6 +11,7 @@ function request(url: string): FinishedRequest {
     status: 200,
     startedDateTime: "2026-10-22T10:00:00.000Z",
     time: 1,
+    mimeType: "",
     fetchBody: vi.fn(() => Promise.resolve({ content: "", encoding: "" })),
   }
 }

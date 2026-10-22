@@ -51,6 +51,16 @@ describe("toFinishedRequest", () => {
   })
 })
 
+describe("response mime type", () => {
+  it("maps response.content.mimeType, defaulting to empty", () => {
+    const req = chromeRequest()
+    expect(toFinishedRequest(req).mimeType).toBe("")
+
+    req.response.content = { mimeType: "application/json", size: 0 }
+    expect(toFinishedRequest(req).mimeType).toBe("application/json")
+  })
+})
+
 describe("onRequestFinished", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
