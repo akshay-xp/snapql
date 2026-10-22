@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { decodeJwt, findTokens } from "./values"
+import { decodeJwt, decodeValue, findTokens } from "./values"
 
 const b64url = (text: string) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(text)))
@@ -85,5 +85,27 @@ describe("findTokens", () => {
         queryString: [],
       }),
     ).toEqual([])
+  })
+})
+
+describe("decodeValue", () => {
+  it("percent-decodes text", () => {
+    expect(decodeValue("hello%20world")).toBe("hello world")
+  })
+
+  it("pretty-prints JSON objects and arrays, after percent-decoding", () => {
+    expect(decodeValue("%7B%22a%22%3A1%7D")).toBe('{\n  "a": 1\n}')
+    expect(decodeValue("[1,2]")).toBe("[\n  1,\n  2\n]")
+  })
+
+  it("shows a JWT's payload", () => {
+    expect(decodeValue(jwt({ alg: "HS256" }, { sub: "42" }))).toBe(
+      '{\n  "sub": "42"\n}',
+    )
+  })
+
+  it("returns undefined when there is nothing to add", () => {
+    for (const value of ["plain", "42", '"str"', "%E0%A4%A"])
+      expect(decodeValue(value)).toBeUndefined()
   })
 })
