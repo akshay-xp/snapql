@@ -142,18 +142,32 @@ export function Detail(props: {
   )
 }
 
+// The whole tab waits for the body, so Copy can take request and response together.
 function RawPanel(props: { entry: Entry }) {
   return (
-    <>
-      <h2 class="text-muted">Request</h2>
-      <pre class="font-mono mb-3 whitespace-pre-wrap break-all">
-        {rawRequest(props.entry)}
-      </pre>
-      <h2 class="text-muted">Response</h2>
-      <LoadedBody entry={props.entry} pretty={false}>
-        {(text) => <Text>{rawResponse(props.entry, text)}</Text>}
-      </LoadedBody>
-    </>
+    <LoadedBody entry={props.entry} pretty={false}>
+      {(text) => {
+        const request = rawRequest(props.entry)
+        const response = rawResponse(props.entry, text)
+        return (
+          <>
+            <Toolbar>
+              <CopyButton
+                label="Copy"
+                captioned
+                value={() => `${request}\n\n${response}`}
+              />
+            </Toolbar>
+            <h2 class="text-muted">Request</h2>
+            <pre class="font-mono mb-3 whitespace-pre-wrap break-all">
+              {request}
+            </pre>
+            <h2 class="text-muted">Response</h2>
+            <Text>{response}</Text>
+          </>
+        )
+      }}
+    </LoadedBody>
   )
 }
 
@@ -255,26 +269,34 @@ function BodyView(props: { text: string }) {
   }
   const [allOpen, setAllOpen] = createSignal(false)
   return (
-    <Show when={json()} fallback={<Text>{props.text}</Text>}>
-      {(value) => (
-        <>
-          <div class="flex justify-end">
-            <button
-              type="button"
-              class="rounded px-1.5 text-muted hover:bg-selected hover:text-fg"
-              onClick={() => setAllOpen(true)}
-            >
-              Expand all
-            </button>
-          </div>
+    <>
+      <Toolbar>
+        <Show when={json()}>
+          <button
+            type="button"
+            class="rounded px-1.5 text-muted hover:bg-selected hover:text-fg"
+            onClick={() => setAllOpen(true)}
+          >
+            Expand all
+          </button>
+        </Show>
+        <CopyButton label="Copy" captioned value={() => props.text} />
+      </Toolbar>
+      <Show when={json()} fallback={<Text>{props.text}</Text>}>
+        {(value) => (
           <JsonTree
             value={value()}
             openDepth={allOpen() ? Number.POSITIVE_INFINITY : OPEN_DEPTH}
           />
-        </>
-      )}
-    </Show>
+        )}
+      </Show>
+    </>
   )
+}
+
+// Tab-level actions live in the panel: the tab bar can't know a lazily loaded body.
+function Toolbar(props: { children: JSX.Element }) {
+  return <div class="flex justify-end gap-1">{props.children}</div>
 }
 
 function Summary(props: { entry: Entry }) {
@@ -397,7 +419,9 @@ function Section(props: {
       <div class="flex items-center justify-between">
         <h2 class="font-semibold text-muted">{props.title}</h2>
         <Show when={props.copy}>
-          {(copy) => <CopyButton label={`Copy ${props.title}`} text={copy()} />}
+          {(copy) => (
+            <CopyButton label={`Copy ${props.title}`} value={copy()} />
+          )}
         </Show>
       </div>
       <div data-block class="rounded-md bg-surface px-3 py-2">

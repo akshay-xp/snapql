@@ -401,6 +401,21 @@ test("JSON bodies render as a tree with Expand all", async () => {
     expect(await panel.detail()).toContain("b".repeat(250))
     await panel.clickButton("Expand all")
     expect(await panel.detail()).toContain("lat: 1")
+
+    await panel.stubClipboard()
+    await panel.clickButton("Copy")
+    expect(await panel.copied()).toBe(
+      JSON.stringify(
+        {
+          id: 1,
+          bio: "b".repeat(250),
+          profile: { address: { geo: { lat: 1 } } },
+        },
+        null,
+        2,
+      ),
+    )
+    expect(await panel.detail()).toContain("Copied")
   } finally {
     await panel.close()
   }
@@ -473,6 +488,15 @@ test("Raw tab shows the request and response as sent", async () => {
     const raw = await panel.detail()
     expect(raw).toContain("POST /graphql HTTP/1.1")
     expect(raw).toContain("HTTP/1.1 200")
+
+    await panel.stubClipboard()
+    await panel.clickButton("Copy")
+    const copied = (await panel.copied()) ?? ""
+    const order = ["POST /graphql HTTP/1.1", "HTTP/1.1 200", '{"data":{}}'].map(
+      (text) => copied.indexOf(text),
+    )
+    expect(order.every((at) => at >= 0)).toBe(true)
+    expect(order).toEqual([...order].sort((a, b) => a - b))
   } finally {
     await panel.close()
   }
