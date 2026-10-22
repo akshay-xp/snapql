@@ -44,6 +44,7 @@ export function App(props: {
           <Show when={entries().length} fallback={<Waiting />}>
             <List
               entries={visible()}
+              query={query()}
               selectedId={selectedId()}
               onSelect={setSelectedId}
             />
