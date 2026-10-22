@@ -12,6 +12,8 @@ export type Decoded = { summary: string; data: unknown }
 export type Decoder = {
   kind: string
   decode(req: RequestView): Decoded | undefined
+  // Run lazily by the panel on the raw response text.
+  decodeResponse?(text: string, decoded: DecodeResult): Decoded | undefined
 }
 
 export type DecodeResult = Decoded & { kind: string }
