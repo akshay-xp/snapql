@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { onRequestFinished, toFinishedRequest } from "./devtools"
+import { getHAR, onRequestFinished, toFinishedRequest } from "./devtools"
 
 function chromeRequest(postData?: { mimeType: string; text: string }) {
   return {
@@ -69,5 +69,30 @@ describe("onRequestFinished", () => {
 
     off()
     expect(removeListener).toHaveBeenCalledWith(listener)
+  })
+})
+
+describe("getHAR", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("resolves to the HAR entries as finished requests", async () => {
+    vi.stubGlobal("chrome", {
+      devtools: {
+        network: {
+          getHAR: (cb: (har: { entries: unknown[] }) => void) =>
+            cb({ entries: [chromeRequest()] }),
+        },
+      },
+    })
+
+    const requests = await getHAR()
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0]).toMatchObject({
+      url: "https://api.test/graphql",
+      status: 201,
+    })
   })
 })
