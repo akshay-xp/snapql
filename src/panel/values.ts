@@ -1,4 +1,5 @@
 import type { Exchange, NameValue } from "../capture/entry"
+import { parseJson } from "../decoders/json"
 
 export type Jwt = {
   header: Record<string, unknown>
@@ -63,3 +64,17 @@ export function findTokens(
 
 const labelled = (prefix: string, pairs: NameValue[]) =>
   pairs.map((p) => ({ source: `${prefix} ${p.name}`, value: p.value }))
+
+export function decodeValue(value: string): string | undefined {
+  const token = decodeJwt(value)
+  if (token) return pretty(token.payload)
+  let text = value
+  try {
+    text = decodeURIComponent(value)
+  } catch {}
+  const json = parseJson(text)
+  if (typeof json === "object" && json !== null) return pretty(json)
+  return text === value ? undefined : text
+}
+
+const pretty = (value: unknown) => JSON.stringify(value, null, 2)
