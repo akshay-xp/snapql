@@ -8,10 +8,18 @@ import {
 } from "solid-js"
 import type { Entry, NameValue } from "../capture/entry"
 import { loadBody } from "./body"
+import { rawRequest, rawResponse } from "./raw"
 import { dataSections } from "./summary"
 import { timingRows } from "./timing"
 
-const tabs = ["Summary", "Body", "Headers", "Params/Cookies", "Timing"] as const
+const tabs = [
+  "Summary",
+  "Body",
+  "Headers",
+  "Params/Cookies",
+  "Timing",
+  "Raw",
+] as const
 type Tab = (typeof tabs)[number]
 
 export function Detail(props: { entry: Entry }) {
@@ -53,7 +61,11 @@ export function Detail(props: { entry: Entry }) {
             <Summary entry={props.entry} />
           </Match>
           <Match when={active() === "Body"}>
-            <BodyPanel entry={props.entry} />
+            <LoadedBody
+              entry={props.entry}
+              pretty={true}
+              render={(text) => text}
+            />
           </Match>
           <Match when={active() === "Headers"}>
             <Pairs
@@ -87,9 +99,29 @@ export function Detail(props: { entry: Entry }) {
           <Match when={active() === "Timing"}>
             <TimingPanel entry={props.entry} />
           </Match>
+          <Match when={active() === "Raw"}>
+            <RawPanel entry={props.entry} />
+          </Match>
         </Switch>
       </div>
     </section>
+  )
+}
+
+function RawPanel(props: { entry: Entry }) {
+  return (
+    <>
+      <h2 class="text-muted">Request</h2>
+      <pre class="mb-3 whitespace-pre-wrap break-all">
+        {rawRequest(props.entry)}
+      </pre>
+      <h2 class="text-muted">Response</h2>
+      <LoadedBody
+        entry={props.entry}
+        pretty={false}
+        render={(text) => rawResponse(props.entry, text)}
+      />
+    </>
   )
 }
 
@@ -143,11 +175,15 @@ function Pairs(props: {
   )
 }
 
-// Rendered only while the Body tab is active, so the body loads on demand.
-function BodyPanel(props: { entry: Entry }) {
+// Mounted only while its tab is active, so the body loads on demand.
+function LoadedBody(props: {
+  entry: Entry
+  pretty: boolean
+  render: (text: string) => string
+}) {
   const [body] = createResource(
     () => props.entry,
-    (entry) => loadBody(entry),
+    (entry) => loadBody(entry, { pretty: props.pretty }),
   )
   return (
     <Show when={body()}>
@@ -156,7 +192,9 @@ function BodyPanel(props: { entry: Entry }) {
           <For each={b().notes}>
             {(note) => <p class="text-muted">{note}</p>}
           </For>
-          <pre class="whitespace-pre-wrap break-all">{b().text}</pre>
+          <pre class="whitespace-pre-wrap break-all">
+            {props.render(b().text)}
+          </pre>
         </>
       )}
     </Show>

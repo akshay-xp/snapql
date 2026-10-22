@@ -218,3 +218,22 @@ test("Timing tab lists HAR phases", async () => {
     await panel.close()
   }
 })
+
+test("Raw tab shows the request and response as sent", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const post = "POST 200 graphql query GetUser"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([post]))
+
+    await panel.select(post)
+    await panel.openTab("Raw")
+
+    await expect.poll(panel.detail).toContain('{"data":{}}')
+    const raw = await panel.detail()
+    expect(raw).toContain("POST /graphql HTTP/1.1")
+    expect(raw).toContain("HTTP/1.1 200")
+  } finally {
+    await panel.close()
+  }
+})
