@@ -11,9 +11,9 @@ const operationTypes = new Set(["query", "mutation", "subscription"])
 export const graphql: Decoder = {
   kind: "graphql",
   decode(req) {
-    const data: GraphQLRequest | undefined = req.requestBody
+    const data = req.requestBody
       ? parseJson(req.requestBody.text)
-      : Object.fromEntries(new URL(req.url).searchParams)
+      : fromParams(new URL(req.url).searchParams)
     if (typeof data?.query === "string") {
       const summary = operationSummary(data.query, data.operationName)
       return summary ? { summary, data } : undefined
@@ -30,6 +30,14 @@ export const graphql: Decoder = {
 // Strings and comments are matched first so their contents never count as braces or keywords.
 const token = /"""[\s\S]*?"""|"(?:\\.|[^"\\])*"|#[^\n]*|[{}(]|[_A-Za-z]\w*/g
 const identifier = /^[_A-Za-z]/
+
+function fromParams(params: URLSearchParams): GraphQLRequest {
+  const extensions = params.get("extensions")
+  return {
+    ...Object.fromEntries(params),
+    extensions: extensions === null ? undefined : parseJson(extensions),
+  } as GraphQLRequest
+}
 
 function parseJson(text: string): GraphQLRequest | undefined {
   try {
