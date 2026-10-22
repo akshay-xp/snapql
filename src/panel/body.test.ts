@@ -105,7 +105,7 @@ describe("loadBody", () => {
   it("fetches once and formats", async () => {
     const getBody = vi.fn(() => Promise.resolve(text('{"a":1}')))
 
-    await expect(loadBody({ getBody })).resolves.toEqual({
+    await expect(loadBody({ getBody, mimeType: "" })).resolves.toEqual({
       text: '{\n  "a": 1\n}',
       notes: [],
     })
@@ -115,7 +115,7 @@ describe("loadBody", () => {
   it("turns a failed fetch into a note", async () => {
     const getBody = () => Promise.reject(new Error("gone"))
 
-    await expect(loadBody({ getBody })).resolves.toEqual({
+    await expect(loadBody({ getBody, mimeType: "" })).resolves.toEqual({
       text: "",
       notes: ["Body unavailable: gone"],
     })
@@ -123,9 +123,19 @@ describe("loadBody", () => {
 
   it("passes format options through", async () => {
     const getBody = () => Promise.resolve(text('{"a":1}'))
-    await expect(loadBody({ getBody }, { pretty: false })).resolves.toEqual({
+    await expect(
+      loadBody({ getBody, mimeType: "" }, { pretty: false }),
+    ).resolves.toEqual({
       text: '{"a":1}',
       notes: [],
     })
+  })
+
+  it("decodes base64 text using the entry's mime type", async () => {
+    const getBody = () =>
+      Promise.resolve({ content: "aGk=", encoding: "base64" })
+    await expect(
+      loadBody({ getBody, mimeType: "text/plain" }),
+    ).resolves.toEqual({ text: "hi", notes: [] })
   })
 })

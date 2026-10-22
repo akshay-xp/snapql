@@ -8,11 +8,14 @@ export type FormatOptions = { pretty?: boolean; mimeType?: string }
 
 // The panel's only getBody() caller, so bodies load only where this is used.
 export async function loadBody(
-  entry: Pick<Entry, "getBody">,
-  options?: FormatOptions,
+  entry: Pick<Entry, "getBody" | "mimeType">,
+  options?: { pretty?: boolean },
 ): Promise<FormattedBody> {
   try {
-    return formatBody(await entry.getBody(), options)
+    return formatBody(await entry.getBody(), {
+      ...options,
+      mimeType: entry.mimeType,
+    })
   } catch (err) {
     return { text: "", notes: [`Body unavailable: ${(err as Error).message}`] }
   }
