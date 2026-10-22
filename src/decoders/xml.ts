@@ -7,7 +7,7 @@ type Token = {
   name: string
 }
 
-// Hand-written instead of DOMParser so decoders run outside a browser (Vitest).
+// Hand-written: decoders run outside a browser (Vitest), so no browser XML parser.
 const token =
   /<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![^>]*>|<\/?[^>]+>|<|[^<]+/g
 

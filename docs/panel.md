@@ -45,7 +45,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - `formatBody(body)`: `{ text, notes }`.
   - Over `BODY_LIMIT` (1024 * 1024 characters): first `BODY_LIMIT` chars, note `Truncated: showing 1 MB of <n> characters`, never parsed.
   - `base64`: note `base64-encoded, <n> bytes` (decoded size) plus raw base64; never parsed.
-  - Otherwise: pretty JSON if it parses, else text as-is. Detection is by parse only: a JSON mime type adds nothing (unparseable JSON shows as text either way), so `formatBody` takes no mime type.
+  - Otherwise: pretty JSON if it parses, else `prettyXml` (from `src/decoders/xml.ts`; balanced XML indented, anything else, including HTML, as-is). Detection is by parse only, so `formatBody` takes no mime type.
 - Failed fetch: `{ text: "", notes: ["Body unavailable: <message>"] }`.
 - Chrome reports bodies of responses without a text-like `content-type` as base64; the e2e server sends `application/json` for `/graphql`.
 
