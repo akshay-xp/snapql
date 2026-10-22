@@ -11,6 +11,13 @@ describe("formatBody", () => {
     })
   })
 
+  it("indents XML", () => {
+    expect(formatBody(text("<a><b>1</b></a>"))).toEqual({
+      text: "<a>\n  <b>1</b>\n</a>",
+      notes: [],
+    })
+  })
+
   it("passes other text through", () => {
     expect(formatBody(text("hello"))).toEqual({ text: "hello", notes: [] })
     expect(formatBody(text("{bad"))).toEqual({ text: "{bad", notes: [] })
@@ -44,6 +51,12 @@ describe("formatBody", () => {
 })
 
 describe("formatBody without pretty-printing", () => {
+  it("leaves XML as-is", () => {
+    expect(formatBody(text("<a><b>1</b></a>"), { pretty: false }).text).toBe(
+      "<a><b>1</b></a>",
+    )
+  })
+
   it("leaves JSON as-is but still truncates", () => {
     expect(formatBody(text('{"a":1}'), { pretty: false })).toEqual({
       text: '{"a":1}',
