@@ -260,6 +260,79 @@ describe("graphql", () => {
       })
     })
 
+    describe("incremental", () => {
+      const multipart = (...parts: unknown[]) =>
+        [
+          "",
+          ...parts.flatMap((p) => [
+            "---",
+            "Content-Type: application/json; charset=utf-8",
+            "",
+            JSON.stringify(p),
+          ]),
+          "-----",
+          "",
+        ].join("\r\n")
+      const parts = [
+        { data: { user: { id: "1", friends: [{ id: "a" }] } }, hasNext: true },
+        {
+          incremental: [
+            { data: { name: "Ada" }, path: ["user"] },
+            { items: [{ id: "b" }, { id: "c" }], path: ["user", "friends", 1] },
+          ],
+          hasNext: true,
+        },
+        {
+          incremental: [
+            {
+              data: { bio: null },
+              path: ["user"],
+              errors: [{ message: "no bio", path: ["user", "bio"] }],
+            },
+          ],
+          hasNext: false,
+        },
+      ]
+      const merged = {
+        summary: "1 error",
+        data: {
+          errors: [{ name: "user.bio", value: "no bio" }],
+          data: {
+            user: {
+              id: "1",
+              friends: [{ id: "a" }, { id: "b" }, { id: "c" }],
+              name: "Ada",
+              bio: null,
+            },
+          },
+          parts: 3,
+        },
+      }
+
+      it("merges @defer data at paths and @stream items, with errors", () => {
+        expect(response(multipart(...parts))).toEqual(merged)
+        expect(response(multipart(...parts).replace(/\r\n/g, "\n"))).toEqual(
+          merged,
+        )
+      })
+
+      it("collects top-level errors from parts", () => {
+        const text = multipart(
+          { data: { a: 1 }, hasNext: true },
+          { errors: [{ message: "late" }], hasNext: false },
+        )
+        expect(response(text)?.data).toEqual({
+          errors: [{ name: "(root)", value: "late" }],
+          data: { a: 1 },
+          parts: 2,
+        })
+      })
+
+      it("ignores multipart text without JSON parts", () => {
+        expect(response("---\r\n\r\nhello\r\n-----")).toBeUndefined()
+      })
+    })
+
     it("ignores non-GraphQL responses", () => {
       expect(response("nope")).toBeUndefined()
       expect(response({ foo: 1 })).toBeUndefined()

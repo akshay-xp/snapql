@@ -24,28 +24,96 @@ export const graphql: Decoder = {
     )
   },
   decodeResponse(text) {
+    if (text.trimStart().startsWith("--")) {
+      const parts = incrementalParts(text)
+      if (!parts.length) return
+      const { data, errors } = mergeIncremental(parts)
+      return responseResult(errors, data, true, { parts: parts.length })
+    }
     const res = parseJson(text) as GraphQLResponse | undefined
     if (typeof res !== "object" || res === null) return
     if (!("data" in res) && !("errors" in res)) return
-    const errors = Array.isArray(res.errors) ? res.errors : []
-    return {
-      summary: errors.length ? count(errors.length, "error") : "no errors",
-      data: {
-        ...(errors.length && {
-          errors: errors.map((e) => ({
-            name: e.path?.join(".") || "(root)",
-            value: String(e.message),
-          })),
-        }),
-        ...("data" in res && { data: res.data }),
-      },
-    }
+    return responseResult(errorList(res.errors), res.data, "data" in res)
   },
 }
 
+type GraphQLError = { message?: unknown; path?: (string | number)[] }
+
 type GraphQLResponse = {
   data?: unknown
-  errors?: { message?: unknown; path?: (string | number)[] }[]
+  errors?: GraphQLError[]
+  incremental?: {
+    data?: object
+    items?: unknown[]
+    path?: (string | number)[]
+    errors?: GraphQLError[]
+  }[]
+}
+
+const errorList = (v: unknown): GraphQLError[] => (Array.isArray(v) ? v : [])
+
+function responseResult(
+  errors: GraphQLError[],
+  data: unknown,
+  hasData: boolean,
+  extra?: object,
+): Decoded {
+  return {
+    summary: errors.length ? count(errors.length, "error") : "no errors",
+    data: {
+      ...(errors.length && {
+        errors: errors.map((e) => ({
+          name: e.path?.join(".") || "(root)",
+          value: String(e.message),
+        })),
+      }),
+      ...(hasData && { data }),
+      ...extra,
+    },
+  }
+}
+
+// Incremental delivery (@defer/@stream): multipart/mixed, one JSON payload per part.
+function incrementalParts(text: string): GraphQLResponse[] {
+  const delimiter = text
+    .split(/\r?\n/)
+    .find((line) => line.startsWith("--"))
+    ?.trim()
+  if (!delimiter) return []
+  return text
+    .split(delimiter)
+    .map((segment) =>
+      parseJson(
+        segment.slice(segment.indexOf("{"), segment.lastIndexOf("}") + 1),
+      ),
+    )
+    .filter((p): p is GraphQLResponse => typeof p === "object" && p !== null)
+}
+
+function mergeIncremental(parts: GraphQLResponse[]) {
+  const data = structuredClone(parts[0].data ?? {})
+  const errors: GraphQLError[] = []
+  const at = (path: (string | number)[]) =>
+    path.reduce<unknown>(
+      (o, key) => (o as Record<string, unknown>)?.[key],
+      data,
+    )
+  for (const part of parts) {
+    errors.push(...errorList(part.errors))
+    for (const item of part.incremental ?? []) {
+      errors.push(...errorList(item.errors))
+      const path = item.path ?? []
+      if (item.items) {
+        const list = at(path.slice(0, -1))
+        if (Array.isArray(list)) list.push(...item.items)
+      } else if (item.data) {
+        const target = at(path)
+        if (typeof target === "object" && target)
+          Object.assign(target, item.data)
+      }
+    }
+  }
+  return { data, errors }
 }
 
 // GraphQL multipart request spec: operations JSON in a field, files beside it.
