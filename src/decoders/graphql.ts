@@ -5,8 +5,9 @@ const operationTypes = new Set(["query", "mutation", "subscription"])
 export const graphql: Decoder = {
   kind: "graphql",
   decode(req) {
-    if (!req.requestBody) return
-    const data = JSON.parse(req.requestBody.text)
+    const data = req.requestBody
+      ? JSON.parse(req.requestBody.text)
+      : Object.fromEntries(new URL(req.url).searchParams)
     if (typeof data?.query !== "string") return
     const summary = operationSummary(data.query, data.operationName)
     return summary ? { summary, data } : undefined
