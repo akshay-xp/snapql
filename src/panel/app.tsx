@@ -8,6 +8,7 @@ import {
 import type { Store } from "../capture/store"
 import { Detail } from "./detail"
 import { List } from "./list"
+import { clampWidth } from "./splitter"
 
 export function App(props: {
   store: Store
@@ -57,9 +58,10 @@ export function App(props: {
             <Detail
               entry={entry()}
               width={detailWidth()}
-              onResize={(clientX) =>
-                setDetailWidth(row.getBoundingClientRect().right - clientX)
-              }
+              onResize={(clientX) => {
+                const box = row.getBoundingClientRect()
+                setDetailWidth(clampWidth(box.right - clientX, box.width))
+              }}
             />
           )}
         </Show>
