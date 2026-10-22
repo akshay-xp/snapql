@@ -7,8 +7,10 @@ import {
 } from "solid-js"
 import type { Store } from "../capture/store"
 import { Detail } from "./detail"
+import { matchesQuery } from "./filter"
 import { Footer } from "./footer"
 import { List } from "./list"
+import { SearchBox } from "./search"
 import { clampWidth } from "./splitter"
 
 export function App(props: {
@@ -20,6 +22,11 @@ export function App(props: {
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
   const [selectedId, setSelectedId] = createSignal<number>()
   const [newestFirst, setNewestFirst] = createSignal(true)
+  const [query, setQuery] = createSignal("")
+  const visible = () => {
+    const shown = entries().filter((e) => matchesQuery(e, query()))
+    return newestFirst() ? shown.reverse() : shown
+  }
   // Undefined until the first drag: the pane takes half the width. Not persisted.
   const [detailWidth, setDetailWidth] = createSignal<number>()
   let row!: HTMLDivElement
@@ -33,15 +40,17 @@ export function App(props: {
     <main class="flex h-dvh flex-col font-sans text-xs">
       <div class="flex min-h-0 flex-1" ref={row}>
         <section class="flex min-w-0 flex-1 flex-col">
+          <SearchBox query={query()} onQuery={setQuery} />
           <Show when={entries().length} fallback={<Waiting />}>
             <List
-              entries={newestFirst() ? [...entries()].reverse() : entries()}
+              entries={visible()}
               selectedId={selectedId()}
               onSelect={setSelectedId}
             />
           </Show>
           <Footer
-            count={entries().length}
+            count={visible().length}
+            total={query() ? entries().length : undefined}
             onClear={() => props.store.clear()}
             newestFirst={newestFirst()}
             onSort={() => setNewestFirst(!newestFirst())}

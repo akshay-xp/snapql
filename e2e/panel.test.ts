@@ -77,6 +77,37 @@ test("rows are newest first; the sort button flips the order", async () => {
   }
 })
 
+test("the search box filters rows and highlights matches", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/two POST"]))
+
+    await panel.search("getuser")
+    await expect
+      .poll(panel.rows)
+      .toEqual(["GetUser persisted graphql", "GetUser query graphql"])
+    expect(await panel.text("footer")).toMatch(/^2 of \d+$/)
+
+    // Only what a row shows is searched: decoded rows don't show their method.
+    await panel.search("POST")
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/two POST"]))
+    expect(await panel.rows()).not.toContain("GetUser query graphql")
+
+    await panel.clearSearch()
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/one GET"]))
+    expect(await panel.text("footer")).toMatch(/^\d+ requests$/)
+  } finally {
+    await panel.close()
+  }
+})
+
 test("decoded requests show their kind and summary", async () => {
   const panel = await openPanel()
   try {
