@@ -15,6 +15,10 @@ const decodersPage = `<!doctype html>
 <script>
   fetch("/api/users/1")
   fetch("/api/form", { method: "POST", body: new URLSearchParams({ a: "1", b: "x y" }) })
+  const upload = new FormData()
+  upload.append("a", "1")
+  upload.append("f", new Blob(["hi"], { type: "text/plain" }), "f.txt")
+  fetch("/api/upload", { method: "POST", body: upload })
 </script>`
 
 // No favicon request, so the last row is the last item.
@@ -248,6 +252,7 @@ function startServer(): Promise<Server> {
         .writeHead(200, { "content-type": "application/json" })
         .end('{"id":1}')
     if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
+    if (req.url === "/api/upload") return res.writeHead(200).end("ok")
     if (req.url === "/decoders")
       return res
         .writeHead(200, { "content-type": "text/html" })
