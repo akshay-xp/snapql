@@ -1,6 +1,6 @@
 import { parseJson } from "./json"
 import { count } from "./text"
-import type { Decoder } from "./types"
+import type { Decoded, Decoder } from "./types"
 
 type GraphQLRequest = {
   query?: unknown
@@ -14,31 +14,36 @@ const operationTypes = new Set(["query", "mutation", "subscription"])
 export const graphql: Decoder = {
   kind: "graphql",
   decode(req) {
-    const data = req.requestBody
-      ? parseJson(req.requestBody.text)
-      : fromParams(new URL(req.url).searchParams)
-    if (!Array.isArray(data)) {
-      const summary = summarize(data as GraphQLRequest)
-      return summary ? { summary, data } : undefined
-    }
-    const ops = data as NonNullable<GraphQLRequest>[]
-    const summaries = ops.map(summarize)
-    if (!ops.length || !summaries.every((s) => s)) return
-    const name = (i: number) => summaries[i] as string
-    const operations = ops.map((op, i) => ({
-      name: name(i),
-      value: typeof op.query === "string" ? op.query : (apqHash(op) ?? ""),
-    }))
-    const variables = ops.flatMap((op, i) =>
-      op.variables === undefined
-        ? []
-        : [{ name: name(i), value: JSON.stringify(op.variables) }],
+    return decodeOperations(
+      req.requestBody
+        ? parseJson(req.requestBody.text)
+        : fromParams(new URL(req.url).searchParams),
     )
-    return {
-      summary: `${count(ops.length, "operation")}: ${summaries.join(", ")}`,
-      data: variables.length ? { operations, variables } : { operations },
-    }
   },
+}
+
+function decodeOperations(data: unknown): Decoded | undefined {
+  if (!Array.isArray(data)) {
+    const summary = summarize(data as GraphQLRequest)
+    return summary ? { summary, data } : undefined
+  }
+  const ops = data as NonNullable<GraphQLRequest>[]
+  const summaries = ops.map(summarize)
+  if (!ops.length || !summaries.every((s) => s)) return
+  const name = (i: number) => summaries[i] as string
+  const operations = ops.map((op, i) => ({
+    name: name(i),
+    value: typeof op.query === "string" ? op.query : (apqHash(op) ?? ""),
+  }))
+  const variables = ops.flatMap((op, i) =>
+    op.variables === undefined
+      ? []
+      : [{ name: name(i), value: JSON.stringify(op.variables) }],
+  )
+  return {
+    summary: `${count(ops.length, "operation")}: ${summaries.join(", ")}`,
+    data: variables.length ? { operations, variables } : { operations },
+  }
 }
 
 function summarize(data: GraphQLRequest): string | undefined {

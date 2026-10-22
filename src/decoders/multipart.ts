@@ -34,14 +34,20 @@ function param(headers: string, key: string): string | undefined {
   return headers.match(new RegExp(`[;\\s]${key}="([^"]*)"`, "i"))?.[1]
 }
 
+export function multipartParts(body: {
+  mimeType: string
+  text: string
+}): Part[] | undefined {
+  if (baseMime(body.mimeType) !== "multipart/form-data") return
+  const boundary = body.mimeType.match(/boundary="?([^";]+)"?/i)?.[1]
+  return boundary ? parseMultipart(body.text, boundary) : undefined
+}
+
 export const multipart: Decoder = {
   kind: "multipart",
   decode(req) {
-    const body = req.requestBody
-    if (!body || baseMime(body.mimeType) !== "multipart/form-data") return
-    const boundary = body.mimeType.match(/boundary="?([^";]+)"?/i)?.[1]
-    if (!boundary) return
-    const parts = parseMultipart(body.text, boundary)
+    const parts = req.requestBody && multipartParts(req.requestBody)
+    if (!parts) return
     const fields = parts
       .filter((p) => p.filename === undefined)
       .map((p) => ({ name: p.name, value: p.content }))
@@ -59,7 +65,7 @@ export const multipart: Decoder = {
 }
 
 // Browsers may leave file contents out of the captured body.
-function fileValue(p: Part): string {
+export function fileValue(p: Part): string {
   const size = p.content
     ? count(new TextEncoder().encode(p.content).length, "byte")
     : "size unknown"
