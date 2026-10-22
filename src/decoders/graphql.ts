@@ -1,4 +1,5 @@
 import { parseJson } from "./json"
+import { count } from "./text"
 import type { Decoder } from "./types"
 
 type GraphQLRequest = {
@@ -13,19 +14,38 @@ export const graphql: Decoder = {
   kind: "graphql",
   decode(req) {
     const data = req.requestBody
-      ? (parseJson(req.requestBody.text) as GraphQLRequest | undefined)
+      ? parseJson(req.requestBody.text)
       : fromParams(new URL(req.url).searchParams)
-    if (typeof data?.query === "string") {
-      const summary = operationSummary(data.query, data.operationName)
+    if (!Array.isArray(data)) {
+      const summary = summarize(data as GraphQLRequest)
       return summary ? { summary, data } : undefined
     }
-    const hash = data?.extensions?.persistedQuery?.sha256Hash
-    if (typeof hash !== "string") return
+    const ops = data as NonNullable<GraphQLRequest>[]
+    const summaries = ops.map(summarize)
+    if (!ops.length || !summaries.every((s) => s)) return
     return {
-      summary: `persisted ${data?.operationName ?? hash.slice(0, 8)}`,
-      data,
+      summary: `${count(ops.length, "operation")}: ${summaries.join(", ")}`,
+      data: {
+        operations: ops.map((op, i) => ({
+          name: summaries[i] as string,
+          value: typeof op.query === "string" ? op.query : (apqHash(op) ?? ""),
+        })),
+      },
     }
   },
+}
+
+function summarize(data: GraphQLRequest): string | undefined {
+  if (typeof data?.query === "string")
+    return operationSummary(data.query, data.operationName)
+  const hash = apqHash(data)
+  if (hash === undefined) return
+  return `persisted ${data?.operationName ?? hash.slice(0, 8)}`
+}
+
+function apqHash(data: GraphQLRequest): string | undefined {
+  const hash = data?.extensions?.persistedQuery?.sha256Hash
+  return typeof hash === "string" ? hash : undefined
 }
 
 // Strings and comments are matched first so their contents never count as braces or keywords.

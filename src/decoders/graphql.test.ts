@@ -118,6 +118,38 @@ describe("graphql", () => {
     }
 
     expect(graphql.decode(form)).toBeUndefined()
-    expect(graphql.decode(post([{ query: "query A { a }" }]))).toBeUndefined()
+  })
+
+  it("summarizes batches per operation", () => {
+    expect(
+      graphql.decode(
+        post([{ query: "query A { a }" }, { query: "mutation B { b }" }]),
+      ),
+    ).toEqual({
+      summary: "2 operations: query A, mutation B",
+      data: {
+        operations: [
+          { name: "query A", value: "query A { a }" },
+          { name: "mutation B", value: "mutation B { b }" },
+        ],
+      },
+    })
+    expect(summary([{ query: "query A { a }" }])).toBe("1 operation: query A")
+  })
+
+  it("summarizes APQ items in a batch by name, valued by hash", () => {
+    const apq = {
+      operationName: "X",
+      extensions: { persistedQuery: { sha256Hash: "abc123ff00" } },
+    }
+    expect(graphql.decode(post([apq]))).toEqual({
+      summary: "1 operation: persisted X",
+      data: { operations: [{ name: "persisted X", value: "abc123ff00" }] },
+    })
+  })
+
+  it("ignores empty batches and batches with non-GraphQL items", () => {
+    expect(summary([])).toBeUndefined()
+    expect(summary([{ query: "query A { a }" }, { foo: 1 }])).toBeUndefined()
   })
 })
