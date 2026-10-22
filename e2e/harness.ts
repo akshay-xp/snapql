@@ -16,6 +16,7 @@ export type Panel = {
   page: Page
   origin: string
   rows(): Promise<string[]>
+  clear(): Promise<void>
   close(): Promise<void>
 }
 
@@ -65,6 +66,10 @@ export async function openPanel(): Promise<Panel> {
     rows: () =>
       panelFrame.evaluate<string[]>(
         `[...document.querySelectorAll("li")].map((li) => li.innerText.replace(/\\s+/g, " ").trim())`,
+      ),
+    clear: () =>
+      panelFrame.evaluate<void>(
+        `[...document.querySelectorAll("button")].find((b) => b.textContent === "Clear").click()`,
       ),
     close: async () => {
       devtools.close()
