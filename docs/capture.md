@@ -32,8 +32,8 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 ## Wiring (`src/capture/capture.ts`, `src/panel/main.tsx`)
 
-- `CaptureSource`: `{ onRequestFinished(cb): () => void; getHAR(): Promise<FinishedRequest[]> }`. The adapter functions satisfy it; tests pass a fake.
-- `startCapture(source, store, decoders)`: assigns ids from 1 (never reused, also across `clear()`), decodes once via `decodeRequest(req, decoders)`, adds `toEntry(req, id, decoded)` to the store, returns the live unsubscribe.
+- `CaptureSource`: `{ onRequestFinished(cb): () => void; getHAR(): Promise<FinishedRequest[]>; onNavigated(cb): () => void }`. The adapter functions satisfy it; tests pass a fake.
+- `startCapture(source, store, decoders, preserveLog)`: assigns ids from 1 (never reused, also across `clear()`), decodes once via `decodeRequest(req, decoders)`, adds `toEntry(req, id, decoded)` to the store, returns one stop function that removes both listeners.
 
 ## Backfill
 
@@ -42,7 +42,14 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 - Dedupe key: `url + " " + startedDateTime`. Any live request matching a HAR key is dropped, buffered or not: Chrome delivers already-finished requests live after `getHAR` resolves (seen in e2e). Each key is forgotten on first match (a request finishes once), so the set never outgrows the HAR.
 - A rejected `getHAR` counts as empty; the buffer still flushes.
 - DevTools only records while its frontend is loaded; requests before DevTools opened are not in the HAR.
-- `main.tsx`: `createStore()`, `startCapture({ onRequestFinished, getHAR }, store, decoders)`, renders `<App store={store} />`.
+
+## Preserve log
+
+- `onNavigated(cb)` (adapter): wraps `chrome.devtools.network.onNavigated`, ignores the url, returns an unsubscribe.
+- On navigation, capture calls `store.clear()` unless `preserveLog()` returns true. It is a plain getter, read at each navigation, so capture stays Solid-free.
+- Panel: "Preserve log" checkbox in the header. Off by default, not persisted across sessions.
+- `main.tsx` owns the signal: `createSignal(false)`; getter to `startCapture`, getter + setter to `App`.
+- `main.tsx`: `createStore()`, `startCapture({ onRequestFinished, getHAR, onNavigated }, store, decoders, preserveLog)`, renders `<App store preserveLog setPreserveLog />`.
 - `App` mirrors `store.snapshot()` into a Solid signal on each `subscribe` notification; the panel never calls `getBody()`.
 - Row: `METHOD STATUS KIND SUMMARY` when `decoded`, else `METHOD STATUS URL`; URL is the tooltip either way.
 - Capture runs in the panel page; devtools APIs are available there in Chrome. Firefox: pending manual verification.

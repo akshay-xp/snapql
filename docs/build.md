@@ -32,7 +32,7 @@
 ## E2E
 
 - Chromium only. Firefox e2e deferred (not automatable).
-- `e2e/harness.ts` exposes one function, `openPanel()`, returning `{ page, origin, rows(), clear(), close() }`.
+- `e2e/harness.ts` exposes one function, `openPanel()`, returning `{ page, origin, rows(), clear(), togglePreserveLog(), close() }`.
 - How it works:
   - `node:http` test server on port 0: `/` is a page that fetches `GET /api/one` then `POST /api/two` (200, 201).
   - Playwright `launchPersistentContext` (`channel: "chromium"`, headless) loads `dist/chrome` with `--auto-open-devtools-for-tabs` and `--remote-debugging-port=0`.
@@ -40,6 +40,7 @@
   - Small CDP client (`Runtime.evaluate` over WebSocket) on the `devtools://` target finds the tab id containing `SnapQL` and shows it; a second client on the `/panel.html` target reads `li` text and clicks Clear.
 - Relies on DevTools internals: `ui/legacy/legacy.js`, `InspectorView.instance()`, `tabbedPane.tabIds()`, `showPanel(id)`. A Playwright (bundled Chromium) upgrade can break it; fix the harness, not the tests.
 - No fixed sleeps: tests wait with `expect.poll`, harness with its internal `poll` helper (the only `setTimeout`).
+- Test server also serves `/other` (fetches `/api/three`) for navigation tests; `togglePreserveLog()` clicks the panel's Preserve log checkbox.
 - `openPanel({ visitFirst: true })` loads the test page after DevTools is up but before the panel is shown (backfill test). DevTools must be loaded first or it records nothing.
 - Rows include the document and favicon requests, so assert with `arrayContaining` unless the panel was just cleared.
 
