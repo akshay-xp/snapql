@@ -28,7 +28,7 @@ export function App(props: {
   })
 
   return (
-    <main class="flex h-dvh flex-col font-mono text-xs">
+    <main class="flex h-dvh flex-col font-sans text-xs">
       <header class="flex items-center gap-2 border-b border-border p-2">
         <h1 class="font-semibold">SnapQL</h1>
         <label class="ml-auto flex items-center gap-1">

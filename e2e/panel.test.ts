@@ -168,6 +168,31 @@ test("Summary shows the request and its decoded data", async () => {
   }
 })
 
+test("UI text is sans and code is monospace", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const row = "POST 200 graphql GetUser query"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+    await panel.select(row)
+
+    expect(await panel.style("main", "font-family")).not.toContain("monospace")
+    expect(await panel.style("main", "font-size")).toBe("12px")
+    expect(await panel.style('[role="tab"]', "font-family")).not.toContain(
+      "monospace",
+    )
+    expect(await panel.style('[role="tabpanel"] pre', "font-family")).toContain(
+      "monospace",
+    )
+    await panel.openTab("Headers")
+    expect(await panel.style('[role="tabpanel"] li', "font-family")).toContain(
+      "monospace",
+    )
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Body tab loads and pretty-prints the response", async () => {
   const panel = await openPanel()
   try {
