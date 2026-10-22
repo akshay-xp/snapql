@@ -19,6 +19,11 @@ const decodersPage = `<!doctype html>
   upload.append("a", "1")
   upload.append("f", new Blob(["hi"], { type: "text/plain" }), "f.txt")
   fetch("/api/upload", { method: "POST", body: upload })
+  fetch("/api/rpc", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: '{"jsonrpc":"2.0","method":"sum","params":[1,2],"id":1}',
+  })
   fetch("/api/soap", {
     method: "POST",
     headers: { "content-type": "text/xml; charset=utf-8" },
@@ -258,6 +263,10 @@ function startServer(): Promise<Server> {
         .end('{"id":1}')
     if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
     if (req.url === "/api/upload") return res.writeHead(200).end("ok")
+    if (req.url === "/api/rpc")
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end('{"jsonrpc":"2.0","result":3,"id":1}')
     if (req.url === "/api/soap")
       return res
         .writeHead(200, { "content-type": "text/xml" })

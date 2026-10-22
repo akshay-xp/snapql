@@ -322,6 +322,7 @@ test("M3 decoders summarize their requests", async () => {
           "POST 200 form 2 fields",
           "POST 200 multipart 1 field, 1 file",
           "POST 200 soap GetPrice",
+          "POST 200 jsonrpc sum",
         ]),
       )
 
