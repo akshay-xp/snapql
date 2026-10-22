@@ -120,6 +120,8 @@ export type Panel = {
   attr(selector: string, name: string): Promise<string | null>
   clear(): Promise<void>
   toggleSort(): Promise<void>
+  search(query: string): Promise<void>
+  clearSearch(): Promise<void>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
 }
@@ -283,6 +285,16 @@ export async function openPanel(
     clear: () =>
       panelFrame.evaluate<void>(
         `document.querySelector('button[aria-label="Clear"]').click()`,
+      ),
+    search: (query: string) =>
+      panelFrame.evaluate<void>(`(() => {
+        const input = document.querySelector('input[aria-label="Filter requests"]')
+        input.value = ${JSON.stringify(query)}
+        input.dispatchEvent(new Event("input", { bubbles: true }))
+      })()`),
+    clearSearch: () =>
+      panelFrame.evaluate<void>(
+        `document.querySelector('button[aria-label="Clear filter"]').click()`,
       ),
     toggleSort: () =>
       panelFrame.evaluate<void>(

@@ -1,8 +1,9 @@
-import type { JSX } from "solid-js"
 import { count } from "../decoders/text"
+import { IconButton } from "./icon-button"
 
 export function Footer(props: {
   count: number
+  total?: number
   onClear: () => void
   newestFirst: boolean
   onSort: () => void
@@ -35,41 +36,10 @@ export function Footer(props: {
         <path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4z" />
       </IconButton>
       <span class="ml-auto pr-1 text-muted">
-        {count(props.count, "request")}
+        {props.total === undefined
+          ? count(props.count, "request")
+          : `${props.count} of ${props.total}`}
       </span>
     </footer>
-  )
-}
-
-function IconButton(props: {
-  label: string
-  pressed?: boolean
-  onClick: () => void
-  children: JSX.Element
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={props.label}
-      title={props.label}
-      aria-pressed={props.pressed}
-      class="flex size-6 items-center justify-center rounded text-muted hover:bg-selected hover:text-fg"
-      classList={{ "text-accent": props.pressed }}
-      onClick={props.onClick}
-    >
-      <svg
-        aria-hidden="true"
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        {props.children}
-      </svg>
-    </button>
   )
 }
