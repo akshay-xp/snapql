@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   getHAR,
+  getTheme,
   onNavigated,
   onRequestFinished,
   toFinishedRequest,
@@ -123,5 +124,21 @@ describe("onNavigated", () => {
 
     off()
     expect(removeListener).toHaveBeenCalledWith(listener)
+  })
+})
+
+describe("getTheme", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it.each([
+    ["dark", "dark"],
+    ["default", "light"],
+    [undefined, "light"],
+  ])("maps themeName %s to %s", (themeName, kind) => {
+    vi.stubGlobal("chrome", { devtools: { panels: { themeName } } })
+
+    expect(getTheme()).toBe(kind)
   })
 })

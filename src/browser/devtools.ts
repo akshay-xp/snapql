@@ -54,3 +54,12 @@ export function onNavigated(cb: () => void): () => void {
   chrome.devtools.network.onNavigated.addListener(listener)
   return () => chrome.devtools.network.onNavigated.removeListener(listener)
 }
+
+export type ThemeKind = "light" | "dark"
+
+const toThemeKind = (name: string | undefined): ThemeKind =>
+  name === "dark" ? "dark" : "light"
+
+export function getTheme(): ThemeKind {
+  return toThemeKind(chrome.devtools.panels.themeName)
+}
