@@ -138,4 +138,20 @@ describe("startCapture", () => {
       expect(urls(store)).toEqual([[1, "https://api.test/l1"]]),
     )
   })
+
+  it("drops a live copy of a HAR entry that arrives after backfill", async () => {
+    const store = createStore()
+    const h1 = request("https://api.test/h1")
+    const { source, emit } = fakeSource(Promise.resolve([h1]))
+
+    startCapture(source, store, [])
+    await vi.waitFor(() => expect(store.snapshot()).toHaveLength(1))
+    emit({ ...h1 })
+    emit(request("https://api.test/l1"))
+
+    expect(urls(store)).toEqual([
+      [1, "https://api.test/h1"],
+      [2, "https://api.test/l1"],
+    ])
+  })
 })
