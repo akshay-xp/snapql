@@ -3,6 +3,7 @@ import type { JSX } from "solid-js"
 export function IconButton(props: {
   label: string
   pressed?: boolean
+  caption?: string
   onClick: () => void
   children: JSX.Element
 }) {
@@ -12,7 +13,7 @@ export function IconButton(props: {
       aria-label={props.label}
       title={props.label}
       aria-pressed={props.pressed}
-      class="flex size-6 items-center justify-center rounded text-muted hover:bg-selected hover:text-fg"
+      class="flex h-6 min-w-6 items-center justify-center gap-1 rounded px-1 text-muted hover:bg-selected hover:text-fg"
       classList={{ "text-accent": props.pressed }}
       onClick={props.onClick}
     >
@@ -29,6 +30,7 @@ export function IconButton(props: {
       >
         {props.children}
       </svg>
+      {props.caption}
     </button>
   )
 }
