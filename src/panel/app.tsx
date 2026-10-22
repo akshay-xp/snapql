@@ -33,11 +33,13 @@ export function App(props: {
     <main class="flex h-dvh flex-col font-sans text-xs">
       <div class="flex min-h-0 flex-1" ref={row}>
         <section class="flex min-w-0 flex-1 flex-col">
-          <List
-            entries={newestFirst() ? [...entries()].reverse() : entries()}
-            selectedId={selectedId()}
-            onSelect={setSelectedId}
-          />
+          <Show when={entries().length} fallback={<Waiting />}>
+            <List
+              entries={newestFirst() ? [...entries()].reverse() : entries()}
+              selectedId={selectedId()}
+              onSelect={setSelectedId}
+            />
+          </Show>
           <Footer
             count={entries().length}
             onClear={() => props.store.clear()}
@@ -61,5 +63,28 @@ export function App(props: {
         </Show>
       </div>
     </main>
+  )
+}
+
+function Waiting() {
+  return (
+    <div class="flex flex-1 flex-col items-center justify-center gap-1.5 p-4 text-center">
+      <svg
+        aria-hidden="true"
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="text-muted"
+      >
+        <path d="M3 12h4l3-8 4 16 3-8h4" />
+      </svg>
+      <p class="text-[13px] font-semibold">Waiting for requests</p>
+      <p class="text-muted">Reload the page to capture its traffic.</p>
+    </div>
   )
 }

@@ -25,8 +25,15 @@ test("clear empties the panel and later requests still appear", async () => {
     await panel.clear()
     await expect.poll(panel.rows).toEqual([])
     expect(await panel.text("footer")).toBe("0 requests")
+    const empty = [
+      "Waiting for requests",
+      "Reload the page to capture its traffic.",
+    ]
+    for (const line of empty) expect(await panel.text("main")).toContain(line)
     await panel.page.evaluate(() => fetch("/api/one"))
     await expect.poll(panel.rows).toEqual(["/api/one GET"])
+    for (const line of empty)
+      expect(await panel.text("main")).not.toContain(line)
     expect(await panel.text("footer")).toBe("1 request")
   } finally {
     await panel.close()
