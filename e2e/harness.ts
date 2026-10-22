@@ -332,9 +332,13 @@ function startServer(): Promise<Server> {
     if (req.url === "/api/missing") return res.writeHead(404).end("missing")
     if (req.url?.startsWith("/api/item")) return res.writeHead(200).end("item")
     if (req.url === "/api/users/1")
-      return res
-        .writeHead(200, { "content-type": "application/json" })
-        .end('{"id":1}')
+      return res.writeHead(200, { "content-type": "application/json" }).end(
+        JSON.stringify({
+          id: 1,
+          bio: "b".repeat(250),
+          profile: { address: { geo: { lat: 1 } } },
+        }),
+      )
     if (req.url?.startsWith("/api/form")) return res.writeHead(200).end("ok")
     if (req.url === "/api/upload") return res.writeHead(200).end("ok")
     if (req.url === "/api/me")

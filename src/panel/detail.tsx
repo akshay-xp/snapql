@@ -2,15 +2,18 @@ import {
   createResource,
   createSignal,
   For,
+  type JSX,
   Match,
   Show,
   Switch,
 } from "solid-js"
 import type { Entry, NameValue } from "../capture/entry"
 import { decoders } from "../decoders"
+import { parseJson } from "../decoders/json"
 import { decoderFor } from "../decoders/registry"
 import type { DecodedResponse } from "../decoders/types"
 import { loadBody } from "./body"
+import { OPEN_DEPTH } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
 import { rawRequest, rawResponse } from "./raw"
@@ -91,11 +94,9 @@ export function Detail(props: {
             <Summary entry={props.entry} />
           </Match>
           <Match when={active() === "Body"}>
-            <LoadedBody
-              entry={props.entry}
-              pretty={true}
-              render={(text) => text}
-            />
+            <LoadedBody entry={props.entry} pretty={true}>
+              {(text) => <BodyView text={text} />}
+            </LoadedBody>
           </Match>
           <Match when={active() === "Headers"}>
             <Pairs
@@ -151,11 +152,9 @@ function RawPanel(props: { entry: Entry }) {
         {rawRequest(props.entry)}
       </pre>
       <h2 class="text-muted">Response</h2>
-      <LoadedBody
-        entry={props.entry}
-        pretty={false}
-        render={(text) => rawResponse(props.entry, text)}
-      />
+      <LoadedBody entry={props.entry} pretty={false}>
+        {(text) => <Text>{rawResponse(props.entry, text)}</Text>}
+      </LoadedBody>
     </>
   )
 }
@@ -222,7 +221,7 @@ function Pairs(props: {
 function LoadedBody(props: {
   entry: Entry
   pretty: boolean
-  render: (text: string) => string
+  children: (text: string) => JSX.Element
 }) {
   const [body] = createResource(
     () => props.entry,
@@ -235,9 +234,42 @@ function LoadedBody(props: {
           <For each={b().notes}>
             {(note) => <p class="text-muted">{note}</p>}
           </For>
-          <pre class="font-mono whitespace-pre-wrap break-all">
-            {props.render(b().text)}
-          </pre>
+          {props.children(b().text)}
+        </>
+      )}
+    </Show>
+  )
+}
+
+function Text(props: { children: string }) {
+  return (
+    <pre class="font-mono whitespace-pre-wrap break-all">{props.children}</pre>
+  )
+}
+
+function BodyView(props: { text: string }) {
+  const json = () => {
+    const value = parseJson(props.text)
+    return typeof value === "object" && value !== null ? value : undefined
+  }
+  const [allOpen, setAllOpen] = createSignal(false)
+  return (
+    <Show when={json()} fallback={<Text>{props.text}</Text>}>
+      {(value) => (
+        <>
+          <div class="flex justify-end">
+            <button
+              type="button"
+              class="rounded px-1.5 text-muted hover:bg-selected hover:text-fg"
+              onClick={() => setAllOpen(true)}
+            >
+              Expand all
+            </button>
+          </div>
+          <JsonTree
+            value={value()}
+            openDepth={allOpen() ? Number.POSITIVE_INFINITY : OPEN_DEPTH}
+          />
         </>
       )}
     </Show>
@@ -354,9 +386,7 @@ function Sections(props: { data: unknown }) {
           <section class="mt-3">
             <h2 class="text-muted">{section.name}</h2>
             {"text" in section ? (
-              <pre class="font-mono whitespace-pre-wrap break-all">
-                {section.text}
-              </pre>
+              <Text>{section.text}</Text>
             ) : (
               <JsonTree value={section.json} />
             )}
