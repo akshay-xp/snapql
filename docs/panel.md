@@ -5,7 +5,11 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## Layout (`src/panel/app.tsx`)
 
 - Header: title, Preserve log checkbox, Clear.
-- Body: flex row. `List` left, `Detail` right (fixed 50% until the divider lands, #18) when an entry is selected.
+- Body: flex row. `List` left, `Detail` right when an entry is selected.
+- Divider (`src/panel/splitter.tsx`, `src/panel/splitter.ts`): an `<hr aria-orientation="vertical">` (implicit `separator` role; Biome prefers the native element) absolutely positioned over the detail pane's left border, so it takes no layout width and list + detail always fill the row.
+  - Drag: `pointerdown` on the handle adds `pointermove`/`pointerup` listeners on `window` (drag survives leaving the handle; also works with the e2e's synthetic events), removed on release or unmount.
+  - `App` owns `detailWidth` (undefined = 50%, until the first drag; not persisted). Width = row's right edge minus pointer x, through `clampWidth(width, container, MIN_PANE)`: each side keeps at least `MIN_PANE` (200px); a row narrower than 400px splits in half.
+  - Pointer only: the handle is not focusable (keyboard resizing not in scope).
 
 ## State
 
@@ -55,13 +59,13 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## E2E harness (`e2e/harness.ts`)
 
-- `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries End until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`).
+- `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `dragDivider(dx)` dispatches pointerdown on the handle and pointermove/up on `window`; `paneWidths()` gives `{ list, detail }` (the headless panel is ~550px wide, so drags stay small); `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries End until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`).
 - `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`.
 
 ## Key files
 
-- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`
-- `src/panel/keys.ts`, `src/panel/virtual.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
+- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`, `src/panel/splitter.tsx`
+- `src/panel/keys.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
 - `src/panel/index.css`
 - `e2e/harness.ts`, `e2e/panel.test.ts`
 
