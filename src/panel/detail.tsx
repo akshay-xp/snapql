@@ -8,6 +8,7 @@ import {
 } from "solid-js"
 import type { Entry, NameValue } from "../capture/entry"
 import { loadBody } from "./body"
+import { nextTab } from "./keys"
 import { rawRequest, rawResponse } from "./raw"
 import { dataSections } from "./summary"
 import { timingRows } from "./timing"
@@ -26,10 +27,21 @@ export function Detail(props: { entry: Entry }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
   const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
+  const onTabKey = (e: KeyboardEvent) => {
+    const i = nextTab(e.key, tabs.indexOf(active()), tabs.length)
+    if (i === undefined) return
+    e.preventDefault()
+    setActive(tabs[i])
+    document.getElementById(`tab-${id(tabs[i])}`)?.focus()
+  }
 
   return (
     <section class="flex w-1/2 flex-col border-l border-border">
-      <div role="tablist" class="flex border-b border-border">
+      <div
+        role="tablist"
+        class="flex border-b border-border"
+        onKeyDown={onTabKey}
+      >
         <For each={tabs}>
           {(tab) => (
             <button
@@ -38,6 +50,7 @@ export function Detail(props: { entry: Entry }) {
               id={`tab-${id(tab)}`}
               aria-selected={active() === tab}
               aria-controls={`panel-${id(tab)}`}
+              tabIndex={active() === tab ? 0 : -1}
               class="border-b-2 px-2 py-1"
               classList={{
                 "border-fg": active() === tab,

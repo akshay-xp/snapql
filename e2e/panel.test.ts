@@ -237,3 +237,25 @@ test("Raw tab shows the request and response as sent", async () => {
     await panel.close()
   }
 })
+
+test("arrow keys move between detail tabs and wrap", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([`POST 201 ${panel.origin}/api/two`]))
+    await panel.press("ArrowDown")
+
+    await panel.pressTab("ArrowRight")
+    expect(await panel.activeTab()).toBe("Body")
+
+    await panel.pressTab("ArrowLeft")
+    await panel.pressTab("ArrowLeft")
+    expect(await panel.activeTab()).toBe("Raw")
+    await panel.pressTab("ArrowLeft")
+    expect(await panel.activeTab()).toBe("Timing")
+  } finally {
+    await panel.close()
+  }
+})
