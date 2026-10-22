@@ -320,6 +320,7 @@ test("M3 decoders summarize their requests", async () => {
         expect.arrayContaining([
           "GET 200 json /api/users/1",
           "POST 200 form 2 fields",
+          "POST 200 multipart 1 field, 1 file",
         ]),
       )
 
@@ -327,6 +328,11 @@ test("M3 decoders summarize their requests", async () => {
     const detail = await panel.detail()
     expect(detail).toContain("a = 1")
     expect(detail).toContain("b = x y")
+
+    await panel.select("POST 200 multipart 1 field, 1 file")
+    const upload = await panel.detail()
+    expect(upload).toContain("a = 1")
+    expect(upload).toContain("f = f.txt (text/plain, ")
   } finally {
     await panel.close()
   }
