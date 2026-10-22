@@ -63,6 +63,19 @@ describe("formatBody", () => {
     ).toBe('{"a":1}')
   })
 
+  it("decodes base64 multipart/mixed bodies as text", () => {
+    const body = { content: btoa("---\r\n"), encoding: "base64" }
+    expect(
+      formatBody(body, { mimeType: 'multipart/mixed; boundary="-"' }),
+    ).toEqual({
+      text: "---\r\n",
+      notes: [],
+    })
+    expect(formatBody(body, { mimeType: "multipart/form-data" }).notes).toEqual(
+      ["base64-encoded, 5 bytes"],
+    )
+  })
+
   it("keeps other base64 bodies raw with a note", () => {
     const body = { content: "aGk=", encoding: "base64" }
     const raw = { text: "aGk=", notes: ["base64-encoded, 2 bytes"] }
