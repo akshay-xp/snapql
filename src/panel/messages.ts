@@ -1,4 +1,5 @@
 import type { Message } from "../capture/entry"
+import type { Decoded } from "../decoders/types"
 
 export function byteLabel(n: number): string {
   if (n < 1000) return `${n} B`
@@ -17,3 +18,12 @@ export const messageText = (m: Pick<Message, "text" | "bytes">) =>
   m.bytes === undefined ? preview(m.text) : `binary ${byteLabel(m.bytes)}`
 
 export const arrow = (dir: Message["dir"]) => (dir === "out" ? "↑" : "↓")
+
+// A protocol decoder's title stands in for the preview.
+export const frameLabel = (
+  m: Pick<Message, "text" | "bytes">,
+  decoded?: Decoded,
+): { text: string; detail?: string } =>
+  decoded
+    ? { text: decoded.title, ...(decoded.detail && { detail: decoded.detail }) }
+    : { text: messageText(m) }
