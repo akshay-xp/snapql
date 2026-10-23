@@ -21,4 +21,10 @@ describe("tabsFor", () => {
     expect(shownTab("Messages", tabs)).toBe("Summary")
     expect(shownTab("Raw", tabs)).toBe("Raw")
   })
+
+  it("shows only socket-relevant tabs for WebSockets", () => {
+    expect(
+      tabsFor({ mimeType: "", messages: [], socket: { protocol: "" } }),
+    ).toEqual(["Summary", "Messages", "Headers"])
+  })
 })
