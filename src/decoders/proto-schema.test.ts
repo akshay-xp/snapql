@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseProto } from "./proto-schema"
+import { messageReader, parseProto } from "./proto-schema"
 
 const parse = (text: string, name = "a.proto") => parseProto([{ name, text }])
 
@@ -147,5 +147,86 @@ describe("parseProto names and errors", () => {
       'a.proto:3: expected ";"',
     )
     expect(() => parse("message {")).toThrow("a.proto:1:")
+  })
+})
+
+const varint = (n: bigint) => {
+  const out: number[] = []
+  do {
+    const byte = Number(n & 0x7fn)
+    n >>= 7n
+    out.push(n ? byte | 0x80 : byte)
+  } while (n)
+  return out
+}
+const le = (size: number, write: (v: DataView) => void) => {
+  const view = new DataView(new ArrayBuffer(size))
+  write(view)
+  return [...new Uint8Array(view.buffer)]
+}
+
+describe("messageReader", () => {
+  const read = (fields: string, ...data: number[]) =>
+    messageReader(
+      parse(`package ex;
+        enum Role { ROLE_UNKNOWN = 0; ADMIN = 1; }
+        message Inner { int32 n = 1; }
+        message T { ${fields} }`),
+      "ex.T",
+    )(new Uint8Array(data))
+
+  it("names fields and reads strings and ints", () => {
+    expect(
+      read(
+        "string name = 1; int32 id = 2;",
+        0x0a,
+        2,
+        0x68,
+        0x69,
+        0x10,
+        0x96,
+        1,
+      ),
+    ).toEqual({ name: "hi", id: 150 })
+    expect(read("int32 v = 1;", 0x08, ...varint(2n ** 64n - 1n))).toEqual({
+      v: -1,
+    })
+  })
+
+  it("reads sint, uint64 and bool by type", () => {
+    expect(read("sint32 v = 1;", 0x08, 3)).toEqual({ v: -2 })
+    expect(read("uint64 v = 1;", 0x08, ...varint(2n ** 60n))).toEqual({
+      v: "1152921504606846976",
+    })
+    expect(read("bool v = 1;", 0x08, 1)).toEqual({ v: true })
+  })
+
+  it("names enum values, keeping unknown numbers", () => {
+    expect(read("Role r = 1;", 0x08, 1)).toEqual({ r: "ADMIN" })
+    expect(read("Role r = 1;", 0x08, 7)).toEqual({ r: 7 })
+  })
+
+  it("reads bytes as hex and nested messages by name", () => {
+    expect(read("bytes b = 1;", 0x0a, 2, 0xff, 0xfe)).toEqual({ b: "ff fe" })
+    expect(read("Inner i = 1;", 0x0a, 2, 0x08, 5)).toEqual({ i: { n: 5 } })
+  })
+
+  it("reads fixed-width types by type", () => {
+    expect(
+      read("float f = 1;", 0x0d, ...le(4, (v) => v.setFloat32(0, 1.5, true))),
+    ).toEqual({ f: 1.5 })
+    expect(
+      read("double d = 1;", 0x09, ...le(8, (v) => v.setFloat64(0, 3.14, true))),
+    ).toEqual({ d: 3.14 })
+    expect(
+      read("sfixed32 s = 1;", 0x0d, ...le(4, (v) => v.setInt32(0, -1, true))),
+    ).toEqual({ s: -1 })
+  })
+
+  it("keeps unknown fields numbered and well-known types schema-less", () => {
+    expect(read("int32 a = 1;", 0x48, 5)).toEqual({ "9": 5 })
+    expect(read("google.protobuf.Timestamp at = 1;", 0x0a, 2, 0x08, 5)).toEqual(
+      { at: { "1": 5 } },
+    )
   })
 })
