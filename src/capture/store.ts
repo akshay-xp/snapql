@@ -15,6 +15,11 @@ export function createStore(cap = DEFAULT_CAP) {
     add(entry: Entry) {
       set([...entries, entry].slice(-cap))
     },
+    update(id: number, fn: (entry: Entry) => Entry) {
+      const index = entries.findIndex((e) => e.id === id)
+      if (index === -1) return
+      set(entries.map((e, i) => (i === index ? fn(e) : e)))
+    },
     clear() {
       set([])
     },

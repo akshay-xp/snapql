@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { toEntry } from "./entry"
+import { type Entry, toEntry } from "./entry"
 import { createStore } from "./store"
 import { emptyExchange } from "./test-helpers"
 
@@ -64,6 +64,42 @@ describe("createStore", () => {
 
     store.add(entry(3))
     expect(store.snapshot().map((e) => e.id)).toEqual([3])
+  })
+
+  it("updates one entry and keeps the others", () => {
+    const store = createStore()
+    const a = entry(1)
+    const b = entry(2)
+    store.add(a)
+    store.add(b)
+    const before = store.snapshot()
+    const listener = vi.fn()
+    store.subscribe(listener)
+    const fn = vi.fn((e: Entry) => ({ ...e, status: 500 }))
+
+    store.update(2, fn)
+
+    expect(store.snapshot()).not.toBe(before)
+    expect(before).toEqual([a, b])
+    expect(store.snapshot()[0]).toBe(a)
+    expect(store.snapshot()[1].status).toBe(500)
+    expect(fn).toHaveBeenCalledExactlyOnceWith(b)
+    expect(listener).toHaveBeenCalledOnce()
+  })
+
+  it("ignores updates to unknown ids", () => {
+    const store = createStore()
+    store.add(entry(1))
+    const before = store.snapshot()
+    const listener = vi.fn()
+    store.subscribe(listener)
+    const fn = vi.fn((e: Entry) => e)
+
+    store.update(99, fn)
+
+    expect(fn).not.toHaveBeenCalled()
+    expect(store.snapshot()).toBe(before)
+    expect(listener).not.toHaveBeenCalled()
   })
 
   it("notifies subscribers on add and clear until unsubscribed", () => {
