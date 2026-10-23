@@ -8,9 +8,11 @@ import {
   onMount,
   Show,
 } from "solid-js"
+import { version } from "../../package.json"
 import type { Store } from "../capture/store"
 import { createBodyIndex } from "./body-index"
 import { Detail } from "./detail"
+import { download } from "./download"
 import {
   chipsFor,
   type Filters,
@@ -20,6 +22,7 @@ import {
   toggle,
 } from "./filter"
 import { Footer } from "./footer"
+import { harFileName, toHar } from "./har"
 import { List } from "./list"
 import type { Schemas } from "./schemas"
 import { FilterChips, SearchBox } from "./search"
@@ -74,6 +77,17 @@ export function App(props: {
     observer.observe(row)
     onCleanup(() => observer.disconnect())
   })
+  // Oldest first, as HAR viewers expect, whatever the list order.
+  const exportHar = async () => {
+    const shown = [...visible()].sort((a, b) => a.startedAt - b.startedAt)
+    const bodies = await Promise.all(
+      shown.map((e) => e.getBody().catch(() => undefined)),
+    )
+    download(
+      JSON.stringify(toHar(shown, bodies, version), null, 2),
+      harFileName(shown, new Date()),
+    )
+  }
   const selected = () => visible().find((e) => e.id === selectedId())
   const [baseId, setBaseId] = createSignal<number>()
   // Unfiltered: a base hidden by the filter can still be compared against.
@@ -136,6 +150,8 @@ export function App(props: {
             onPreserveLog={props.setPreserveLog}
             onReloadCapture={props.onReloadCapture}
             schemas={props.schemas}
+            exportCount={visible().length}
+            onExportHar={exportHar}
           />
         </section>
         <Show when={selected()}>

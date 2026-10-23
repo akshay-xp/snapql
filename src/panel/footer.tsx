@@ -14,8 +14,11 @@ export function Footer(props: {
   onPreserveLog: (on: boolean) => void
   onReloadCapture: () => void
   schemas: Schemas
+  exportCount: number
+  onExportHar: () => Promise<void>
 }) {
   const [picking, setPicking] = createSignal(false)
+  const [exporting, setExporting] = createSignal(false)
   return (
     <footer class="relative flex h-8 shrink-0 items-center gap-0.5 border-t border-border px-1.5">
       <IconButton label="Clear" onClick={props.onClear}>
@@ -51,8 +54,34 @@ export function Footer(props: {
       >
         <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1" />
       </IconButton>
+      <IconButton
+        label="Export HAR"
+        pressed={exporting()}
+        onClick={() => setExporting(!exporting())}
+      >
+        <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+      </IconButton>
       <Show when={picking()}>
         <SchemaPicker schemas={props.schemas} />
+      </Show>
+      <Show when={exporting()}>
+        <div
+          data-export
+          class="absolute bottom-full left-1.5 z-10 mb-1 flex w-56 items-center justify-between gap-2 rounded-md border border-border bg-bg p-2 shadow-lg"
+        >
+          <span>Export {count(props.exportCount, "request")}</span>
+          <button
+            type="button"
+            class="rounded px-1.5 py-0.5 text-accent hover:bg-selected disabled:text-muted"
+            disabled={!props.exportCount}
+            onClick={async () => {
+              await props.onExportHar()
+              setExporting(false)
+            }}
+          >
+            Download
+          </button>
+        </div>
       </Show>
       <span class="ml-auto pr-1 text-muted">
         {props.total === undefined

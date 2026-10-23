@@ -378,6 +378,9 @@ export type Panel = {
   // Text of matches whose content is wider than their box.
   overflowing(selector: string): Promise<string[]>
   stubClipboard(): Promise<void>
+  // Records blob link clicks (name and text) instead of downloading.
+  stubDownload(): Promise<void>
+  downloads(): Promise<{ name: string; text: string }[]>
   copied(): Promise<string | undefined>
   togglePreserveLog(): Promise<void>
   close(): Promise<void>
@@ -629,6 +632,22 @@ export async function openPanel(
         `navigator.clipboard.writeText = async (text) => { window.__copied = text }`,
       ),
     copied: () => panelFrame.evaluate<string | undefined>("window.__copied"),
+    stubDownload: () =>
+      panelFrame.evaluate<void>(`(() => {
+        window.__downloads = []
+        const click = HTMLAnchorElement.prototype.click
+        HTMLAnchorElement.prototype.click = function () {
+          if (!this.href.startsWith("blob:")) return click.call(this)
+          const name = this.download
+          window.__downloads.push(
+            fetch(this.href).then((r) => r.text()).then((text) => ({ name, text })),
+          )
+        }
+      })()`),
+    downloads: () =>
+      panelFrame.evaluate<{ name: string; text: string }[]>(
+        "Promise.all(window.__downloads)",
+      ),
     pairs: () =>
       panelFrame.evaluate<string>(
         `[...document.querySelectorAll('[role="tabpanel"] dt')].map((dt) => dt.textContent + " = " + dt.nextElementSibling.querySelector("[data-value]").textContent).join("\\n")`,

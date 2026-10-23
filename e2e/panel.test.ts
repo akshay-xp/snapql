@@ -1445,3 +1445,58 @@ test("Compare diffs a request against the marked base", async () => {
     await panel.close()
   }
 })
+
+test("Export HAR downloads the visible requests", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    await panel.stubDownload()
+    const exportHar = 'button[aria-label="Export HAR"]'
+    type Har = {
+      log: {
+        version: string
+        entries: {
+          request: { url: string; postData?: { text: string } }
+          response: { content: { text?: string } }
+        }[]
+      }
+    }
+    const har = async (i: number) => {
+      const all = await panel.downloads()
+      expect(all).toHaveLength(i + 1)
+      return { name: all[i].name, log: (JSON.parse(all[i].text) as Har).log }
+    }
+    const entry = (log: Har["log"], path: string) =>
+      log.entries.find((e) => new URL(e.request.url).pathname === path)
+
+    await panel.click(exportHar)
+    expect(await panel.text("[data-export]")).toBe("Export 5 requests Download")
+    await panel.clickButton("Download")
+    await expect.poll(async () => (await panel.downloads()).length).toBe(1)
+    const full = await har(0)
+    expect(full.name).toMatch(/^snapql-127\.0\.0\.1-\d{8}-\d{6}\.har$/)
+    expect(full.log.version).toBe("1.2")
+    expect(full.log.entries).toHaveLength(5)
+    expect(full.log.entries[0].request.url).toMatch(/\/filters$/)
+    expect(entry(full.log, "/api/users/1")?.response.content.text).toContain(
+      '"bio"',
+    )
+    expect(entry(full.log, "/api/gql-ok")?.request.postData?.text).toBe(
+      '{"query":"query A { a }"}',
+    )
+    expect(await panel.text("[data-export]")).toBeNull()
+
+    await panel.toggleChip("graphql")
+    await panel.click(exportHar)
+    await panel.clickButton("Download")
+    await expect.poll(async () => (await panel.downloads()).length).toBe(2)
+    const filtered = await har(1)
+    expect(
+      // Fetched in parallel, so their start order varies.
+      filtered.log.entries.map((e) => new URL(e.request.url).pathname).sort(),
+    ).toEqual(["/api/gql-bad", "/api/gql-ok"])
+  } finally {
+    await panel.close()
+  }
+})
