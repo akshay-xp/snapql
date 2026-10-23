@@ -29,6 +29,8 @@ export type ProbeEvent =
       dir: "in" | "out"
       text: string
       bytes?: number
+      base64?: string
+      truncated?: true
     }
   | { type: "close"; id: number; time: number; code?: number; reason?: string }
 

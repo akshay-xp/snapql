@@ -376,7 +376,7 @@ describe("live capture", () => {
         status: 101,
         open: true,
         messages: [],
-        socket: { protocol: "" },
+        socket: { protocol: "", protocols: ["chat"] },
       })
       expect(opened.decoded).toMatchObject({
         kind: "websocket",
@@ -387,13 +387,29 @@ describe("live capture", () => {
       probe([
         { type: "ready", id: 9, time: 1001, protocol: "chat" },
         { type: "frame", id: 9, time: 1002, dir: "out", text: "hi" },
-        { type: "frame", id: 9, time: 1003, dir: "in", text: "", bytes: 4 },
+        {
+          type: "frame",
+          id: 9,
+          time: 1003,
+          dir: "in",
+          text: "",
+          bytes: 4,
+          base64: "AQIDBA==",
+          truncated: true,
+        },
         { type: "close", id: 9, time: 1500, code: 1000, reason: "bye" },
       ])
       const entry = store.snapshot()[0]
       expect(entry.messages).toEqual([
         { dir: "out", time: 1002, text: "hi" },
-        { dir: "in", time: 1003, text: "", bytes: 4 },
+        {
+          dir: "in",
+          time: 1003,
+          text: "",
+          bytes: 4,
+          base64: "AQIDBA==",
+          truncated: true,
+        },
       ])
       expect(entry).toMatchObject({
         open: false,

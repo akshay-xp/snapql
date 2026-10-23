@@ -60,12 +60,13 @@ export type FinishedRequest = RequestView & {
   fetchBody: () => Promise<Body>
 }
 
-// bytes is set for binary frames, whose text is "".
+// bytes and base64 are set for binary frames, whose text is "".
 export type Message = {
   dir: "in" | "out"
   time: number
   text: string
   bytes?: number
+  base64?: string
   event?: string
   id?: string
   truncated?: true
@@ -96,7 +97,13 @@ export type Entry = {
   open?: boolean
   droppedMessages?: number
   // WebSockets only.
-  socket?: { protocol: string; closeCode?: number; closeReason?: string }
+  // protocol is the negotiated one; protocols were requested at creation.
+  socket?: {
+    protocol: string
+    protocols?: string[]
+    closeCode?: number
+    closeReason?: string
+  }
 }
 
 export function toEntry(
