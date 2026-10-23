@@ -1471,7 +1471,9 @@ test("Export HAR downloads the visible requests", async () => {
       log.entries.find((e) => new URL(e.request.url).pathname === path)
 
     await panel.click(exportHar)
-    expect(await panel.text("[data-export]")).toBe("Export 5 requests Download")
+    expect(await panel.text("[data-export]")).toBe(
+      "Export 5 requests Redact secrets Download",
+    )
     await panel.clickButton("Download")
     await expect.poll(async () => (await panel.downloads()).length).toBe(1)
     const full = await har(0)
@@ -1496,6 +1498,68 @@ test("Export HAR downloads the visible requests", async () => {
       // Fetched in parallel, so their start order varies.
       filtered.log.entries.map((e) => new URL(e.request.url).pathname).sort(),
     ).toEqual(["/api/gql-bad", "/api/gql-ok"])
+  } finally {
+    await panel.close()
+  }
+})
+
+test("Export HAR redacts secrets unless unchecked", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/secrets`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([expect.stringMatching(/^\/api\/login/)]))
+    await panel.stubDownload()
+    const box = "[data-export] input[type=checkbox]"
+    type Pair = { name: string; value: string }
+    type Login = {
+      request: {
+        url: string
+        headers: Pair[]
+        queryString: Pair[]
+        postData: { text: string }
+      }
+      response: { headers: Pair[]; content: { text: string } }
+    }
+    const login = async (i: number) => {
+      await expect
+        .poll(async () => (await panel.downloads()).length)
+        .toBe(i + 1)
+      const har = JSON.parse((await panel.downloads())[i].text)
+      return har.log.entries.find((e: Login) =>
+        e.request.url.includes("/api/login"),
+      ) as Login
+    }
+    const header = (pairs: Pair[], name: string) =>
+      pairs.find((p) => p.name.toLowerCase() === name)?.value
+
+    await panel.click('button[aria-label="Export HAR"]')
+    expect(await panel.checked(box)).toBe(true)
+    await panel.clickButton("Download")
+    const redacted = await login(0)
+    const R = "[redacted]"
+    for (const name of ["authorization", "x-api-key", "cookie"])
+      expect(header(redacted.request.headers, name), name).toBe(R)
+    expect(header(redacted.response.headers, "set-cookie")).toBe(R)
+    expect(header(redacted.request.queryString, "token")).toBe(R)
+    expect(header(redacted.request.queryString, "x")).toBe("1")
+    expect(redacted.request.url).toContain(`token=${R}&x=1`)
+    expect(redacted.request.postData.text).toBe(`password=${R}&user=ada`)
+    expect(JSON.parse(redacted.response.content.text)).toEqual({
+      user: { secret: R, name: "Ada" },
+      note: R,
+    })
+
+    await panel.click('button[aria-label="Export HAR"]')
+    await panel.click(box)
+    expect(await panel.checked(box)).toBe(false)
+    await panel.clickButton("Download")
+    const verbatim = await login(1)
+    expect(header(verbatim.request.headers, "authorization")).toMatch(
+      /^Bearer [\w-]+\.[\w-]+\.sig$/,
+    )
+    expect(verbatim.request.url).toContain("token=abc")
   } finally {
     await panel.close()
   }

@@ -219,6 +219,21 @@ const filtersPage = `<!doctype html>
   fetch("/api/missing")
 </script>`
 
+const secretsPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  document.cookie = "sid=s1"
+  fetch("/api/login?token=abc&x=1", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer ${jwt}",
+      "x-api-key": "k1",
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: "password=hunter2&user=ada",
+  })
+</script>`
+
 const diffPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
@@ -361,6 +376,7 @@ export type Panel = {
   style(selector: string, property: string): Promise<string>
   text(selector: string): Promise<string | null>
   attr(selector: string, name: string): Promise<string | null>
+  checked(selector: string): Promise<boolean | null>
   clear(): Promise<void>
   toggleSort(): Promise<void>
   search(query: string): Promise<void>
@@ -485,6 +501,10 @@ export async function openPanel(
         const el = document.querySelector(${JSON.stringify(selector)})
         return el ? (${rowText})(el) : null
       })()`),
+    checked: (selector: string) =>
+      panelFrame.evaluate<boolean | null>(
+        `document.querySelector(${JSON.stringify(selector)})?.checked ?? null`,
+      ),
     attr: (selector: string, name: string) =>
       panelFrame.evaluate<string | null>(
         `document.querySelector(${JSON.stringify(selector)})?.getAttribute(${JSON.stringify(name)}) ?? null`,
@@ -792,6 +812,17 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/secrets")
+      return res
+        .writeHead(200, { "content-type": "text/html" })
+        .end(secretsPage)
+    if (req.url?.startsWith("/api/login"))
+      return res
+        .writeHead(200, {
+          "content-type": "application/json",
+          "set-cookie": "session=s2",
+        })
+        .end(JSON.stringify({ user: { secret: "s3", name: "Ada" }, note: jwt }))
     if (req.url === "/diff")
       return res.writeHead(200, { "content-type": "text/html" }).end(diffPage)
     if (req.url?.startsWith("/api/diff/"))
