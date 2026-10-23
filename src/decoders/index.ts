@@ -1,6 +1,7 @@
 import { form } from "./form"
 import { graphql } from "./graphql"
 import { graphqlWs } from "./graphql-ws"
+import { grpcWeb } from "./grpc-web"
 import { json } from "./json"
 import { jsonrpc } from "./jsonrpc"
 import { llm } from "./llm"
@@ -26,6 +27,7 @@ export const decoders: Decoder[] = [
   socketio,
   graphqlWs,
   websocket,
+  grpcWeb,
   protobuf,
   sse,
   ndjson,
