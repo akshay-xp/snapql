@@ -113,6 +113,14 @@ const livePage = `<!doctype html>
   }
 </script>`
 
+// Opens its stream while loading, before the panel can inject the probe.
+const earlyPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  const es = new EventSource("/api/live?n=30")
+  es.addEventListener("done", () => es.close())
+</script>`
+
 const bulkPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
@@ -467,6 +475,8 @@ function startServer(): Promise<Server> {
       req.on("close", () => clearInterval(timer))
       return
     }
+    if (req.url === "/early")
+      return res.writeHead(200, { "content-type": "text/html" }).end(earlyPage)
     if (req.url === "/live")
       return res.writeHead(200, { "content-type": "text/html" }).end(livePage)
     if (req.url === "/api/one") return res.writeHead(200).end("one")

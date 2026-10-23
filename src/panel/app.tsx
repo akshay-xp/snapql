@@ -20,6 +20,8 @@ export function App(props: {
   store: Store
   preserveLog: Accessor<boolean>
   setPreserveLog: (on: boolean) => void
+  // Reloads with the probe injected first, so streams opened while loading are live.
+  onReloadCapture: () => void
 }) {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
@@ -58,7 +60,10 @@ export function App(props: {
       >
         <section class="flex min-h-0 min-w-0 flex-1 flex-col">
           <SearchBox query={query()} onQuery={setQuery} />
-          <Show when={entries().length} fallback={<Waiting />}>
+          <Show
+            when={entries().length}
+            fallback={<Waiting onReloadCapture={props.onReloadCapture} />}
+          >
             <Show
               when={visible().length}
               fallback={
@@ -81,6 +86,7 @@ export function App(props: {
             onSort={() => setNewestFirst(!newestFirst())}
             preserveLog={props.preserveLog()}
             onPreserveLog={props.setPreserveLog}
+            onReloadCapture={props.onReloadCapture}
           />
         </section>
         <Show when={selected()}>
@@ -111,7 +117,7 @@ function Message(props: { children: JSX.Element }) {
   )
 }
 
-function Waiting() {
+function Waiting(props: { onReloadCapture: () => void }) {
   return (
     <Message>
       <svg
@@ -130,6 +136,13 @@ function Waiting() {
       </svg>
       <p class="text-[13px] font-semibold">Waiting for requests</p>
       <p class="text-muted">Reload the page to capture its traffic.</p>
+      <button
+        type="button"
+        class="text-accent underline"
+        onClick={props.onReloadCapture}
+      >
+        Reload and capture
+      </button>
     </Message>
   )
 }
