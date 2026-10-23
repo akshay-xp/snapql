@@ -1,4 +1,4 @@
-import { bytes, hex, requestBytes } from "./bytes"
+import { bytes, hex, InvalidBytes, parseFirst, requestBytes } from "./bytes"
 import { baseMime } from "./text"
 import type { Decoder } from "./types"
 
@@ -75,12 +75,6 @@ class Reader {
 const int = (n: bigint) =>
   Number.isSafeInteger(Number(n)) ? Number(n) : String(n)
 
-export class ProtoError extends Error {
-  constructor(readonly offset: number) {
-    super(`invalid protobuf at byte ${offset}`)
-  }
-}
-
 export function readMessage(data: Uint8Array): ProtoMessage {
   const reader = new Reader(data)
   const message: ProtoMessage = {}
@@ -88,7 +82,7 @@ export function readMessage(data: Uint8Array): ProtoMessage {
     const tagAt = reader.offset
     const tag = guard(tagAt, () => Number(reader.varint()))
     const read = values[tag & 7]
-    if (!(tag >>> 3) || !read) throw new ProtoError(tagAt)
+    if (!(tag >>> 3) || !read) throw new InvalidBytes("protobuf", tagAt)
     const value = guard(reader.offset, () => read(reader))
     const key = String(tag >>> 3)
     const prev = message[key]
@@ -106,7 +100,7 @@ function guard<T>(offset: number, read: () => T): T {
   try {
     return read()
   } catch {
-    throw new ProtoError(offset)
+    throw new InvalidBytes("protobuf", offset)
   }
 }
 
@@ -121,15 +115,8 @@ const values: Partial<Record<number, (reader: Reader) => unknown>> = {
 export function protobufData(
   candidates: Uint8Array[],
 ): { message: ProtoMessage } | { error: string; hex: string } {
-  let first: ProtoError | undefined
-  for (const data of candidates) {
-    try {
-      return { message: readMessage(data) }
-    } catch (err) {
-      first ??= err as ProtoError
-    }
-  }
-  return { error: (first as ProtoError).message, hex: hex(candidates[0]) }
+  const parsed = parseFirst(candidates, readMessage)
+  return "value" in parsed ? { message: parsed.value } : parsed
 }
 
 const printable = /^[\t\n\r\P{Cc}]*$/u
