@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { emptyExchange } from "../capture/entry"
-import { toCurl } from "./curl"
+import { toCurl, toFetch } from "./curl"
 
 const request = (
   method: string,
@@ -55,5 +55,33 @@ describe("toCurl", () => {
     expect(toCurl(request("POST", []))).toBe(
       "curl 'https://x.test/api?a=1' \\\n  -X 'POST'",
     )
+  })
+})
+
+describe("toFetch", () => {
+  const options = (code: string) => {
+    const prefix = 'await fetch("https://x.test/api?a=1", '
+    expect(code.startsWith(prefix)).toBe(true)
+    expect(code.endsWith(")")).toBe(true)
+    return JSON.parse(code.slice(prefix.length, -1))
+  }
+
+  it("writes method, kept headers and body as JSON", () => {
+    expect(options(toFetch(post))).toEqual({
+      method: "POST",
+      headers: { "content-type": "application/json", "x-note": "it's" },
+      body: `{"a":"b's"}`,
+    })
+  })
+
+  it("omits the body when there is none; later headers win", () => {
+    const get = request("GET", [
+      ["x-a", "1"],
+      ["x-a", "2"],
+    ])
+    expect(options(toFetch(get))).toEqual({
+      method: "GET",
+      headers: { "x-a": "2" },
+    })
   })
 })
