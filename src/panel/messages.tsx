@@ -27,6 +27,7 @@ export function Messages(props: {
           onSelect={setSelected}
           label="Messages"
           idPrefix="message-"
+          follow
         >
           {(i, selected) => {
             const m = props.messages[i]
