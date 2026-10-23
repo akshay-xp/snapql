@@ -201,4 +201,92 @@ describe("probe", () => {
       expect(second.state.drain().events).toMatchObject([{ type: "close" }])
     })
   })
+
+  describe("WebSocket", () => {
+    class FakeWebSocket extends EventTarget {
+      static OPEN = 1
+      protocol = ""
+      sent: unknown[] = []
+      constructor(
+        readonly url: string,
+        readonly protocols?: string | string[],
+      ) {
+        super()
+      }
+      send(data: unknown) {
+        this.sent.push(data)
+      }
+      close() {}
+    }
+
+    const setup = (protocols?: string | string[]) => {
+      const win: Record<PropertyKey, unknown> = { WebSocket: FakeWebSocket }
+      const state = run(win)
+      const Wrapped = win.WebSocket as typeof FakeWebSocket
+      return { state, ws: new Wrapped("ws://x/s", protocols), Wrapped }
+    }
+
+    it("keeps the page's view of WebSocket", () => {
+      const { ws, Wrapped } = setup()
+      expect(ws).toBeInstanceOf(FakeWebSocket)
+      expect(ws).toBeInstanceOf(Wrapped)
+      expect(Wrapped.OPEN).toBe(1)
+    })
+
+    it("records open with the requested protocols, then the negotiated one", () => {
+      const { state, ws } = setup(["chat", "v2"])
+      ws.protocol = "chat"
+      ws.dispatchEvent(new Event("open"))
+      expect(state.drain().events).toMatchObject([
+        {
+          type: "open",
+          kind: "websocket",
+          method: "WS",
+          url: "ws://x/s",
+          protocols: ["chat", "v2"],
+          mimeType: "",
+        },
+        { type: "ready", protocol: "chat" },
+      ])
+      expect(setup("chat").state.drain().events[0]).toMatchObject({
+        protocols: ["chat"],
+      })
+      expect(setup().state.drain().events[0]).toMatchObject({ protocols: [] })
+    })
+
+    it("records sent and received frames, binary by size", async () => {
+      const { state, ws } = setup()
+      state.drain()
+      ws.send("hi")
+      ws.send(new Uint8Array(4))
+      ws.send(new Blob(["abcd"]))
+      expect(ws.sent).toHaveLength(3)
+      ws.dispatchEvent(new MessageEvent("message", { data: "yo" }))
+      ws.dispatchEvent(
+        new MessageEvent("message", { data: new ArrayBuffer(8) }),
+      )
+      expect(state.drain().events).toMatchObject([
+        { type: "frame", dir: "out", text: "hi" },
+        { type: "frame", dir: "out", text: "", bytes: 4 },
+        { type: "frame", dir: "out", text: "", bytes: 4 },
+        { type: "frame", dir: "in", text: "yo" },
+        { type: "frame", dir: "in", text: "", bytes: 8 },
+      ])
+    })
+
+    it("records close once with its code and reason", () => {
+      const { state, ws } = setup()
+      state.drain()
+      const close = new Event("close") as Event & {
+        code: number
+        reason: string
+      }
+      Object.assign(close, { code: 1000, reason: "bye" })
+      ws.dispatchEvent(close)
+      ws.dispatchEvent(close)
+      expect(state.drain().events).toMatchObject([
+        { type: "close", code: 1000, reason: "bye" },
+      ])
+    })
+  })
 })
