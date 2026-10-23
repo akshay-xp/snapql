@@ -22,6 +22,7 @@ import { nextTab } from "./keys"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
 import { Section, Text } from "./section"
+import { socketRows } from "./socket"
 import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
 import { shownTab, type Tab, tabsFor } from "./tabs"
@@ -365,6 +366,9 @@ function Summary(props: { entry: Entry }) {
           <span>{heading().clock}</span>
         </div>
       </header>
+      <Show when={props.entry.socket}>
+        <Pairs title="Socket" pairs={socketRows(props.entry)} />
+      </Show>
       <Sections data={props.entry.decoded?.data} />
       <Tokens entry={props.entry} />
       <Show when={decodeResponse()}>
