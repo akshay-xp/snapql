@@ -230,3 +230,41 @@ describe("messageReader", () => {
     )
   })
 })
+
+describe("messageReader repeated and maps", () => {
+  const read = (fields: string, ...data: number[]) =>
+    messageReader(
+      parse(`package ex;
+        enum Role { ROLE_UNKNOWN = 0; ADMIN = 1; }
+        message Inner { int32 n = 1; }
+        message T { ${fields} }`),
+      "ex.T",
+    )(new Uint8Array(data))
+
+  it("reads repeated scalars packed or not, always as arrays", () => {
+    expect(read("repeated int32 s = 1;", 0x0a, 2, 5, 7)).toEqual({ s: [5, 7] })
+    expect(read("repeated int32 s = 1;", 0x08, 5, 0x08, 7)).toEqual({
+      s: [5, 7],
+    })
+    expect(read("repeated int32 s = 1;", 0x08, 5)).toEqual({ s: [5] })
+  })
+
+  it("reads repeated messages", () => {
+    expect(
+      read("repeated Inner i = 1;", 0x0a, 2, 0x08, 1, 0x0a, 2, 0x08, 2),
+    ).toEqual({ i: [{ n: 1 }, { n: 2 }] })
+  })
+
+  it("reads maps as objects", () => {
+    expect(
+      read(
+        "map<string, int32> m = 1;",
+        ...[0x0a, 5, 0x0a, 1, 0x61, 0x10, 1],
+        ...[0x0a, 5, 0x0a, 1, 0x62, 0x10, 2],
+      ),
+    ).toEqual({ m: { a: 1, b: 2 } })
+    expect(read("map<int32, Role> m = 1;", 0x0a, 4, 0x08, 1, 0x10, 1)).toEqual({
+      m: { "1": "ADMIN" },
+    })
+  })
+})

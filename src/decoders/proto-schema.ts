@@ -1,11 +1,11 @@
-import { hex } from "./bytes"
+import { hex, keyText } from "./bytes"
 import type { Field, ProtoFile, Schema } from "./proto-types"
 import {
   eachField,
   float32,
   int,
   type ProtoMessage,
-  type Reader,
+  Reader,
   readMessage,
   schemaLess,
 } from "./protobuf"
@@ -293,15 +293,66 @@ export function messageReader(
 
 function readTyped(schema: Schema, type: string, data: Uint8Array): unknown {
   const fields = schema.messages[type]?.fields
-  if (!fields) return readMessage(data)
+  return fields ? readFields(schema, fields, data) : readMessage(data)
+}
+
+function readFields(
+  schema: Schema,
+  fields: Record<number, Field>,
+  data: Uint8Array,
+): ProtoMessage {
   const message: ProtoMessage = {}
   eachField(data, (number, wireType, reader) => {
     const field = fields[number]
-    const value = field && typedValue(schema, field.type, wireType, reader)
+    if (field?.map && wireType === 2) {
+      const entry = readFields(schema, entryFields(field.map), reader.bytes())
+      message[field.name] = {
+        ...(message[field.name] as ProtoMessage),
+        [keyText(entry.key)]: entry.value,
+      }
+      return
+    }
+    const packed =
+      field?.repeated && wireType === 2
+        ? packedWireType(schema, field.type)
+        : undefined
+    const value =
+      packed !== undefined
+        ? readPacked(schema, field.type, packed, reader.bytes())
+        : field && typedValue(schema, field.type, wireType, reader)
     if (value === undefined) message[number] = schemaLess(wireType, reader)
-    else message[field.name] = value
+    else if (!field.repeated) message[field.name] = value
+    else
+      message[field.name] = [
+        ...((message[field.name] as unknown[]) ?? []),
+        ...(packed !== undefined ? (value as unknown[]) : [value]),
+      ]
   })
   return message
+}
+
+const entryFields = (map: { key: string; value: string }) => ({
+  1: { name: "key", type: map.key },
+  2: { name: "value", type: map.value },
+})
+
+// proto3 packs repeated numeric scalars and enums.
+function packedWireType(schema: Schema, type: string): number | undefined {
+  if (["fixed32", "sfixed32", "float"].includes(type)) return 5
+  if (["fixed64", "sfixed64", "double"].includes(type)) return 1
+  if (type in schema.enums || /^(u|s)?int(32|64)$|^bool$/.test(type)) return 0
+}
+
+function readPacked(
+  schema: Schema,
+  type: string,
+  wireType: number,
+  data: Uint8Array,
+): unknown[] {
+  const reader = new Reader(data)
+  const values: unknown[] = []
+  while (!reader.done) values.push(typedValue(schema, type, wireType, reader))
+  return values
 }
 
 // undefined when the wire type doesn't fit the declared type (read schema-less).
