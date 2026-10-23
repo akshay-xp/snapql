@@ -15,10 +15,11 @@ export function Footer(props: {
   onReloadCapture: () => void
   schemas: Schemas
   exportCount: number
-  onExportHar: () => Promise<void>
+  onExportHar: (redact: boolean) => Promise<void>
 }) {
   const [picking, setPicking] = createSignal(false)
   const [exporting, setExporting] = createSignal(false)
+  const [redact, setRedact] = createSignal(true)
   return (
     <footer class="relative flex h-8 shrink-0 items-center gap-0.5 border-t border-border px-1.5">
       <IconButton label="Clear" onClick={props.onClear}>
@@ -67,15 +68,26 @@ export function Footer(props: {
       <Show when={exporting()}>
         <div
           data-export
-          class="absolute bottom-full left-1.5 z-10 mb-1 flex w-56 items-center justify-between gap-2 rounded-md border border-border bg-bg p-2 shadow-lg"
+          class="absolute bottom-full left-1.5 z-10 mb-1 flex w-56 flex-col gap-2 rounded-md border border-border bg-bg p-2 shadow-lg"
         >
-          <span>Export {count(props.exportCount, "request")}</span>
+          <span class="font-semibold">
+            Export {count(props.exportCount, "request")}
+          </span>
+          <label class="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              class="accent-accent"
+              checked={redact()}
+              onChange={(e) => setRedact(e.currentTarget.checked)}
+            />
+            Redact secrets
+          </label>
           <button
             type="button"
-            class="rounded px-1.5 py-0.5 text-accent hover:bg-selected disabled:text-muted"
+            class="self-end rounded px-1.5 py-0.5 text-accent hover:bg-selected disabled:text-muted"
             disabled={!props.exportCount}
             onClick={async () => {
-              await props.onExportHar()
+              await props.onExportHar(redact())
               setExporting(false)
             }}
           >

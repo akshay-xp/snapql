@@ -24,6 +24,7 @@ import {
 import { Footer } from "./footer"
 import { harFileName, toHar } from "./har"
 import { List } from "./list"
+import { redactHar } from "./redact"
 import type { Schemas } from "./schemas"
 import { FilterChips, SearchBox } from "./search"
 import { clampSize, isStacked } from "./splitter"
@@ -78,13 +79,14 @@ export function App(props: {
     onCleanup(() => observer.disconnect())
   })
   // Oldest first, as HAR viewers expect, whatever the list order.
-  const exportHar = async () => {
+  const exportHar = async (redact: boolean) => {
     const shown = [...visible()].sort((a, b) => a.startedAt - b.startedAt)
     const bodies = await Promise.all(
       shown.map((e) => e.getBody().catch(() => undefined)),
     )
+    const har = toHar(shown, bodies, version)
     download(
-      JSON.stringify(toHar(shown, bodies, version), null, 2),
+      JSON.stringify(redact ? redactHar(har) : har, null, 2),
       harFileName(shown, new Date()),
     )
   }
