@@ -30,6 +30,7 @@ import { redactHar } from "./redact"
 import type { Schemas } from "./schemas"
 import { FilterChips, SearchBox } from "./search"
 import { clampSize, isStacked } from "./splitter"
+import type { Tab } from "./tabs"
 
 export function App(props: {
   store: Store
@@ -80,6 +81,14 @@ export function App(props: {
     return bodyQuery() && texts && !matchesQuery(entry, query())
       ? bodyHit(texts, query())
       : undefined
+  }
+  // A fresh object per selection, so picking the same tab again still applies.
+  const [openTab, setOpenTab] = createSignal<{ tab: Tab }>()
+  const select = (id: number | undefined) => {
+    const entry = visible().find((e) => e.id === id)
+    const hit = entry && hitOf(entry)
+    setOpenTab(hit && { tab: hit.side === "response" ? "Body" : "Raw" })
+    setSelectedId(id)
   }
   // Undefined until the first drag: the pane takes half the panel. Not persisted.
   const [detailWidth, setDetailWidth] = createSignal<number>()
@@ -154,7 +163,7 @@ export function App(props: {
                 query={query()}
                 bodyHit={hitOf}
                 selectedId={selectedId()}
-                onSelect={setSelectedId}
+                onSelect={select}
               />
             </Show>
           </Show>
@@ -179,6 +188,7 @@ export function App(props: {
               schemas={props.schemas}
               base={base()}
               bodyQuery={bodyQuery()}
+              openTab={openTab()}
               onCompare={setBaseId}
               stacked={stacked()}
               size={stacked() ? detailHeight() : detailWidth()}

@@ -119,9 +119,17 @@ export function Detail(props: {
   onCompare: (id: number | undefined) => void
   // Highlighted in the Body tab; empty unless body search is on.
   bodyQuery: string
+  // Set when a body-only match is selected: the tab that shows it.
+  openTab?: { tab: Tab }
 }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
+  createEffect(
+    on(
+      () => props.openTab,
+      (open) => open && setActive(open.tab),
+    ),
+  )
   // Decode as choices by entry id, while the panel is open.
   const [formats, setFormats] = createSignal<Record<number, BinaryFormat>>({})
   const format = () => {
@@ -301,7 +309,7 @@ export function Detail(props: {
             <TimingPanel entry={props.entry} />
           </Match>
           <Match when={shown() === "Raw"}>
-            <RawPanel entry={props.entry} />
+            <RawPanel entry={props.entry} query={props.bodyQuery} />
           </Match>
           <Match when={shown() === "Diff" && comparing()}>
             {(base) => <DiffView base={base()} entry={props.entry} />}
@@ -313,7 +321,7 @@ export function Detail(props: {
 }
 
 // The whole tab waits for the body, so Copy can take request and response together.
-function RawPanel(props: { entry: Entry }) {
+function RawPanel(props: { entry: Entry; query: string }) {
   return (
     <LoadedBody entry={props.entry} pretty={false}>
       {(text) => {
@@ -329,10 +337,10 @@ function RawPanel(props: { entry: Entry }) {
               />
             </Toolbar>
             <Section title="Request">
-              <Text>{request}</Text>
+              <Text query={props.query}>{request}</Text>
             </Section>
             <Section title="Response">
-              <Text>{response}</Text>
+              <Text query={props.query}>{response}</Text>
             </Section>
           </>
         )
