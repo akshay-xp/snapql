@@ -138,4 +138,65 @@
       }
     }
   }
+
+  const WebSocket = window.WebSocket
+  if (WebSocket) {
+    window.WebSocket = class extends WebSocket {
+      #id = nextId++
+      #closed = false
+
+      constructor(url, protocols, ...rest) {
+        super(url, protocols, ...rest)
+        state.record({
+          type: "open",
+          id: this.#id,
+          kind: "websocket",
+          method: "WS",
+          url: this.url,
+          protocols:
+            protocols === undefined ? [] : [].concat(protocols).map(String),
+          mimeType: "",
+          time: Date.now(),
+        })
+        super.addEventListener("open", () =>
+          state.record({
+            type: "ready",
+            id: this.#id,
+            time: Date.now(),
+            protocol: this.protocol,
+          }),
+        )
+        super.addEventListener("message", (e) => this.#frame("in", e.data))
+        super.addEventListener("close", (e) => {
+          if (this.#closed) return
+          this.#closed = true
+          state.record({
+            type: "close",
+            id: this.#id,
+            time: Date.now(),
+            code: e.code,
+            reason: e.reason,
+          })
+        })
+      }
+
+      send(data) {
+        this.#frame("out", data)
+        return super.send(data)
+      }
+
+      // Binary frames are recorded by size only.
+      #frame(dir, data) {
+        const text = typeof data === "string"
+        state.record({
+          type: "frame",
+          id: this.#id,
+          time: Date.now(),
+          dir,
+          text: text ? data : "",
+          bytes: text ? undefined : (data.byteLength ?? data.size),
+        })
+      }
+    }
+  }
 })(window)
