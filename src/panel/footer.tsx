@@ -9,6 +9,7 @@ export function Footer(props: {
   onSort: () => void
   preserveLog: boolean
   onPreserveLog: (on: boolean) => void
+  onReloadCapture: () => void
 }) {
   return (
     <footer class="flex h-8 shrink-0 items-center gap-0.5 border-t border-border px-1.5">
@@ -34,6 +35,9 @@ export function Footer(props: {
         onClick={() => props.onPreserveLog(!props.preserveLog)}
       >
         <path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4z" />
+      </IconButton>
+      <IconButton label="Reload and capture" onClick={props.onReloadCapture}>
+        <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
       </IconButton>
       <span class="ml-auto pr-1 text-muted">
         {props.total === undefined

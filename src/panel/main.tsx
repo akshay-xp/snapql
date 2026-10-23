@@ -8,6 +8,7 @@ import {
   onRequestFinished,
   onThemeChanged,
   probeScript,
+  reloadWithScript,
 } from "../browser/devtools"
 import { startCapture } from "../capture/capture"
 import { pollProbe } from "../capture/probe-source"
@@ -59,6 +60,7 @@ render(
       store={store}
       preserveLog={preserveLog}
       setPreserveLog={setPreserveLog}
+      onReloadCapture={async () => reloadWithScript(await script)}
     />
   ),
   document.getElementById("root") as HTMLElement,

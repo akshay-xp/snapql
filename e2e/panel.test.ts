@@ -922,3 +922,24 @@ test("Messages follows new messages only from the bottom", async () => {
     await panel.close()
   }
 })
+
+test("Reload and capture catches streams opened while loading", async () => {
+  const panel = await openPanel()
+  try {
+    expect(await panel.text("main")).toContain("Reload and capture")
+
+    await panel.page.goto(`${panel.origin}/early`)
+    await expect.poll(panel.probed).toBe(true)
+    const early = async () =>
+      (await panel.rows()).filter((r) => r.startsWith("/api/live "))
+    await new Promise((r) => setTimeout(r, 800))
+    expect(await early()).toEqual([])
+
+    await panel.click('button[aria-label="Reload and capture"]')
+    await expect
+      .poll(early, { timeout: 5000 })
+      .toEqual([expect.stringMatching(/ live \d+ msgs? sse$/)])
+  } finally {
+    await panel.close()
+  }
+})
