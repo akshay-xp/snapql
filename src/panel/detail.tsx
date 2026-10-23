@@ -7,12 +7,12 @@ import {
   Show,
   Switch,
 } from "solid-js"
-import { type Entry, incoming, type Message } from "../capture/entry"
+import { type Body, type Entry, incoming, type Message } from "../capture/entry"
 import { decoders } from "../decoders"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
 import type { DecodedResponse } from "../decoders/types"
-import { loadBody } from "./body"
+import { BODY_LIMIT, loadBody } from "./body"
 import { valueText } from "./copy"
 import { CopyButton } from "./copy-button"
 import { summaryHeading } from "./heading"
@@ -305,7 +305,7 @@ function Summary(props: { entry: Entry }) {
     const decoded = props.entry.decoded
     if (!decoded) return
     const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
-    return decode && ((text: string) => decode(text, decoded))
+    return decode && ((body: Body) => decode(body, decoded))
   }
   const heading = () => summaryHeading(props.entry)
 
@@ -357,15 +357,15 @@ function Summary(props: { entry: Entry }) {
 // Mounted only while Summary is shown, so the response body loads on demand.
 function ResponseGroup(props: {
   entry: Entry
-  decode: (text: string) => DecodedResponse | undefined
+  decode: (body: Body) => DecodedResponse | undefined
 }) {
   const [body] = createResource(
     () => props.entry,
-    (entry) => loadBody(entry, { pretty: false }),
+    (entry) => entry.getBody().catch(() => undefined),
   )
   const decoded = () => {
     const b = body()
-    return b && props.decode(b.text)
+    return b && b.content.length <= BODY_LIMIT ? props.decode(b) : undefined
   }
   return (
     <Show when={decoded()}>

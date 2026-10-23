@@ -259,9 +259,24 @@ describe("graphql", () => {
     }
     const response = (body: unknown) =>
       graphql.decodeResponse?.(
-        typeof body === "string" ? body : JSON.stringify(body),
+        {
+          content: typeof body === "string" ? body : JSON.stringify(body),
+          encoding: "",
+        },
         decoded,
       )
+
+    it("decodes base64 response bodies", () => {
+      expect(
+        graphql.decodeResponse?.(
+          {
+            content: btoa('{"errors":[{"message":"boom"}]}'),
+            encoding: "base64",
+          },
+          decoded,
+        )?.summary,
+      ).toBe("1 error")
+    })
 
     it("lists errors by path, plus data", () => {
       expect(

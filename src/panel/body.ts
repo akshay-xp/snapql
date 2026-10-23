@@ -7,7 +7,8 @@ export type FormattedBody = { text: string; notes: string[] }
 
 export type FormatOptions = { pretty?: boolean; mimeType?: string }
 
-// The panel's only getBody() caller, so bodies load only where this is used.
+// With the Response group, the panel's only getBody() caller, so bodies load
+// only where they are shown.
 export async function loadBody(
   entry: Pick<Entry, "getBody" | "mimeType">,
   options?: { pretty?: boolean },
