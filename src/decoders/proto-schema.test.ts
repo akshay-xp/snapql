@@ -94,3 +94,58 @@ describe("parseProto services", () => {
     })
   })
 })
+
+describe("parseProto names and errors", () => {
+  it("resolves names innermost scope first", () => {
+    const type = (decls: string) =>
+      parse(`package a.b; ${decls} message M { C f = 1; }`).messages["a.b.M"]
+        .fields[1].type
+    expect(type("message C {}")).toBe("a.b.C")
+    const nested = parse("package a.b; message M { message C {} C f = 1; }")
+    expect(nested.messages["a.b.M"].fields[1].type).toBe("a.b.M.C")
+    const outer = parseProto([
+      { name: "a.proto", text: "package a; message C {}" },
+      { name: "b.proto", text: "package a.b; message M { C f = 1; }" },
+    ])
+    expect(outer.messages["a.b.M"].fields[1].type).toBe("a.C")
+  })
+
+  it("treats a leading dot as absolute", () => {
+    const schema = parse(
+      "package x; message Y {} message M { message Y {} .x.Y f = 1; }",
+    )
+    expect(schema.messages["x.M"].fields[1].type).toBe("x.Y")
+  })
+
+  it("resolves types from imported files in any order", () => {
+    const schema = parseProto([
+      {
+        name: "b.proto",
+        text: 'package ex; import "protos/a.proto"; message Box { User u = 1; }',
+      },
+      { name: "a.proto", text: "package ex; message User {}" },
+    ])
+    expect(schema.messages["ex.Box"].fields[1].type).toBe("ex.User")
+  })
+
+  it("knows well-known types by name", () => {
+    const schema = parse(
+      'import "google/protobuf/timestamp.proto"; message M { google.protobuf.Timestamp at = 1; }',
+    )
+    expect(schema.messages.M.fields[1].type).toBe("google.protobuf.Timestamp")
+    expect(schema.messages).not.toHaveProperty("google.protobuf.Timestamp")
+  })
+
+  it("reports file and line", () => {
+    expect(() => parse("message M {\n\n  Missing m = 1;\n}")).toThrow(
+      "a.proto:3: unknown type Missing",
+    )
+    expect(() => parse('package ex;\nimport "z.proto";', "b.proto")).toThrow(
+      'b.proto:2: import "z.proto" not loaded',
+    )
+    expect(() => parse("message M {\n  int32 a = 1\n}")).toThrow(
+      'a.proto:3: expected ";"',
+    )
+    expect(() => parse("message {")).toThrow("a.proto:1:")
+  })
+})
