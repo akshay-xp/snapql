@@ -984,3 +984,59 @@ test("WebSockets show their frames live and close into one row", async () => {
     await panel.close()
   }
 })
+
+test("Socket.IO and graphql-ws frames are titled by their protocol", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/socket`)
+    await expect.poll(panel.probed).toBe(true)
+    // Direction and title only: offsets and sizes vary.
+    const titles = async () =>
+      (await panel.messages()).map((r) =>
+        r.replace(/^\+\S+ /, "").replace(/ \S+ k?B$/, ""),
+      )
+
+    await panel.page.click("#sio")
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/socket.io/ live 6 msgs socketio"]))
+    await panel.selectStarting("/socket.io/ ")
+    await panel.openTab("Messages")
+    await expect
+      .poll(titles)
+      .toEqual([
+        "↑ connect",
+        "↑ chat",
+        "↑ ping",
+        "↓ connect",
+        "↓ chat",
+        "↓ ping",
+      ])
+    await panel.click("#message-1")
+    expect(
+      await panel.text('[role="tabpanel"] section [data-json="key"]'),
+    ).toBe("args")
+
+    await panel.page.click("#gql")
+    await expect
+      .poll(panel.rows)
+      .toEqual(
+        expect.arrayContaining([
+          "/graphql-ws graphql-transport-ws live 6 msgs graphql-ws",
+        ]),
+      )
+    await panel.selectStarting("/graphql-ws ")
+    await expect
+      .poll(titles)
+      .toEqual([
+        "↑ connection_init",
+        "↑ OnMsg subscribe",
+        "↑ OnMsg next",
+        "↓ connection_init",
+        "↓ OnMsg subscribe",
+        "↓ OnMsg next",
+      ])
+  } finally {
+    await panel.close()
+  }
+})

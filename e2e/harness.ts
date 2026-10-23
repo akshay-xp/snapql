@@ -126,7 +126,25 @@ const socketPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <button id="open">open</button>
 <button id="close">close</button>
+<button id="sio">sio</button>
+<button id="gql">gql</button>
 <script>
+  const socket = (path, protocols, frames) => {
+    const s = new WebSocket(location.origin.replace("http", "ws") + path, protocols)
+    s.onopen = () => frames.forEach((f) => s.send(f))
+  }
+  document.getElementById("sio").onclick = () =>
+    socket("/socket.io/?EIO=4&transport=websocket", [], [
+      "40",
+      '42["chat",{"text":"hi"}]',
+      "2",
+    ])
+  document.getElementById("gql").onclick = () =>
+    socket("/graphql-ws", ["graphql-transport-ws"], [
+      '{"type":"connection_init"}',
+      '{"type":"subscribe","id":"1","payload":{"query":"subscription OnMsg { msg }"}}',
+      '{"type":"next","id":"1","payload":{"data":{"msg":"hi"}}}',
+    ])
   let ws
   document.getElementById("open").onclick = () => {
     ws = new WebSocket(location.origin.replace("http", "ws") + "/sock", ["chat"])
