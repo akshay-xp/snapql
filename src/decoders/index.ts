@@ -2,6 +2,7 @@ import { form } from "./form"
 import { graphql } from "./graphql"
 import { json } from "./json"
 import { jsonrpc } from "./jsonrpc"
+import { llm } from "./llm"
 import { multipart } from "./multipart"
 import { ndjson, sse } from "./sse"
 import { trpc } from "./trpc"
@@ -10,6 +11,7 @@ import { soap, xml } from "./xml"
 
 // Most specific first; json is the catch-all and stays last.
 export const decoders: Decoder[] = [
+  llm,
   graphql,
   jsonrpc,
   trpc,
