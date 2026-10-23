@@ -48,3 +48,44 @@ describe("readMsgpack scalars", () => {
     expect(read(0xc4, 2, 0x0a, 0xff)).toBe("0a ff")
   })
 })
+
+describe("readMsgpack containers", () => {
+  it("reads arrays", () => {
+    expect(read(0x92, 0x01, 0xa1, 0x61)).toEqual([1, "a"])
+    expect(read(0xdc, 0, 1, 0x01)).toEqual([1])
+  })
+
+  it("reads maps, stringifying non-string keys", () => {
+    expect(read(0x81, 0xa1, 0x61, 0x01)).toEqual({ a: 1 })
+    expect(read(0x81, 0x01, 0x02)).toEqual({ "1": 2 })
+    expect(read(0x81, 0xc3, 0x01)).toEqual({ true: 1 })
+    expect(read(0x81, 0x91, 0x01, 0x02)).toEqual({ "[1]": 2 })
+  })
+
+  it("reads ext types", () => {
+    expect(read(0xd4, 0x05, 0xaa)).toEqual({ type: 5, data: "aa" })
+  })
+
+  it("reads timestamps as ISO strings", () => {
+    expect(read(0xd6, 0xff, 0, 0, 0, 0)).toBe("1970-01-01T00:00:00.000Z")
+    const ts64 = be(8, (v) => v.setBigUint64(0, (500000000n << 34n) | 1n))
+    expect(read(0xd7, 0xff, ...ts64)).toBe("1970-01-01T00:00:01.500Z")
+    const ts96 = be(12, (v) => {
+      v.setUint32(0, 0)
+      v.setBigInt64(4, -1n)
+    })
+    expect(read(0xc7, 12, 0xff, ...ts96)).toBe("1969-12-31T23:59:59.000Z")
+  })
+})
+
+describe("readMsgpack errors", () => {
+  const error = (at: number, ...data: number[]) =>
+    expect(() => read(...data)).toThrow(`invalid msgpack at byte ${at}`)
+
+  it("reports where input broke", () => {
+    error(0, 0xc1)
+    error(2, 0x92, 0x01)
+    error(1, 0x01, 0x02)
+    error(0, 0xa5, 0x68)
+  })
+})
