@@ -52,3 +52,22 @@ describe("event-stream", () => {
     )
   })
 })
+
+describe("NDJSON and JSON Lines", () => {
+  const text = '{"a":1}\n\n{"b":2}\r\n{"c":3}'
+  const events = [{ text: '{"a":1}' }, { text: '{"b":2}' }, { text: '{"c":3}' }]
+
+  it("gives one event per non-empty line", () => {
+    expect(parse("application/x-ndjson", text)).toEqual(events)
+    expect(parse("application/jsonl; charset=utf-8", text)).toEqual(events)
+  })
+
+  it("gives the same events however the text is split", () => {
+    expectAnySplit("application/x-ndjson", text)
+  })
+
+  it("has no parser for other mime types", () => {
+    expect(streamParser("application/json")).toBeUndefined()
+    expect(streamParser("")).toBeUndefined()
+  })
+})
