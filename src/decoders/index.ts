@@ -4,6 +4,7 @@ import { json } from "./json"
 import { jsonrpc } from "./jsonrpc"
 import { llm } from "./llm"
 import { multipart } from "./multipart"
+import { socketio } from "./socketio"
 import { ndjson, sse } from "./sse"
 import { trpc } from "./trpc"
 import type { Decoder } from "./types"
@@ -20,6 +21,7 @@ export const decoders: Decoder[] = [
   xml,
   multipart,
   form,
+  socketio,
   websocket,
   sse,
   ndjson,
