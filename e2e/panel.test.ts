@@ -285,7 +285,7 @@ test("Summary shows the request and its decoded data", async () => {
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
     expect(await panel.text('[role="tabpanel"] header')).toMatch(
-      /^GetUser graphql query POST \/graphql · 200 OK · \d+ ms · \d\d:\d\d:\d\d$/,
+      /^GetUser graphql query Copy as POST \/graphql · 200 OK · \d+ ms · \d\d:\d\d:\d\d$/,
     )
     expect(
       await panel.attr('[role="tabpanel"] header [data-path]', "title"),
@@ -321,7 +321,7 @@ test("Summary shows the request and its decoded data", async () => {
     await panel.click('button[aria-label="Copy query"]')
     expect(await panel.copied()).toBe("query GetUser { user { id } }")
 
-    const caret = '[role="tabpanel"] button[aria-expanded]'
+    const caret = '[role="tabpanel"] button[aria-expanded]:not([aria-haspopup])'
     expect(await panel.attr(caret, "aria-expanded")).toBe("true")
     expect(
       await panel.style('[role="tabpanel"] [data-json="string"]', "color"),
@@ -1345,6 +1345,47 @@ test("search bodies matches request and response body text", async () => {
 
     await panel.click(toggle)
     await expect.poll(panel.rows).toEqual([])
+  } finally {
+    await panel.close()
+  }
+})
+
+test("Copy as copies cURL and fetch, not for sockets", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await panel.stubClipboard()
+    const a = "A query graphql"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([a]))
+    await panel.select(a)
+
+    await panel.clickButton("Copy as")
+    expect(await panel.text('[role="menu"]')).toBe("cURL fetch")
+    await panel.clickButton("cURL")
+    const curl = (await panel.copied()) ?? ""
+    expect(curl.startsWith(`curl '${panel.origin}/api/gql-ok'`)).toBe(true)
+    expect(curl).toContain("-H 'content-type: application/json'")
+    expect(curl).toContain(`--data-raw '{"query":"query A { a }"}'`)
+    expect(curl).not.toContain("accept-encoding")
+    expect(await panel.text('[role="menu"]')).toBeNull()
+    expect(await panel.text("header button")).toBe("Copied")
+
+    await panel.clickButton("Copied")
+    await panel.clickButton("fetch")
+    expect(
+      (await panel.copied())?.startsWith(
+        `await fetch("${panel.origin}/api/gql-ok", `,
+      ),
+    ).toBe(true)
+
+    await panel.page.goto(`${panel.origin}/socket`)
+    await expect.poll(panel.probed).toBe(true)
+    await panel.page.click("#open")
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([expect.stringMatching(/^\/sock /)]))
+    await panel.selectStarting("/sock ")
+    expect(await panel.text("header button")).toBeNull()
   } finally {
     await panel.close()
   }
