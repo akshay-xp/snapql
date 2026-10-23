@@ -1444,11 +1444,14 @@ test("selecting a body match opens the tab that shows it", async () => {
     await panel.click(bodiesToggle)
 
     await panel.search("plum")
-    await panel.select("/api/order request (1): plum")
+    const order = "/api/order request (1): plum"
+    await expect.poll(panel.rows).toEqual([order])
+    await panel.select(order)
     await expect.poll(panel.activeTab).toBe("Raw")
     await expect.poll(panel.marks).toEqual(["plum"])
 
     await panel.search("apple")
+    await expect.poll(async () => (await panel.rows()).length).toBe(1)
     await panel.selectStarting("/api/fruit")
     await expect.poll(panel.activeTab).toBe("Body")
 
@@ -1469,6 +1472,7 @@ test("steps through body matches", async () => {
     await expect.poll(async () => (await panel.rows()).length).toBe(5)
     await panel.click(bodiesToggle)
     await panel.search("apple")
+    await expect.poll(async () => (await panel.rows()).length).toBe(1)
     await panel.selectStarting("/api/fruit")
     const nav = "[data-match-nav]"
     const next = 'button[aria-label="Next match"]'
