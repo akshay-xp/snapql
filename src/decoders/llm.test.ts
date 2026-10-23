@@ -95,6 +95,44 @@ const chatStream = events(
   "[DONE]",
 )
 
+const block = (index: number, content_block: object) => ({
+  type: "content_block_start",
+  index,
+  content_block,
+})
+const delta = (index: number, d: object) => ({
+  type: "content_block_delta",
+  index,
+  delta: d,
+})
+
+const anthropicStream = events(
+  {
+    type: "message_start",
+    message: {
+      id: "msg_1",
+      model: "claude-test",
+      usage: { input_tokens: 10, output_tokens: 1 },
+    },
+  },
+  block(0, { type: "thinking", thinking: "" }),
+  delta(0, { type: "thinking_delta", thinking: "Let me " }),
+  delta(0, { type: "thinking_delta", thinking: "think" }),
+  { type: "content_block_stop", index: 0 },
+  block(1, { type: "text", text: "" }),
+  delta(1, { type: "text_delta", text: "Sure" }),
+  block(2, { type: "tool_use", id: "toolu_1", name: "get_weather", input: {} }),
+  delta(2, { type: "input_json_delta", partial_json: '{"city":' }),
+  { type: "ping" },
+  delta(2, { type: "input_json_delta", partial_json: '"Oslo"}' }),
+  {
+    type: "message_delta",
+    delta: { stop_reason: "tool_use" },
+    usage: { output_tokens: 20 },
+  },
+  { type: "message_stop" },
+)
+
 describe("reassemble", () => {
   it("folds Chat Completions deltas and merges tool calls by index", () => {
     expect(reassemble(chatStream)).toEqual({
@@ -165,5 +203,19 @@ describe("reassemble", () => {
       stopReason: "completed",
       usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 },
     })
+  })
+
+  it("folds Anthropic content blocks, including thinking", () => {
+    expect(reassemble(anthropicStream)).toEqual({
+      text: "Sure",
+      thinking: "Let me think",
+      toolCalls: [
+        { id: "toolu_1", name: "get_weather", arguments: '{"city":"Oslo"}' },
+      ],
+      stopReason: "tool_use",
+      usage: { input_tokens: 10, output_tokens: 20 },
+    })
+    const noThinking = anthropicStream.filter((e) => !e.text.includes("think"))
+    expect(reassemble(noThinking)).not.toHaveProperty("thinking")
   })
 })
