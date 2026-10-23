@@ -28,7 +28,8 @@ import {
   loadBody,
 } from "./body"
 import { valueText } from "./copy"
-import { CopyButton } from "./copy-button"
+import { CopyButton, createCopied } from "./copy-button"
+import { toCurl, toFetch } from "./curl"
 import { summaryHeading } from "./heading"
 import { hexDump } from "./hex-dump"
 import { OPEN_DEPTH, treeValue } from "./json"
@@ -47,6 +48,46 @@ import { findTokens } from "./values"
 
 // Binary frames decode by format; text frames by the entry's own decoder,
 // which sees the whole frame list.
+function CopyAs(props: { entry: Entry }) {
+  const [open, setOpen] = createSignal(false)
+  const [copied, copy] = createCopied()
+  const item = (label: string, text: (entry: Entry) => string) => (
+    <button
+      type="button"
+      role="menuitem"
+      class="rounded px-2 py-1 text-left hover:bg-selected"
+      onClick={() => {
+        copy(text(props.entry))
+        setOpen(false)
+      }}
+    >
+      {label}
+    </button>
+  )
+  return (
+    <div class="relative ml-auto shrink-0 self-center font-sans">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open()}
+        class="rounded px-1.5 py-0.5 text-muted hover:bg-selected hover:text-fg"
+        onClick={() => setOpen(!open())}
+      >
+        {copied() ? "Copied" : "Copy as"}
+      </button>
+      <Show when={open()}>
+        <div
+          role="menu"
+          class="absolute top-full right-0 z-10 mt-1 flex w-28 flex-col rounded-md border border-border bg-bg p-1 shadow-lg"
+        >
+          {item("cURL", toCurl)}
+          {item("fetch", toFetch)}
+        </div>
+      </Show>
+    </div>
+  )
+}
+
 function frameDecoder(entry: Entry, format: BinaryFormat) {
   const kind = entry.decoded?.kind
   const decode = kind ? decoderFor(kind, decoders)?.decodeMessage : undefined
@@ -478,6 +519,9 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
             <span class="shrink-0 rounded border border-border px-1.5 text-[11px] text-muted">
               {heading().tag}
             </span>
+          </Show>
+          <Show when={!props.entry.socket}>
+            <CopyAs entry={props.entry} />
           </Show>
         </div>
         <div class="flex flex-wrap gap-x-1.5 text-muted">
