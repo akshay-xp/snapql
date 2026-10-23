@@ -25,6 +25,12 @@ describe("matchesQuery", () => {
     expect(matchesQuery(graphql, "mutation")).toBe(false)
   })
 
+  it("matches body text when given", () => {
+    expect(matchesQuery(two, "needle", "a needle here")).toBe(true)
+    expect(matchesQuery(two, "NEEDLE", "a needle here")).toBe(true)
+    expect(matchesQuery(two, "needle")).toBe(false)
+  })
+
   it("matches undecoded rows by path and method", () => {
     expect(matchesQuery(two, "post")).toBe(true)
     expect(matchesQuery(two, "/api/t")).toBe(true)

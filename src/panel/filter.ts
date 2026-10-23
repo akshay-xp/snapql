@@ -6,11 +6,12 @@ export type Segment = { text: string; hit: boolean }
 export function matchesQuery(
   entry: Pick<Entry, "method" | "url" | "status" | "decoded">,
   query: string,
+  bodyText?: string,
 ): boolean {
   const q = query.toLowerCase()
   if (!q) return true
   const { title, detail, kind } = rowLabel(entry)
-  return [title, detail, kind, entry.url].some((field) =>
+  return [title, detail, kind, entry.url, bodyText].some((field) =>
     field?.toLowerCase().includes(q),
   )
 }
