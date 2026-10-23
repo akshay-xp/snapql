@@ -64,7 +64,9 @@ export function createLive(
           : Promise.reject(new Error("available when the stream ends")),
       messages: [],
       open: true,
-      ...(socket && { socket: { protocol: "" } }),
+      ...(socket && {
+        socket: { protocol: "", protocols: ev.protocols ?? [] },
+      }),
     }
     store.add(entry)
   }
@@ -126,10 +128,8 @@ export function createLive(
             socket: { ...e.socket, protocol },
           }))
         } else if (ev.type === "frame") {
-          const { dir, time, text, bytes } = ev
-          append(stream, [
-            { dir, time, text, ...(bytes !== undefined && { bytes }) },
-          ])
+          const { type: _, id: __, ...message } = ev
+          append(stream, [message])
         } else {
           const tail = incoming(stream.parser?.end() ?? [], ev.time)
           const { code, reason } = ev
