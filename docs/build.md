@@ -43,6 +43,7 @@
 - No fixed sleeps: tests wait with `expect.poll`, harness with its internal `poll` helper (the only `setTimeout`).
 - Test server also serves `/other` (fetches `/api/three`) for navigation tests; `togglePreserveLog()` clicks the panel's Preserve log checkbox.
 - `openPanel({ visitFirst: true })` loads the test page after DevTools is up but before the panel is shown (backfill test). DevTools must be loaded first or it records nothing.
+- `e2e/fixtures/glyph.ttf`: made for this repo with fontTools `FontBuilder` (`.notdef` and a square `A`, 1000 upm, family `SnapQL Glyph`); a font the Body preview can load, since CI has no system fonts to borrow. Regenerate the same way if it ever needs to change.
 - Rows include the document and favicon requests, so assert with `arrayContaining` unless the panel was just cleared.
 
 ## CI
