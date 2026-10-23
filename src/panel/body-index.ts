@@ -3,10 +3,12 @@ import { loadBody } from "./body"
 
 type Indexed = Pick<Entry, "getBody" | "mimeType" | "requestBody">
 
+export type BodyTexts = { request: string; response: string }
+
 // Keyed by getBody: message appends keep it (no refetch), while a finished
 // merge brings a new one, so a live fetch is indexed again once complete.
 export function createBodyIndex(onChange: () => void) {
-  const texts = new WeakMap<Entry["getBody"], string>()
+  const texts = new WeakMap<Entry["getBody"], BodyTexts>()
   const started = new WeakSet<Entry["getBody"]>()
   return {
     sync(entries: readonly Indexed[], on: boolean) {
@@ -15,11 +17,10 @@ export function createBodyIndex(onChange: () => void) {
         if (started.has(entry.getBody)) continue
         started.add(entry.getBody)
         void loadBody(entry, { pretty: false }).then((body) => {
-          const response = body.view ? "" : body.text
-          texts.set(
-            entry.getBody,
-            `${entry.requestBody?.text ?? ""}\n${response}`,
-          )
+          texts.set(entry.getBody, {
+            request: entry.requestBody?.text ?? "",
+            response: body.view ? "" : body.text,
+          })
           onChange()
         })
       }

@@ -47,7 +47,7 @@ describe("createBodyIndex", () => {
     const done = changed()
     bodies.sync([a], true)
     await done
-    expect(bodies.text(a)).toBe('req\n{"geo":1}')
+    expect(bodies.text(a)).toEqual({ request: "req", response: '{"geo":1}' })
 
     const b = fake(text("b"))
     const later = changed()
@@ -72,7 +72,7 @@ describe("createBodyIndex", () => {
     const second = changed()
     bodies.sync([failed], true)
     await second
-    expect(bodies.text(png)).toBe("p\n")
-    expect(bodies.text(failed)).toBe("f\n")
+    expect(bodies.text(png)).toEqual({ request: "p", response: "" })
+    expect(bodies.text(failed)).toEqual({ request: "f", response: "" })
   })
 })

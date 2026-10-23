@@ -59,11 +59,15 @@ export function App(props: {
   const [bodyVersion, setBodyVersion] = createSignal(0)
   const bodies = createBodyIndex(() => setBodyVersion((v) => v + 1))
   createEffect(() => bodies.sync(entries(), searchBodies()))
+  const bodyText = (entry: Entry) => {
+    const texts = bodies.text(entry)
+    return texts && `${texts.request}\n${texts.response}`
+  }
   const visible = createMemo(() => {
     bodyVersion()
     const shown = entries().filter(
       (e) =>
-        matchesQuery(e, query(), searchBodies() ? bodies.text(e) : undefined) &&
+        matchesQuery(e, query(), searchBodies() ? bodyText(e) : undefined) &&
         matchesFilters(e, active()),
     )
     return newestFirst() ? shown.reverse() : shown
@@ -72,7 +76,7 @@ export function App(props: {
   // Only for rows that matched in a body alone, which have nothing to highlight.
   const bodyExcerpt = (entry: Entry) => {
     bodyVersion()
-    const text = bodies.text(entry)
+    const text = bodyText(entry)
     return bodyQuery() && text !== undefined && !matchesQuery(entry, query())
       ? excerpt(text, query())
       : undefined
