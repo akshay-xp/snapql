@@ -49,15 +49,24 @@ class Reader {
 const int = (n: bigint) =>
   Number.isSafeInteger(Number(n)) ? Number(n) : String(n)
 
+export class ProtoError extends Error {
+  constructor(readonly offset: number) {
+    super(`invalid protobuf at byte ${offset}`)
+  }
+}
+
 export function readMessage(data: Uint8Array): ProtoMessage {
   const reader = new Reader(data)
   const message: ProtoMessage = {}
   while (!reader.done) {
-    const tag = Number(reader.varint())
-    const field = String(tag >>> 3)
-    const value = readValue(reader, tag & 7)
-    const prev = message[field]
-    message[field] =
+    const tagAt = reader.offset
+    const tag = guard(tagAt, () => Number(reader.varint()))
+    const read = values[tag & 7]
+    if (!(tag >>> 3) || !read) throw new ProtoError(tagAt)
+    const value = guard(reader.offset, () => read(reader))
+    const key = String(tag >>> 3)
+    const prev = message[key]
+    message[key] =
       prev === undefined
         ? value
         : Array.isArray(prev)
@@ -67,12 +76,34 @@ export function readMessage(data: Uint8Array): ProtoMessage {
   return message
 }
 
-function readValue(reader: Reader, wireType: number): unknown {
-  if (wireType === 0) return int(BigInt.asIntN(64, reader.varint()))
-  if (wireType === 5) return reader.fixed(4)
-  if (wireType === 1) return reader.fixed(8)
-  if (wireType === 2) return lengthDelimited(reader.bytes())
-  throw new Error(`unsupported wire type ${wireType}`)
+function guard<T>(offset: number, read: () => T): T {
+  try {
+    return read()
+  } catch {
+    throw new ProtoError(offset)
+  }
+}
+
+// By wire type; groups (3, 4) are deprecated and unsupported.
+const values: Partial<Record<number, (reader: Reader) => unknown>> = {
+  0: (r) => int(BigInt.asIntN(64, r.varint())),
+  1: (r) => r.fixed(8),
+  2: (r) => lengthDelimited(r.bytes()),
+  5: (r) => r.fixed(4),
+}
+
+export function protobufData(
+  candidates: Uint8Array[],
+): { message: ProtoMessage } | { error: string; hex: string } {
+  let first: ProtoError | undefined
+  for (const data of candidates) {
+    try {
+      return { message: readMessage(data) }
+    } catch (err) {
+      first ??= err as ProtoError
+    }
+  }
+  return { error: (first as ProtoError).message, hex: hex(candidates[0]) }
 }
 
 const printable = /^[\t\n\r\P{Cc}]*$/u
