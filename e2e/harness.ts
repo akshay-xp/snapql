@@ -179,6 +179,21 @@ const grpcReplies: Record<string, Buffer> = {
   ]),
 }
 
+const packedPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  const post = (url, type, bytes) =>
+    fetch(url, {
+      method: "POST",
+      headers: { "content-type": type },
+      body: new Uint8Array(bytes),
+    })
+  post("/api/msgpack", "application/msgpack",
+    [0x82, 0xa1, 0x61, 0x01, 0xa1, 0x62, 0xcd, 0x01, 0x00])
+  post("/api/cbor", "application/cbor",
+    [0xa1, 0x61, 0x74, 0xc1, 0x1a, 0x65, 0x53, 0xf1, 0x00])
+</script>`
+
 const socketPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <button id="open">open</button>
@@ -661,6 +676,16 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/packed")
+      return res.writeHead(200, { "content-type": "text/html" }).end(packedPage)
+    if (req.url === "/api/msgpack")
+      return res
+        .writeHead(200, { "content-type": "application/msgpack" })
+        .end(Buffer.from([0x91, 0xa2, 0x6f, 0x6b]))
+    if (req.url === "/api/cbor")
+      return res
+        .writeHead(200, { "content-type": "application/cbor" })
+        .end(Buffer.from([0xf5]))
     if (req.url === "/grpc")
       return res.writeHead(200, { "content-type": "text/html" }).end(grpcPage)
     const grpcReply = grpcReplies[req.url ?? ""]
