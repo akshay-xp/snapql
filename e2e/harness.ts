@@ -137,6 +137,16 @@ const binaryPage = `<!doctype html>
   })
 </script>`
 
+const protobufPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  fetch("/api/proto", {
+    method: "POST",
+    headers: { "content-type": "application/x-protobuf" },
+    body: new Uint8Array([0x0a, 0x02, 0x68, 0x69, 0x10, 0x96, 0x01]),
+  })
+</script>`
+
 const socketPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <button id="open">open</button>
@@ -619,6 +629,14 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/protobuf")
+      return res
+        .writeHead(200, { "content-type": "text/html" })
+        .end(protobufPage)
+    if (req.url === "/api/proto")
+      return res
+        .writeHead(200, { "content-type": "application/x-protobuf" })
+        .end(Buffer.from([0x08, 0x01, 0x12, 0x03, 0x61, 0x62, 0x63]))
     if (req.url === "/binary")
       return res.writeHead(200, { "content-type": "text/html" }).end(binaryPage)
     if (req.url === "/api/binary-utf8") return res.writeHead(200).end("ok")

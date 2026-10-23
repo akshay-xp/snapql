@@ -1072,3 +1072,20 @@ test("binary request bodies reach the HAR as UTF-8 or Latin-1 text", async () =>
     await panel.close()
   }
 })
+
+test("protobuf requests and responses show their messages", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/protobuf`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/proto POST protobuf"]))
+    await panel.select("/api/proto POST protobuf")
+    await expect.poll(panel.detail).toContain("Response · 7 bytes")
+    const detail = await panel.detail()
+    for (const text of ["message", '"hi"', "150", '"abc"'])
+      expect(detail).toContain(text)
+  } finally {
+    await panel.close()
+  }
+})
