@@ -126,3 +126,16 @@ function harEntry(entry: Entry, body: Body | undefined): HarEntry {
     }),
   }
 }
+
+const pad = (n: number) => String(n).padStart(2, "0")
+
+// Hostname, not host: a port's ":" is not allowed in Windows file names.
+export function harFileName(
+  entries: readonly Pick<Entry, "url">[],
+  now: Date,
+): string {
+  const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+  const host = entries[0] ? `${new URL(entries[0].url).hostname}-` : ""
+  return `snapql-${host}${date}-${time}.har`
+}

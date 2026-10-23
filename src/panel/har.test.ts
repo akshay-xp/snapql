@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { type Entry, emptyExchange } from "../capture/entry"
-import { toHar } from "./har"
+import { harFileName, toHar } from "./har"
 
 const nv = (name: string, value: string) => ({ name, value })
 
@@ -118,5 +118,16 @@ describe("toHar", () => {
       { type: "send", time: 1, opcode: 1, data: "hi" },
       { type: "receive", time: 2, opcode: 2, data: "AQI=" },
     ])
+  })
+})
+
+describe("harFileName", () => {
+  const now = new Date(2026, 9, 23, 9, 5, 7)
+
+  it("names the file after the first host and local time", () => {
+    expect(harFileName([{ url: "http://127.0.0.1:5173/a" }], now)).toBe(
+      "snapql-127.0.0.1-20261023-090507.har",
+    )
+    expect(harFileName([], now)).toBe("snapql-20261023-090507.har")
   })
 })
