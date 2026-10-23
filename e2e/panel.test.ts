@@ -1436,6 +1436,32 @@ test("Body tab highlights text bodies and scrolls to clipped matches", async () 
   }
 })
 
+test("selecting a body match opens the tab that shows it", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/search`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    await panel.click(bodiesToggle)
+
+    await panel.search("plum")
+    await panel.select("/api/order request (1): plum")
+    await expect.poll(panel.activeTab).toBe("Raw")
+    await expect.poll(panel.marks).toEqual(["plum"])
+
+    await panel.search("apple")
+    await panel.selectStarting("/api/fruit")
+    await expect.poll(panel.activeTab).toBe("Body")
+
+    // A URL match keeps whatever tab was open.
+    await panel.openTab("Raw")
+    await panel.search("fruit")
+    await panel.select("/api/fruit GET")
+    expect(await panel.activeTab()).toBe("Raw")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Copy as copies cURL and fetch, not for sockets", async () => {
   const panel = await openPanel()
   try {
