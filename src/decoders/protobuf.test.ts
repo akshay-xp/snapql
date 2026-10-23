@@ -143,6 +143,7 @@ describe("protobuf", () => {
       protobuf.decodeResponse?.(
         { content: btoa("\x08\x01"), encoding: "base64" },
         { kind: "protobuf", title: "/api/proto", data: undefined },
+        [],
       ),
     ).toEqual({ summary: "2 bytes", data: { message: { "1": 1 } } })
   })

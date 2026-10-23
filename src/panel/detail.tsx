@@ -305,7 +305,8 @@ function Summary(props: { entry: Entry }) {
     const decoded = props.entry.decoded
     if (!decoded) return
     const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
-    return decode && ((body: Body) => decode(body, decoded))
+    const headers = props.entry.exchange.responseHeaders
+    return decode && ((body: Body) => decode(body, decoded, headers))
   }
   const heading = () => summaryHeading(props.entry)
 

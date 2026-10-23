@@ -264,6 +264,7 @@ describe("graphql", () => {
           encoding: "",
         },
         decoded,
+        [],
       )
 
     it("decodes base64 response bodies", () => {
@@ -274,6 +275,7 @@ describe("graphql", () => {
             encoding: "base64",
           },
           decoded,
+          [],
         )?.summary,
       ).toBe("1 error")
     })
