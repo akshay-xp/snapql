@@ -69,3 +69,28 @@ describe("parseProto fields", () => {
     expect(Object.keys(fields)).toEqual(["4", "5", "6", "7", "8", "9"])
   })
 })
+
+describe("parseProto services", () => {
+  it("maps method paths to input and output types", () => {
+    const { methods } = parse(`
+      package ex;
+      message GetUserRequest {}
+      message User {}
+      service UserService {
+        option (svc) = true;
+        rpc GetUser(GetUserRequest) returns (User);
+        rpc ListUsers(GetUserRequest) returns (stream User) { option (x) = 1; }
+      }
+    `)
+    expect(methods).toEqual({
+      "/ex.UserService/GetUser": {
+        input: "ex.GetUserRequest",
+        output: "ex.User",
+      },
+      "/ex.UserService/ListUsers": {
+        input: "ex.GetUserRequest",
+        output: "ex.User",
+      },
+    })
+  })
+})
