@@ -34,25 +34,61 @@ function tokenize(text: string): Token[] {
 }
 
 // A field type as written, resolved once every file's names are known.
-type Pending = { type: string; scope: string; set: (type: string) => void }
+type Pending = {
+  type: string
+  scope: string
+  set: (type: string) => void
+  file: string
+  line: number
+}
+
+export class ProtoSchemaError extends Error {
+  constructor(file: string, line: number, reason: string) {
+    super(`${file}:${line}: ${reason}`)
+  }
+}
+
+type Import = { path: string; file: string; line: number }
 
 const SKIPPED = new Set(["option", "reserved", "extensions"])
 
 export function parseProto(files: ProtoFile[]): Schema {
   const schema: Schema = { messages: {}, enums: {}, methods: {} }
   const pending: Pending[] = []
-  for (const file of files) new FileParser(file, schema, pending).parse()
-  for (const p of pending) p.set(resolve(p.type, p.scope, schema))
+  const imports: Import[] = []
+  for (const file of files)
+    new FileParser(file, schema, pending, imports).parse()
+  for (const i of imports) {
+    const loaded = files.some(
+      (f) => i.path === f.name || i.path.endsWith(`/${f.name}`),
+    )
+    if (!loaded && !i.path.startsWith("google/protobuf/"))
+      throw new ProtoSchemaError(
+        i.file,
+        i.line,
+        `import "${i.path}" not loaded`,
+      )
+  }
+  for (const p of pending) {
+    const type = resolve(p.type, p.scope, schema)
+    if (type === undefined)
+      throw new ProtoSchemaError(p.file, p.line, `unknown type ${p.type}`)
+    p.set(type)
+  }
   return schema
 }
 
-// Innermost scope first, walking out to the root.
-function resolve(type: string, scope: string, schema: Schema): string {
-  if (SCALARS.has(type)) return type
+// Innermost scope first, walking out to the root; a leading dot is absolute.
+// Well-known types resolve by name and decode schema-less.
+function resolve(type: string, scope: string, schema: Schema) {
+  if (SCALARS.has(type) || type.startsWith("google.protobuf.")) return type
+  const known = (full: string) =>
+    full in schema.messages || full in schema.enums
+  if (type.startsWith("."))
+    return known(type.slice(1)) ? type.slice(1) : undefined
   for (let s = scope; ; s = s.slice(0, Math.max(0, s.lastIndexOf(".")))) {
-    const full = s ? `${s}.${type}` : type
-    if (full in schema.messages || full in schema.enums) return full
-    if (!s) return type
+    if (known(join(s, type))) return join(s, type)
+    if (!s) return
   }
 }
 
@@ -60,48 +96,54 @@ class FileParser {
   private tokens: Token[]
   private pos = 0
   private pkg = ""
+  private file: string
 
   constructor(
     file: ProtoFile,
     private schema: Schema,
     private pending: Pending[],
+    private imports: Import[],
   ) {
+    this.file = file.name
     this.tokens = tokenize(file.text)
   }
 
   parse() {
     while (this.pos < this.tokens.length) {
       const word = this.next()
-      if (word === "syntax") this.skipStatement()
-      else if (word === "package") {
+      if (word === "syntax" || word === "option") this.skipStatement()
+      else if (word === "import") {
+        const line = this.line()
+        let path = this.next()
+        if (path === "public" || path === "weak") path = this.next()
+        this.imports.push({ path: path.slice(1, -1), file: this.file, line })
+        this.expect(";")
+      } else if (word === "package") {
         this.pkg = this.next()
         this.expect(";")
       } else if (word === "message") this.message(this.pkg)
       else if (word === "enum") this.enumBody(this.pkg)
       else if (word === "service") this.service()
+      else this.fail(`unexpected "${word}"`)
     }
   }
 
   private service() {
-    const service = join(this.pkg, this.next())
+    const service = join(this.pkg, this.name())
     this.expect("{")
     while (this.peek() !== "}") {
       if (this.next() !== "rpc") {
         this.skipStatement()
         continue
       }
-      const name = this.next()
+      const name = this.name()
       const input = this.rpcType()
       this.expect("returns")
       const method = { input, output: this.rpcType() }
       this.schema.methods[`/${service}/${name}`] = method
       const scope = this.pkg
-      this.pending.push({ type: input, scope, set: (t) => (method.input = t) })
-      this.pending.push({
-        type: method.output,
-        scope,
-        set: (t) => (method.output = t),
-      })
+      this.defer(input, scope, (t) => (method.input = t))
+      this.defer(method.output, scope, (t) => (method.output = t))
       if (this.peek() === "{") this.skipBracketed()
       else this.expect(";")
     }
@@ -118,7 +160,7 @@ class FileParser {
   }
 
   private message(scope: string) {
-    const name = join(scope, this.next())
+    const name = join(scope, this.name())
     const fields: Record<number, Field> = {}
     this.schema.messages[name] = { fields }
     this.expect("{")
@@ -150,12 +192,12 @@ class FileParser {
       this.expect(",")
       const value = this.next()
       this.expect(">")
-      field = { name: this.next(), type: "map", map }
-      this.pending.push({ type: value, scope, set: (t) => (map.value = t) })
+      field = { name: this.name(), type: "map", map }
+      this.defer(value, scope, (t) => (map.value = t))
     } else {
-      field = { name: this.next(), type: word }
+      field = { name: this.name(), type: word }
       if (repeated) field.repeated = true
-      this.pending.push({ type: word, scope, set: (t) => (field.type = t) })
+      this.defer(word, scope, (t) => (field.type = t))
     }
     this.expect("=")
     fields[Number(this.next())] = field
@@ -165,7 +207,7 @@ class FileParser {
 
   private enumBody(scope: string) {
     const values: Record<number, string> = {}
-    this.schema.enums[join(scope, this.next())] = values
+    this.schema.enums[join(scope, this.name())] = values
     this.expect("{")
     while (this.peek() !== "}") {
       const name = this.next()
@@ -194,16 +236,37 @@ class FileParser {
     } while (depth)
   }
 
+  private defer(type: string, scope: string, set: (type: string) => void) {
+    const line = this.tokens[this.pos - 1].line
+    this.pending.push({ type, scope, set, file: this.file, line })
+  }
+
+  private line() {
+    return (this.tokens[this.pos] ?? this.tokens.at(-1))?.line ?? 1
+  }
+
+  private fail(reason: string): never {
+    throw new ProtoSchemaError(this.file, this.line(), reason)
+  }
+
+  // Declared names: messages, enums, fields, services, rpcs.
+  private name() {
+    if (!/^[A-Za-z_]\w*$/.test(this.peek() ?? "")) this.fail("expected a name")
+    return this.next()
+  }
+
   private peek() {
     return this.tokens[this.pos]?.text
   }
 
   private next() {
-    return this.tokens[this.pos++]?.text
+    if (this.pos >= this.tokens.length) this.fail("unexpected end of file")
+    return this.tokens[this.pos++].text
   }
 
   private expect(text: string) {
-    if (this.next() !== text) throw new Error(`expected "${text}"`)
+    if (this.peek() !== text) this.fail(`expected "${text}"`)
+    this.pos++
   }
 }
 
