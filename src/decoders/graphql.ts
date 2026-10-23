@@ -1,5 +1,6 @@
 import { parseJson } from "./json"
 import { fileRows, multipartParts, type Part } from "./multipart"
+import { parseStream } from "./stream"
 import { count } from "./text"
 import type { Decoded, DecodedResponse, Decoder } from "./types"
 
@@ -75,18 +76,8 @@ function responseResult(
 
 // Incremental delivery (@defer/@stream): multipart/mixed, one JSON payload per part.
 function incrementalParts(text: string): GraphQLResponse[] {
-  const delimiter = text
-    .split(/\r?\n/)
-    .find((line) => line.startsWith("--"))
-    ?.trim()
-  if (!delimiter) return []
-  return text
-    .split(delimiter)
-    .map((segment) =>
-      parseJson(
-        segment.slice(segment.indexOf("{"), segment.lastIndexOf("}") + 1),
-      ),
-    )
+  return (parseStream("multipart/mixed", text) ?? [])
+    .map((part) => parseJson(part.text))
     .filter((p): p is GraphQLResponse => typeof p === "object" && p !== null)
 }
 

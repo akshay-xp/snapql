@@ -16,6 +16,14 @@ export function streamParser(mimeType: string): StreamParser | undefined {
     return mixedParts(mimeType.match(/boundary="?([^";]+)"?/i)?.[1])
 }
 
+export function parseStream(
+  mimeType: string,
+  text: string,
+): StreamEvent[] | undefined {
+  const parser = streamParser(mimeType)
+  return parser && [...parser.push(text), ...parser.end()]
+}
+
 // Splits on CRLF, LF or CR. A chunk-final CR is held back: the next chunk may
 // start with its LF.
 function lines() {
