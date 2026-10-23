@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { grpcWeb, parseTrailers, readFrames, statusOf } from "./grpc-web"
+import {
+  grpcRequestData,
+  grpcResponse,
+  grpcWeb,
+  parseTrailers,
+  readFrames,
+  statusOf,
+} from "./grpc-web"
 import { decoders } from "./index"
 import { decodeRequest } from "./registry"
 import type { RequestView } from "./types"
@@ -183,6 +190,29 @@ describe("grpcWeb responses", () => {
   it("shows compressed frames as hex", () => {
     expect(respond([...frame(1, [0xff]), ...ok])?.data).toMatchObject({
       message: { compressed: "ff" },
+    })
+  })
+})
+
+describe("gRPC-web message readers", () => {
+  const read = () => "R"
+
+  it("reads request messages with the given reader", () => {
+    const body = String.fromCharCode(...frame(0, [8, 1]))
+    expect(grpcRequestData("application/grpc-web+proto", body, read)).toEqual({
+      message: "R",
+    })
+  })
+
+  it("reads response messages with the given reader", () => {
+    const data = [...frame(0, [8, 1]), ...frame(0x80, ascii("grpc-status:0"))]
+    const body = {
+      content: btoa(String.fromCharCode(...data)),
+      encoding: "base64",
+    }
+    expect(grpcResponse(body, [], read)).toMatchObject({
+      summary: "OK",
+      data: { message: "R" },
     })
   })
 })

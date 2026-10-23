@@ -1,4 +1,4 @@
-import { binaryDecoder, hex, InvalidBytes, parseFirst } from "./bytes"
+import { binaryDecoder, hex, InvalidBytes } from "./bytes"
 
 export const protobuf = binaryDecoder(
   "protobuf",
@@ -116,13 +116,6 @@ const values: Partial<Record<number, (reader: Reader) => unknown>> = {
   1: (r) => r.fixed(8),
   2: (r) => lengthDelimited(r.bytes()),
   5: (r) => r.fixed(4),
-}
-
-export function protobufData(
-  candidates: Uint8Array[],
-): { message: ProtoMessage } | { error: string; hex: string } {
-  const parsed = parseFirst(candidates, readMessage)
-  return "value" in parsed ? { message: parsed.value } : parsed
 }
 
 const printable = /^[\t\n\r\P{Cc}]*$/u
