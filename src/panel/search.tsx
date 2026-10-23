@@ -5,6 +5,8 @@ import { IconButton } from "./icon-button"
 export function SearchBox(props: {
   query: string
   onQuery: (query: string) => void
+  searchBodies: boolean
+  onSearchBodies: (on: boolean) => void
 }) {
   return (
     <search class="flex h-10 shrink-0 items-center border-b border-border px-2">
@@ -30,6 +32,13 @@ export function SearchBox(props: {
           value={props.query}
           onInput={(e) => props.onQuery(e.currentTarget.value)}
         />
+        <IconButton
+          label="Search bodies"
+          pressed={props.searchBodies}
+          onClick={() => props.onSearchBodies(!props.searchBodies)}
+        >
+          <path d="M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h6" />
+        </IconButton>
         <Show when={props.query}>
           <IconButton label="Clear filter" onClick={() => props.onQuery("")}>
             <path d="M6 6l12 12M18 6 6 18" />

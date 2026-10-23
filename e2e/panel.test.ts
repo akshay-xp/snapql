@@ -1317,3 +1317,35 @@ test("filter chips narrow by protocol and status", async () => {
     await panel.close()
   }
 })
+
+test("search bodies matches request and response body text", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    const toggle = 'button[aria-label="Search bodies"]'
+    const users = "/api/users/1 GET json"
+
+    await panel.search("geo")
+    await expect.poll(panel.rows).toEqual([])
+
+    await panel.click(toggle)
+    expect(await panel.attr(toggle, "aria-pressed")).toBe("true")
+    await expect.poll(panel.rows).toEqual([users])
+    expect(await panel.text("footer")).toBe("1 of 5")
+
+    // Quoted as JSON, so the /filters document's own script doesn't match.
+    await panel.search('"query":"query B')
+    await expect.poll(panel.rows).toEqual(["B query 400 graphql"])
+
+    await panel.search("geo")
+    await panel.page.evaluate(() => fetch("/api/users/1"))
+    await expect.poll(panel.rows).toEqual([users, users])
+    expect(await panel.text("footer")).toBe("2 of 6")
+
+    await panel.click(toggle)
+    await expect.poll(panel.rows).toEqual([])
+  } finally {
+    await panel.close()
+  }
+})
