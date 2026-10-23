@@ -1089,3 +1089,28 @@ test("protobuf requests and responses show their messages", async () => {
     await panel.close()
   }
 })
+
+test("gRPC-web calls show method, messages and status", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/grpc`)
+    const unary = "GetUser example.UserService grpc-web"
+    const stream = "ListUsers example.UserService grpc-web"
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([unary, stream]))
+
+    await panel.select(unary)
+    await expect.poll(panel.detail).toContain("Response · OK")
+    const detail = await panel.detail()
+    for (const text of ['"hi"', "150", '"abc"']) expect(detail).toContain(text)
+
+    await panel.select(stream)
+    await expect.poll(panel.detail).toContain("Response · NOT_FOUND")
+    const streamed = await panel.detail()
+    for (const text of ["message 1", "message 2", "NOT_FOUND: gone"])
+      expect(streamed).toContain(text)
+  } finally {
+    await panel.close()
+  }
+})
