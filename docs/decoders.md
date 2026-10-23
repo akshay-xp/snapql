@@ -18,7 +18,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `sse`, `ndjson`, `json` (catch-all, last).
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `sse`, `ndjson`, `json` (catch-all, last).
 
 ## Adding a decoder
 
@@ -35,6 +35,16 @@ No capture, store, or UI change.
 - `application/x-ndjson`, `application/jsonl`: one event per non-empty line.
 - `multipart/mixed` (GraphQL `@defer`/`@stream`): one event per part body, part headers dropped. Boundary from the mime's `boundary` param, else the first line starting `--` is the delimiter; `--<b>--` ends the stream (later text ignored).
 - Decoders `sse` (`text/event-stream`) and `ndjson` (`application/x-ndjson`, `application/jsonl`) match on response mime only: title = path, detail = method, no `data`. Placed just before `json`, so a stream whose request another decoder claims (GraphQL over SSE, LLM) keeps that kind, and a JSON POST to an SSE endpoint is `sse`, not `json`. `multipart/mixed` gets no kind of its own.
+
+## LLM (`src/decoders/llm.ts`)
+
+- Kind `llm`. Matches a JSON request body that is a plain object with `stream: true`, a string `model`, and a `messages` array or an `input` field. Host is ignored (proxies, gateways, self-hosted). Title = `model`, detail `stream`, `data` = the body. First in order, so an LLM body with a stray `query` field isn't GraphQL. Non-streaming requests don't match.
+- `reassemble(events: StreamEvent[])`: `Reassembled` (`{ text, thinking?, toolCalls: { id?, name, arguments }[], stopReason?, usage? }`) or `undefined`. Each event's text is JSON-parsed (failures, e.g. `[DONE]`, skipped); the first payload of a known format picks the folder:
+  - OpenAI Chat Completions (`choices` array): `choices[0].delta.content` concatenated; `delta.tool_calls` merged by `index` (`id`, `function.name`, `function.arguments` appended); `finish_reason`; `usage` (final `choices: []` chunk).
+  - OpenAI Responses (`type` starts `response.`): `response.output_text.delta`; a `function_call` item from `response.output_item.added` (`call_id`, `name`) keyed by `output_index`, filled by `response.function_call_arguments.delta`; `response.completed`/`response.incomplete` give `status` (as stop reason) and `usage`.
+  - Anthropic Messages (`message_start` or `content_block_*`): blocks keyed by `index`; `tool_use` starts a call (`id`, `name`); deltas `text_delta`, `thinking_delta`, `input_json_delta.partial_json`; `message_delta` gives `stop_reason`; usage = `message_start` usage overlaid by `message_delta` usage.
+- `decodeResponse(text)`: `reassemble(parseStream("text/event-stream", text))`. Summary `stop reason`, or `incomplete` when the stream has none. `data` sections, in order: `reply` (text), `thinking` (when present), `tool <name>` per call (`{ id?, arguments }`, arguments parsed when valid JSON, else the raw string; repeated names get ` 2`, ` 3`), `usage` rows (`stop reason` first, then each usage key; non-strings JSON-encoded; omitted when empty). Rendered by Summary's Response group like any decoder, so no LLM-specific UI.
+- Not handled: non-streaming replies, other formats (Gemini, ...).
 
 ## JSON-RPC (`src/decoders/jsonrpc.ts`)
 
@@ -98,7 +108,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
