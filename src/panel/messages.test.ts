@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   arrow,
   byteLabel,
+  frameLabel,
   messageBytes,
   messageText,
   offsetLabel,
@@ -35,5 +36,18 @@ describe("message labels", () => {
     expect(messageText({ text: "  a\n b" })).toBe("a b")
     expect(arrow("out")).toBe("↑")
     expect(arrow("in")).toBe("↓")
+  })
+
+  it("labels frames with their decoded title", () => {
+    expect(
+      frameLabel(
+        { text: '42["chat"]' },
+        { title: "chat", detail: "/admin", data: {} },
+      ),
+    ).toEqual({ text: "chat", detail: "/admin" })
+    expect(frameLabel({ text: " a\n b" })).toEqual({ text: "a b" })
+    expect(
+      frameLabel({ text: "", bytes: 4 }, { title: "up", data: undefined }),
+    ).toEqual({ text: "up" })
   })
 })

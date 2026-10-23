@@ -7,13 +7,13 @@ import {
   Show,
   Switch,
 } from "solid-js"
-import { type Entry, incoming, type NameValue } from "../capture/entry"
+import { type Entry, incoming, type Message } from "../capture/entry"
 import { decoders } from "../decoders"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
 import type { DecodedResponse } from "../decoders/types"
 import { loadBody } from "./body"
-import { pairsText, valueText } from "./copy"
+import { valueText } from "./copy"
 import { CopyButton } from "./copy-button"
 import { summaryHeading } from "./heading"
 import { OPEN_DEPTH, treeValue } from "./json"
@@ -21,13 +21,20 @@ import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
-import { Section, Text } from "./section"
+import { Pairs, Section, Sections, Text } from "./section"
 import { socketRows } from "./socket"
 import { Splitter } from "./splitter.tsx"
-import { dataSections } from "./summary"
 import { shownTab, type Tab, tabsFor } from "./tabs"
 import { timingRows } from "./timing"
-import { decodeValue, findTokens } from "./values"
+import { findTokens } from "./values"
+
+// The entry's own decoder, if it titles frames; it sees the whole frame list.
+function frameDecoder(entry: Entry) {
+  const kind = entry.decoded?.kind
+  const decode = kind && decoderFor(kind, decoders)?.decodeMessage
+  if (!decode) return
+  return (m: Message) => decode(m, entry.messages ?? [])
+}
 
 export function Detail(props: {
   entry: Entry
@@ -130,6 +137,7 @@ export function Detail(props: {
                     messages={messages()}
                     timed
                     directions={!!props.entry.socket}
+                    decode={frameDecoder(props.entry)}
                   />
                 )}
               </Show>
@@ -231,44 +239,6 @@ function TimingPanel(props: { entry: Entry }) {
         </For>
       </div>
     </>
-  )
-}
-
-function Pairs(props: { title: string; pairs: NameValue[]; decode?: boolean }) {
-  return (
-    <Section title={props.title} copy={() => pairsText(props.pairs)}>
-      <Show when={props.pairs.length} fallback={<p class="text-muted">None</p>}>
-        <dl
-          data-section={props.title}
-          class="grid grid-cols-[fit-content(40%)_minmax(0,1fr)] gap-x-4 gap-y-0.5 font-mono"
-        >
-          <For each={props.pairs}>
-            {(pair) => (
-              <>
-                <dt class="text-syntax-key [overflow-wrap:anywhere]">
-                  {pair.name}
-                </dt>
-                <dd class="[overflow-wrap:anywhere]">
-                  <span
-                    data-value
-                    classList={{ "text-error": props.title === "errors" }}
-                  >
-                    {pair.value}
-                  </span>
-                  <Show when={props.decode && decodeValue(pair.value)}>
-                    {(decoded) => (
-                      <div class="whitespace-pre-wrap text-muted">
-                        {decoded()}
-                      </div>
-                    )}
-                  </Show>
-                </dd>
-              </>
-            )}
-          </For>
-        </dl>
-      </Show>
-    </Section>
   )
 }
 
@@ -444,30 +414,5 @@ function Tokens(props: { entry: Entry }) {
         )}
       </For>
     </Show>
-  )
-}
-
-function Sections(props: { data: unknown }) {
-  return (
-    <For each={dataSections(props.data)}>
-      {(section) =>
-        "rows" in section ? (
-          <Pairs title={section.name} pairs={section.rows} />
-        ) : (
-          <Section
-            title={section.name}
-            copy={() =>
-              valueText("text" in section ? section.text : section.json)
-            }
-          >
-            {"text" in section ? (
-              <Text>{section.text}</Text>
-            ) : (
-              <JsonTree value={section.json} />
-            )}
-          </Section>
-        )
-      }
-    </For>
   )
 }

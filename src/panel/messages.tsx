@@ -1,10 +1,12 @@
 import { createSignal, Show } from "solid-js"
 import type { Message } from "../capture/entry"
+import type { Decoded } from "../decoders/types"
 import { treeValue } from "./json"
 import { JsonTree } from "./json-tree"
 import {
   arrow,
   byteLabel,
+  frameLabel,
   messageBytes,
   messageText,
   offsetLabel,
@@ -18,9 +20,16 @@ export function Messages(props: {
   timed: boolean
   // Sockets go both ways; streams only arrive, so arrows would be noise.
   directions?: boolean
+  // A socket protocol's frame decoder, run only for rendered rows.
+  decode?: (m: Message) => Decoded | undefined
 }) {
   const indexes = () => props.messages.map((_, i) => i)
   const [selected, setSelected] = createSignal<number>()
+  // Decoded frames show their data rather than the raw text.
+  const decodedTree = (m: Message) => {
+    const data = props.decode?.(m)?.data
+    return typeof data === "object" && data !== null ? data : undefined
+  }
   const message = () => {
     const i = selected()
     return i === undefined ? undefined : props.messages[i]
@@ -39,6 +48,7 @@ export function Messages(props: {
         >
           {(i, selected) => {
             const m = props.messages[i]
+            const label = frameLabel(m, props.decode?.(m))
             // Muted and syntax colors fall under 4.5:1 on the selected row.
             const muted = () => ({ "text-muted": !selected() })
             return (
@@ -61,7 +71,12 @@ export function Messages(props: {
                     {m.event}
                   </span>
                 </Show>
-                <span class="min-w-0 flex-1 truncate">{messageText(m)}</span>
+                <span class="min-w-0 flex-1 truncate">
+                  {label.text}
+                  <Show when={label.detail}>
+                    <span classList={muted()}> {label.detail}</span>
+                  </Show>
+                </span>
                 <span class="shrink-0" classList={muted()}>
                   {byteLabel(messageBytes(m))}
                 </span>
@@ -79,7 +94,7 @@ export function Messages(props: {
               copy={() => m.text}
             >
               <Show
-                when={treeValue(m.text)}
+                when={decodedTree(m) ?? treeValue(m.text)}
                 fallback={
                   <Text>{m.bytes === undefined ? m.text : messageText(m)}</Text>
                 }
