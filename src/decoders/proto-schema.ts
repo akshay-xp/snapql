@@ -1,4 +1,14 @@
+import { hex } from "./bytes"
 import type { Field, ProtoFile, Schema } from "./proto-types"
+import {
+  eachField,
+  float32,
+  int,
+  type ProtoMessage,
+  type Reader,
+  readMessage,
+  schemaLess,
+} from "./protobuf"
 
 const SCALARS = new Set([
   "double",
@@ -272,3 +282,75 @@ class FileParser {
 
 const join = (scope: string, name: string) =>
   scope ? `${scope}.${name}` : name
+
+// Decodes a message of the named type; unknown fields keep their numbers.
+export function messageReader(
+  schema: Schema,
+  type: string,
+): (data: Uint8Array) => unknown {
+  return (data) => readTyped(schema, type, data)
+}
+
+function readTyped(schema: Schema, type: string, data: Uint8Array): unknown {
+  const fields = schema.messages[type]?.fields
+  if (!fields) return readMessage(data)
+  const message: ProtoMessage = {}
+  eachField(data, (number, wireType, reader) => {
+    const field = fields[number]
+    const value = field && typedValue(schema, field.type, wireType, reader)
+    if (value === undefined) message[number] = schemaLess(wireType, reader)
+    else message[field.name] = value
+  })
+  return message
+}
+
+// undefined when the wire type doesn't fit the declared type (read schema-less).
+function typedValue(
+  schema: Schema,
+  type: string,
+  wireType: number,
+  reader: Reader,
+): unknown {
+  if (wireType === 0) return varintAs(schema, type, reader)
+  if (wireType === 5) return fixed32As(type, reader)
+  if (wireType === 1) return fixed64As(type, reader)
+  if (wireType !== 2) return
+  if (type === "string") return new TextDecoder().decode(reader.bytes())
+  if (type === "bytes") return hex(reader.bytes())
+  if (type in schema.messages || type.startsWith("google.protobuf."))
+    return readTyped(schema, type, reader.bytes())
+}
+
+function varintAs(schema: Schema, type: string, reader: Reader): unknown {
+  switch (type) {
+    case "int32":
+    case "int64":
+      return int(BigInt.asIntN(64, reader.varint()))
+    case "uint32":
+    case "uint64":
+      return int(reader.varint())
+    case "sint32":
+    case "sint64": {
+      const n = reader.varint()
+      return int((n >> 1n) ^ -(n & 1n))
+    }
+    case "bool":
+      return reader.varint() !== 0n
+  }
+  const values = schema.enums[type]
+  if (!values) return
+  const n = Number(BigInt.asIntN(32, reader.varint()))
+  return values[n] ?? n
+}
+
+function fixed32As(type: string, reader: Reader): unknown {
+  if (type === "fixed32") return reader.take(4).getUint32(0, true)
+  if (type === "sfixed32") return reader.take(4).getInt32(0, true)
+  if (type === "float") return float32(reader.take(4))
+}
+
+function fixed64As(type: string, reader: Reader): unknown {
+  if (type === "fixed64") return int(reader.take(8).getBigUint64(0, true))
+  if (type === "sfixed64") return int(reader.take(8).getBigInt64(0, true))
+  if (type === "double") return reader.take(8).getFloat64(0, true)
+}

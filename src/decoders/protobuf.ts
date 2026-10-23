@@ -13,7 +13,7 @@ export const protobuf = binaryDecoder(
 
 export type ProtoMessage = { [field: string]: unknown }
 
-class Reader {
+export class Reader {
   offset = 0
   private view: DataView
 
@@ -42,34 +42,36 @@ class Reader {
     return this.data.subarray(this.offset - length, this.offset)
   }
 
-  fixed(size: 4 | 8) {
-    const at = this.offset
+  // A little-endian view of the next size bytes.
+  take(size: 4 | 8): DataView {
+    if (this.offset + size > this.data.length) throw new Error("truncated")
     this.offset += size
+    return new DataView(
+      this.view.buffer,
+      this.view.byteOffset + this.offset - size,
+      size,
+    )
+  }
+
+  fixed(size: 4 | 8) {
+    const v = this.take(size)
     return size === 4
-      ? {
-          fixed32: this.view.getUint32(at, true),
-          float: Number(this.view.getFloat32(at, true).toPrecision(7)),
-        }
-      : {
-          fixed64: int(this.view.getBigUint64(at, true)),
-          double: this.view.getFloat64(at, true),
-        }
+      ? { fixed32: v.getUint32(0, true), float: float32(v) }
+      : { fixed64: int(v.getBigUint64(0, true)), double: v.getFloat64(0, true) }
   }
 }
 
-const int = (n: bigint) =>
+export const int = (n: bigint) =>
   Number.isSafeInteger(Number(n)) ? Number(n) : String(n)
 
+export const float32 = (v: DataView) =>
+  Number(v.getFloat32(0, true).toPrecision(7))
+
 export function readMessage(data: Uint8Array): ProtoMessage {
-  const reader = new Reader(data)
   const message: ProtoMessage = {}
-  while (!reader.done) {
-    const tagAt = reader.offset
-    const tag = guard(tagAt, () => Number(reader.varint()))
-    const read = values[tag & 7]
-    if (!(tag >>> 3) || !read) throw new InvalidBytes("protobuf", tagAt)
-    const value = guard(reader.offset, () => read(reader))
-    const key = String(tag >>> 3)
+  eachField(data, (field, wireType, reader) => {
+    const value = schemaLess(wireType, reader)
+    const key = String(field)
     const prev = message[key]
     message[key] =
       prev === undefined
@@ -77,8 +79,27 @@ export function readMessage(data: Uint8Array): ProtoMessage {
         : Array.isArray(prev)
           ? [...prev, value]
           : [prev, value]
-  }
+  })
   return message
+}
+
+// Validates each tag and blames bad values on their offset; read consumes the value.
+export function eachField(
+  data: Uint8Array,
+  read: (field: number, wireType: number, reader: Reader) => void,
+) {
+  const reader = new Reader(data)
+  while (!reader.done) {
+    const tagAt = reader.offset
+    const tag = guard(tagAt, () => Number(reader.varint()))
+    if (!(tag >>> 3) || !values[tag & 7])
+      throw new InvalidBytes("protobuf", tagAt)
+    guard(reader.offset, () => read(tag >>> 3, tag & 7, reader))
+  }
+}
+
+export function schemaLess(wireType: number, reader: Reader): unknown {
+  return (values[wireType] as (reader: Reader) => unknown)(reader)
 }
 
 function guard<T>(offset: number, read: () => T): T {
