@@ -115,6 +115,8 @@ export function Detail(props: {
   // The entry marked with Compare, if any.
   base: Entry | undefined
   onCompare: (id: number | undefined) => void
+  // Highlighted in the Body tab; empty unless body search is on.
+  bodyQuery: string
 }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
@@ -199,7 +201,12 @@ export function Detail(props: {
           <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
               {(text, body) => (
-                <BodyView text={text} view={body.view} entry={props.entry} />
+                <BodyView
+                  text={text}
+                  view={body.view}
+                  entry={props.entry}
+                  query={props.bodyQuery}
+                />
               )}
             </LoadedBody>
           </Match>
@@ -385,7 +392,12 @@ function LoadedBody(props: {
   )
 }
 
-function BodyView(props: { text: string; view?: BodyViewKind; entry: Entry }) {
+function BodyView(props: {
+  text: string
+  view?: BodyViewKind
+  entry: Entry
+  query: string
+}) {
   const json = () => treeValue(props.text)
   const [allOpen, setAllOpen] = createSignal(false)
   return (
@@ -409,6 +421,7 @@ function BodyView(props: { text: string; view?: BodyViewKind; entry: Entry }) {
               <JsonTree
                 value={value()}
                 openDepth={allOpen() ? Number.POSITIVE_INFINITY : OPEN_DEPTH}
+                query={props.query}
               />
             )}
           </Show>

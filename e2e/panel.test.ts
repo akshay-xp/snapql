@@ -1375,6 +1375,29 @@ test("search bodies matches request and response body text", async () => {
   }
 })
 
+test("Body tab highlights body search matches", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    await panel.click('button[title="Search request and response bodies"]')
+    await panel.search("lat")
+    await expect.poll(async () => (await panel.rows()).length).toBe(1)
+    await panel.selectStarting("/api/users/1")
+    await panel.openTab("Body")
+
+    // lat sits under geo, at a depth that starts collapsed.
+    await expect.poll(panel.marks).toEqual(["lat"])
+    expect(await panel.detail()).toContain("lat")
+
+    await panel.clearSearch()
+    await expect.poll(panel.marks).toEqual([])
+    expect(await panel.detail()).not.toContain("lat")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Copy as copies cURL and fetch, not for sockets", async () => {
   const panel = await openPanel()
   try {

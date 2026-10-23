@@ -3,18 +3,25 @@ import {
   brackets,
   children,
   clip,
+  hasMatch,
   OPEN_DEPTH,
   sizeLabel,
   startsOpen,
 } from "./json"
+import { Marked } from "./search"
 
-export function JsonTree(props: { value: unknown; openDepth?: number }) {
+export function JsonTree(props: {
+  value: unknown
+  openDepth?: number
+  query?: string
+}) {
   return (
     <div class="font-mono [overflow-wrap:anywhere]">
       <Node
         value={props.value}
         depth={0}
         openDepth={props.openDepth ?? OPEN_DEPTH}
+        query={props.query ?? ""}
       />
     </div>
   )
@@ -25,20 +32,19 @@ function Node(props: {
   value: unknown
   depth: number
   openDepth: number
+  query: string
 }) {
   const kids = children(props.value)
-  const [open, setOpen] = createSignal(startsOpen(props.depth, props.openDepth))
-  createEffect(
-    on(
-      () => props.openDepth,
-      (openDepth) => setOpen(startsOpen(props.depth, openDepth)),
-      { defer: true },
-    ),
-  )
+  // Nodes holding a match open while it's searched, and close again after.
+  const startOpen = () =>
+    startsOpen(props.depth, props.openDepth) ||
+    hasMatch(props.value, props.query)
+  const [open, setOpen] = createSignal(startOpen())
+  createEffect(on(startOpen, setOpen, { defer: true }))
   const key = (
     <Show when={props.name !== undefined}>
       <span data-json="key" class="text-syntax-key">
-        {props.name}
+        <Marked text={props.name ?? ""} query={props.query} />
       </span>
       <span class="text-muted">: </span>
     </Show>
@@ -47,7 +53,7 @@ function Node(props: {
     return (
       <div class="pl-[1.5ch]">
         {key}
-        <Leaf value={props.value} />
+        <Leaf value={props.value} query={props.query} />
       </div>
     )
   return (
@@ -80,6 +86,7 @@ function Node(props: {
                 value={value}
                 depth={props.depth + 1}
                 openDepth={props.openDepth}
+                query={props.query}
               />
             )}
           </For>
@@ -89,13 +96,13 @@ function Node(props: {
   )
 }
 
-function Leaf(props: { value: unknown }) {
+function Leaf(props: { value: unknown; query: string }) {
   const v = props.value
-  if (typeof v === "string") return <StringLeaf value={v} />
+  if (typeof v === "string") return <StringLeaf value={v} query={props.query} />
   if (v === null)
     return (
       <span data-json="null" class="text-muted">
-        null
+        <Marked text="null" query={props.query} />
       </span>
     )
   if (typeof v === "object")
@@ -106,18 +113,21 @@ function Leaf(props: { value: unknown }) {
     )
   return (
     <span data-json="number" class="text-syntax-number">
-      {String(v)}
+      <Marked text={String(v)} query={props.query} />
     </span>
   )
 }
 
-function StringLeaf(props: { value: string }) {
+function StringLeaf(props: { value: string; query: string }) {
   const [full, setFull] = createSignal(false)
   const clipped = () => clip(props.value)
   return (
     <>
       <span data-json="string" class="text-syntax-string">
-        {JSON.stringify(full() ? props.value : clipped().head)}
+        <Marked
+          text={JSON.stringify(full() ? props.value : clipped().head)}
+          query={props.query}
+        />
       </span>
       <Show when={clipped().clipped && !full()}>
         …
