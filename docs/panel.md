@@ -20,6 +20,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - `selectedId`: signal in `App`. `selected()` derives the entry; an effect resets `selectedId` to `undefined` when the entry leaves the store (Clear, eviction, navigation), which closes the pane.
 - `preserveLog`: owned by `main.tsx` (see `docs/capture.md`).
 - `query`: signal in `App`, default `""`, not persisted.
+- `searchBodies`: signal in `App`, default `false`, not persisted. `bodyVersion` counter bumps on each indexed body so `visible` recomputes.
 - `filters`: signal in `App` (`Filters`, selected chips), not persisted; `active` = `prune(filters, chips)` is what filtering and chip state read.
 - `visible`: `createMemo` in `App`: entries filtered by `matchesQuery` and `matchesFilters(e, active)`, then reversed when `newestFirst`. `List`, `Footer`, the no-match check and `selected()` all read it.
 - `newestFirst`: signal in `App`, default `true`, not persisted. `App` passes `List` the reversed list when on; `List` knows nothing of order, so ↑/↓/Home/End follow the displayed order.
@@ -47,7 +48,11 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 ## Search (`src/panel/search.tsx`, `src/panel/filter.ts`)
 
 - `SearchBox`: `h-10` `<search>` bar atop the list (same height as the tab bar, so they line up side by side); `<input type="search" aria-label="Filter requests">` (native cancel button hidden) inside a `surface` pill with an accent focus ring; × `IconButton` (`Clear filter`) only while the query is non-empty.
-- `matchesQuery(entry, query)` (pure): case-insensitive substring over what the row shows (`rowLabel` title, detail, kind) plus the full URL; empty query matches all. Decoded rows don't show their method, so `POST` doesn't match a GraphQL row.
+- `matchesQuery(entry, query, bodyText?)` (pure): case-insensitive substring over what the row shows (`rowLabel` title, detail, kind) plus the full URL, plus `bodyText` when given; empty query matches all. Decoded rows don't show their method, so `POST` doesn't match a GraphQL row.
+- Search bodies: `IconButton` (`Search bodies`, `aria-pressed`, document icon) inside the pill, before ×. While on, `App` passes `bodies.text(e)` to `matchesQuery`; body-only hits show the row unhighlighted.
+  - `createBodyIndex(onChange)` (`src/panel/body-index.ts`, Solid-free): `sync(entries, on)` (an `App` effect) starts `loadBody(entry, { pretty: false })` once per unseen `getBody`; `text(entry)` gives `<request body text>\n<response text>` (response `""` for `view` bodies: image, font, hex; rejected bodies give `""` via `loadBody`), `undefined` until resolved; `onChange` after each.
+  - Keyed by `getBody` in a `WeakMap`: `appendMessages` copies keep it (live entries not refetched); the finished merge brings a new one (a live fetch is reindexed once complete); freed with the entries.
+  - Off: no new fetches, matching ignores the index; the cache is kept, so turning it back on is instant.
 - `highlight(text, query)` (pure): `{ text, hit }` segments, every occurrence, original casing, query matched literally (`indexOf`, no regex). `Marked` renders hits as `<mark>` (`bg-accent/30`); `List` passes title and detail through it.
 - Filters (`FilterChips`): `<fieldset aria-label="Filters">` (`h-8`, scrolls horizontally, no wrap) under `SearchBox`: kind chips, a `w-px` separator, status chips. Chips are mono pill buttons with `aria-pressed` (`bg-accent/20 text-accent` when on).
   - `chipsFor(entries)` (pure): `{ kinds, statuses }` present in the store. `kindOf` = `decoded.kind` or `other`; `statusGroup` = `failed` for 0, else `<n>xx`. Alphabetical/ascending, `other`/`failed` last. JSON calls show as `json` (no `rest` kind).
