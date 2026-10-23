@@ -55,4 +55,15 @@ describe("rowLabel", () => {
     expect(rowLabel(entry({ open: false }))).not.toHaveProperty("live")
     expect(rowLabel(entry())).not.toHaveProperty("live")
   })
+
+  it("says how a socket closed", () => {
+    const closed = rowLabel(
+      entry({ socket: { protocol: "", closeCode: 1000 }, open: false }),
+    )
+    expect(closed.closed).toBe("closed 1000")
+    const open = rowLabel(entry({ socket: { protocol: "" }, open: true }))
+    expect(open.live).toBe(true)
+    expect(open).not.toHaveProperty("closed")
+    expect(rowLabel(entry())).not.toHaveProperty("closed")
+  })
 })
