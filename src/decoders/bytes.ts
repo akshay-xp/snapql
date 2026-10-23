@@ -32,3 +32,7 @@ function isUtf8(data: Uint8Array): boolean {
     return false
   }
 }
+
+export function hex(data: Uint8Array): string {
+  return Array.from(data, (b) => b.toString(16).padStart(2, "0")).join(" ")
+}

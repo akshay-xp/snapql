@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { bytes, requestBytes, text } from "./bytes"
+import { bytes, hex, requestBytes, text } from "./bytes"
 
 describe("bytes", () => {
   it("decodes base64 bodies to their exact bytes", () => {
@@ -48,5 +48,11 @@ describe("requestBytes", () => {
   // Chrome would have decoded these bytes, so the text must have been UTF-8.
   it("drops the Latin-1 candidate when its bytes are valid UTF-8", () => {
     expect(of("\u00c3\u00a9")).toEqual([[0xc3, 0x83, 0xc2, 0xa9]])
+  })
+})
+
+describe("hex", () => {
+  it("gives lowercase byte pairs", () => {
+    expect(hex(new Uint8Array([0x0a, 0xff]))).toBe("0a ff")
   })
 })
