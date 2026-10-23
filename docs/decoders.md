@@ -17,6 +17,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 ## Bytes (`src/decoders/bytes.ts`)
 
 - `bytes(body)`: exact `Uint8Array` (base64 decoded; text UTF-8 encoded). `text(body)`: base64 read as UTF-8 (invalid sequences U+FFFD), text as is. Text decoders call `text(body)` first.
+- `requestBytes(text)`: request bytes rebuilt from Chrome's HAR `postData.text`, as `Uint8Array[]` candidates. Chrome gives valid UTF-8 bodies decoded and anything else as one code unit per byte (Latin-1), pinned in e2e (`/binary`). Text with a code unit above U+00FF, or pure ASCII: one candidate, the UTF-8 encoding. Otherwise the UTF-8 encoding, plus the Latin-1 bytes when those aren't valid UTF-8 (valid ones Chrome would have decoded). The text alone can't tell these apart (`é\x01` is `C3 A9 01` or `E9 01`; e2e saw the former), so binary decoders keep the first candidate that parses fully. Firefox: unverified.
 
 ## Registry (`src/decoders/registry.ts`)
 
