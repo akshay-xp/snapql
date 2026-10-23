@@ -42,6 +42,7 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 - `onRequestFinished(cb)`: subscribes to `chrome.devtools.network.onRequestFinished`, delivers mapped requests, returns an unsubscribe that removes the same listener.
 - `getHAR()`: callback form of `chrome.devtools.network.getHAR`, entries mapped via `toFinishedRequest`. Chrome gives HAR entries the `Request` prototype, so `getContent` works on them (verified in e2e).
 - `evalInPage(expr)`: callback form of `inspectedWindow.eval`; resolves the result, or `undefined` on `isException`/`isError`. `reloadWithScript(script)`: `inspectedWindow.reload({ injectedScript })`. `probeScript()`: fetches the extension's `probe.js` (`runtime.getURL`).
+- Binary request bodies (Chrome, pinned in e2e): `postData.text` is the UTF-8 decode when the bytes are valid UTF-8, else one code unit per byte (Latin-1). Nothing is lost, but `é` + `01` could be `C3 A9 01` or `E9 01`.
 - Firefox: HAR entries may lack `getContent`; harmless until something calls `getBody()` (M2). Check then.
 
 ## Wiring (`src/capture/capture.ts`, `src/panel/main.tsx`)
