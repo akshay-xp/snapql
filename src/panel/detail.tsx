@@ -1,9 +1,11 @@
 import {
+  createEffect,
   createResource,
   createSignal,
   For,
   type JSX,
   Match,
+  on,
   Show,
   Switch,
 } from "solid-js"
@@ -400,8 +402,14 @@ function BodyView(props: {
 }) {
   const json = () => treeValue(props.text)
   const [allOpen, setAllOpen] = createSignal(false)
+  let view!: HTMLDivElement
+  createEffect(
+    on([() => props.query, () => props.text], () =>
+      view.querySelector("mark")?.scrollIntoView({ block: "center" }),
+    ),
+  )
   return (
-    <>
+    <div ref={view} class="contents">
       <Toolbar>
         <Show when={json()}>
           <button
@@ -416,7 +424,10 @@ function BodyView(props: {
       </Toolbar>
       <Switch
         fallback={
-          <Show when={json()} fallback={<Text>{props.text}</Text>}>
+          <Show
+            when={json()}
+            fallback={<Text query={props.query}>{props.text}</Text>}
+          >
             {(value) => (
               <JsonTree
                 value={value()}
@@ -437,7 +448,7 @@ function BodyView(props: {
           <Text>{hexDump(fromBase64(props.text))}</Text>
         </Match>
       </Switch>
-    </>
+    </div>
   )
 }
 

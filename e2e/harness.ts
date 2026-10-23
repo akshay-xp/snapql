@@ -219,6 +219,13 @@ const filtersPage = `<!doctype html>
   fetch("/api/missing")
 </script>`
 
+const searchPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  fetch("/api/note")
+  fetch("/api/long")
+</script>`
+
 const secretsPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
@@ -376,6 +383,7 @@ export type Panel = {
   devtoolsTheme(): Promise<"light" | "dark">
   cssVar(name: string): Promise<string>
   style(selector: string, property: string): Promise<string>
+  scrollTop(selector: string): Promise<number>
   text(selector: string): Promise<string | null>
   attr(selector: string, name: string): Promise<string | null>
   checked(selector: string): Promise<boolean | null>
@@ -498,6 +506,10 @@ export async function openPanel(
         const el = document.querySelector(${JSON.stringify(selector)})
         return el ? getComputedStyle(el).getPropertyValue(${JSON.stringify(property)}) : ""
       })()`),
+    scrollTop: (selector: string) =>
+      panelFrame.evaluate<number>(
+        `document.querySelector(${JSON.stringify(selector)}).scrollTop`,
+      ),
     text: (selector: string) =>
       panelFrame.evaluate<string | null>(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)})
@@ -838,6 +850,21 @@ async function startServer(): Promise<Server> {
           req.url.startsWith("/api/diff/1")
             ? '{"id":1,"n":"x"}'
             : '{"n":"x","id":1}',
+        )
+    if (req.url === "/search")
+      return res.writeHead(200, { "content-type": "text/html" }).end(searchPage)
+    if (req.url === "/api/note")
+      return res
+        .writeHead(200, { "content-type": "text/plain" })
+        .end("a hidden pearl")
+    if (req.url === "/api/long")
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end(
+          JSON.stringify([
+            ...Array.from({ length: 300 }, (_, n) => ({ n })),
+            { note: `${"x".repeat(250)} needle` },
+          ]),
         )
     if (req.url === "/filters")
       return res

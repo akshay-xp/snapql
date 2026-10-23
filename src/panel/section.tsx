@@ -3,13 +3,14 @@ import type { NameValue } from "../capture/entry"
 import { pairsText, valueText } from "./copy"
 import { CopyButton } from "./copy-button"
 import { JsonTree } from "./json-tree"
+import { Marked } from "./search"
 import { dataSections } from "./summary"
 import { decodeValue } from "./values"
 
-export function Text(props: { children: string }) {
+export function Text(props: { children: string; query?: string }) {
   return (
     <pre class="font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">
-      {props.children}
+      <Marked text={props.children} query={props.query ?? ""} />
     </pre>
   )
 }
