@@ -36,3 +36,27 @@ function isUtf8(data: Uint8Array): boolean {
 export function hex(data: Uint8Array): string {
   return Array.from(data, (b) => b.toString(16).padStart(2, "0")).join(" ")
 }
+
+export class InvalidBytes extends Error {
+  constructor(
+    format: string,
+    readonly offset: number,
+  ) {
+    super(`invalid ${format} at byte ${offset}`)
+  }
+}
+
+export function parseFirst<T>(
+  candidates: Uint8Array[],
+  read: (data: Uint8Array) => T,
+): { value: T } | { error: string; hex: string } {
+  let first: Error | undefined
+  for (const data of candidates) {
+    try {
+      return { value: read(data) }
+    } catch (err) {
+      first ??= err as Error
+    }
+  }
+  return { error: (first as Error).message, hex: hex(candidates[0]) }
+}

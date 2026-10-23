@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { bytes, hex, requestBytes, text } from "./bytes"
+import {
+  bytes,
+  hex,
+  InvalidBytes,
+  parseFirst,
+  requestBytes,
+  text,
+} from "./bytes"
 
 describe("bytes", () => {
   it("decodes base64 bodies to their exact bytes", () => {
@@ -54,5 +61,25 @@ describe("requestBytes", () => {
 describe("hex", () => {
   it("gives lowercase byte pairs", () => {
     expect(hex(new Uint8Array([0x0a, 0xff]))).toBe("0a ff")
+  })
+})
+
+describe("parseFirst", () => {
+  const read = (data: Uint8Array) => {
+    if (data[0] === 1) throw new InvalidBytes("x", 0)
+    return "ok"
+  }
+  const parse = (...candidates: number[][]) =>
+    parseFirst(
+      candidates.map((c) => new Uint8Array(c)),
+      read,
+    )
+
+  it("keeps the first candidate that parses", () => {
+    expect(parse([1], [2])).toEqual({ value: "ok" })
+  })
+
+  it("reports the first candidate when none parses", () => {
+    expect(parse([1], [1])).toEqual({ error: "invalid x at byte 0", hex: "01" })
   })
 })
