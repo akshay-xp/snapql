@@ -7,7 +7,7 @@ import {
   Show,
   Switch,
 } from "solid-js"
-import type { Entry, NameValue } from "../capture/entry"
+import { type Entry, incoming, type NameValue } from "../capture/entry"
 import { decoders } from "../decoders"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
@@ -19,7 +19,6 @@ import { summaryHeading } from "./heading"
 import { OPEN_DEPTH, treeValue } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
-import { bodyMessages } from "./messages"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
 import { Section, Text } from "./section"
@@ -109,7 +108,7 @@ export function Detail(props: {
             <LoadedBody entry={props.entry} pretty={false}>
               {(text) => (
                 <Messages
-                  messages={bodyMessages(
+                  messages={incoming(
                     parseStream(props.entry.mimeType, text) ?? [],
                     props.entry.startedAt,
                   )}

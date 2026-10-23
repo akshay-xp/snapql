@@ -3,6 +3,7 @@ import {
   appendMessages,
   type FinishedRequest,
   FRAME_LIMIT,
+  incoming,
   MESSAGE_CAP,
   type Message,
   toEntry,
@@ -125,5 +126,13 @@ describe("appendMessages", () => {
     expect(long.truncated).toBe(true)
     expect(exact.text.length).toBe(FRAME_LIMIT)
     expect(exact).not.toHaveProperty("truncated")
+  })
+})
+
+describe("incoming", () => {
+  it("stamps parsed events as incoming messages", () => {
+    expect(incoming([{ text: "a", event: "ping" }], 5)).toEqual([
+      { dir: "in", time: 5, text: "a", event: "ping" },
+    ])
   })
 })

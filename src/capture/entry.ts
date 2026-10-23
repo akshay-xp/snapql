@@ -1,3 +1,4 @@
+import type { StreamEvent } from "../decoders/stream"
 import type { DecodeResult, RequestView } from "../decoders/types"
 
 export type Body = { content: string; encoding: string }
@@ -27,6 +28,26 @@ export type Exchange = {
   timings: Timings
 }
 
+export const emptyExchange: Exchange = {
+  requestHeaders: [],
+  responseHeaders: [],
+  queryString: [],
+  requestCookies: [],
+  responseCookies: [],
+  httpVersion: "",
+  statusText: "",
+  size: -1,
+  timings: {
+    blocked: -1,
+    dns: -1,
+    connect: -1,
+    ssl: -1,
+    send: -1,
+    wait: -1,
+    receive: -1,
+  },
+}
+
 export type FinishedRequest = RequestView & {
   exchange: Exchange
   startedDateTime: string
@@ -44,6 +65,12 @@ export type Message = {
   id?: string
   truncated?: true
 }
+
+// Parsed stream events as incoming messages, all stamped with one arrival time.
+export const incoming = (
+  events: readonly StreamEvent[],
+  time: number,
+): Message[] => events.map((e) => ({ dir: "in", time, ...e }))
 
 export const MESSAGE_CAP = 2000
 export const FRAME_LIMIT = 1024 * 1024

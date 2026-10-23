@@ -1,12 +1,16 @@
 import { decodeRequest } from "../decoders/registry"
 import type { Decoder } from "../decoders/types"
 import { type FinishedRequest, toEntry } from "./entry"
+import { createLive } from "./live"
+import type { Drained } from "./probe-source"
 import type { Store } from "./store"
 
 export type CaptureSource = {
   onRequestFinished(cb: (req: FinishedRequest) => void): () => void
   getHAR(): Promise<FinishedRequest[]>
   onNavigated(cb: () => void): () => void
+  // Live stream records from the page probe; absent where there is no probe.
+  onProbe?(cb: (drained: Drained) => void): () => void
 }
 
 const key = (req: FinishedRequest) => `${req.url} ${req.startedDateTime}`
@@ -41,11 +45,14 @@ export function startCapture(
       buffer?.forEach(addLive)
       buffer = undefined
     })
+  const live = createLive(store, decoders, () => id++)
+  const offProbe = source.onProbe?.(live.apply)
   const offNavigated = source.onNavigated(() => {
     if (!preserveLog()) store.clear()
   })
   return () => {
     off()
     offNavigated()
+    offProbe?.()
   }
 }
