@@ -20,6 +20,7 @@ DevTools extension that makes network traffic human readable. v0.2.0 (live on th
 4. The entry store is capped; oldest entries evicted first.
 5. No runtime dependencies beyond Solid without explicit justification.
 6. Decoders read only the request side and run once per entry, at capture.
+7. The page probe (`src/probe/probe.js`) ships verbatim, runs only while the panel is open, only records, and needs no permissions.
 
 ## Roadmap
 
