@@ -1462,6 +1462,45 @@ test("selecting a body match opens the tab that shows it", async () => {
   }
 })
 
+test("steps through body matches", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/search`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    await panel.click(bodiesToggle)
+    await panel.search("apple")
+    await panel.selectStarting("/api/fruit")
+    const nav = "[data-match-nav]"
+    const next = 'button[aria-label="Next match"]'
+
+    await expect.poll(() => panel.text(nav)).toBe("1 of 3")
+    expect(await panel.text("mark[data-current]")).toBe("apple")
+    expect(await panel.count("mark[data-current]")).toBe(1)
+    expect(
+      await panel.style("mark[data-current]", "background-color"),
+    ).not.toBe(
+      await panel.style(
+        '[role="tabpanel"] mark:not([data-current])',
+        "background-color",
+      ),
+    )
+
+    await panel.click(next)
+    await panel.click(next)
+    expect(await panel.text(nav)).toBe("3 of 3")
+    await panel.click(next)
+    expect(await panel.text(nav)).toBe("1 of 3")
+    await panel.click('button[aria-label="Previous match"]')
+    expect(await panel.text(nav)).toBe("3 of 3")
+    expect(await panel.count("mark[data-current]")).toBe(1)
+
+    await panel.search("zzz")
+    await expect.poll(() => panel.count(nav)).toBe(0)
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Copy as copies cURL and fetch, not for sockets", async () => {
   const panel = await openPanel()
   try {

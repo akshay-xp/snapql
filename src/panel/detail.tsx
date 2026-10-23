@@ -38,6 +38,7 @@ import { hexDump } from "./hex-dump"
 import { OPEN_DEPTH, treeValue } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
+import { createMatches, MatchNav } from "./matches"
 import { byteLabel } from "./messages"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
@@ -324,28 +325,44 @@ export function Detail(props: {
 function RawPanel(props: { entry: Entry; query: string }) {
   return (
     <LoadedBody entry={props.entry} pretty={false}>
-      {(text) => {
-        const request = rawRequest(props.entry)
-        const response = rawResponse(props.entry, text)
-        return (
-          <>
-            <Toolbar>
-              <CopyButton
-                label="Copy"
-                captioned
-                value={() => `${request}\n\n${response}`}
-              />
-            </Toolbar>
-            <Section title="Request">
-              <Text query={props.query}>{request}</Text>
-            </Section>
-            <Section title="Response">
-              <Text query={props.query}>{response}</Text>
-            </Section>
-          </>
-        )
-      }}
+      {(text) => (
+        <RawView
+          request={rawRequest(props.entry)}
+          response={rawResponse(props.entry, text)}
+          query={props.query}
+        />
+      )}
     </LoadedBody>
+  )
+}
+
+function RawView(props: { request: string; response: string; query: string }) {
+  let view!: HTMLDivElement
+  const matches = createMatches(
+    () => view,
+    () => [props.query, props.request, props.response],
+  )
+  return (
+    <div ref={view} class="contents">
+      <Toolbar>
+        <MatchNav
+          index={matches.index()}
+          count={matches.count()}
+          onMove={matches.move}
+        />
+        <CopyButton
+          label="Copy"
+          captioned
+          value={() => `${props.request}\n\n${props.response}`}
+        />
+      </Toolbar>
+      <Section title="Request">
+        <Text query={props.query}>{props.request}</Text>
+      </Section>
+      <Section title="Response">
+        <Text query={props.query}>{props.response}</Text>
+      </Section>
+    </div>
   )
 }
 
@@ -411,14 +428,18 @@ function BodyView(props: {
   const json = () => treeValue(props.text)
   const [allOpen, setAllOpen] = createSignal(false)
   let view!: HTMLDivElement
-  createEffect(
-    on([() => props.query, () => props.text], () =>
-      view.querySelector("mark")?.scrollIntoView({ block: "center" }),
-    ),
+  const matches = createMatches(
+    () => view,
+    () => [props.query, props.text],
   )
   return (
     <div ref={view} class="contents">
       <Toolbar>
+        <MatchNav
+          index={matches.index()}
+          count={matches.count()}
+          onMove={matches.move}
+        />
         <Show when={json()}>
           <button
             type="button"

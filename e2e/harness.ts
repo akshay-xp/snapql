@@ -389,6 +389,7 @@ export type Panel = {
   cssVar(name: string): Promise<string>
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
+  count(selector: string): Promise<number>
   text(selector: string): Promise<string | null>
   attr(selector: string, name: string): Promise<string | null>
   checked(selector: string): Promise<boolean | null>
@@ -511,6 +512,10 @@ export async function openPanel(
         const el = document.querySelector(${JSON.stringify(selector)})
         return el ? getComputedStyle(el).getPropertyValue(${JSON.stringify(property)}) : ""
       })()`),
+    count: (selector: string) =>
+      panelFrame.evaluate<number>(
+        `document.querySelectorAll(${JSON.stringify(selector)}).length`,
+      ),
     scrollTop: (selector: string) =>
       panelFrame.evaluate<number>(
         `document.querySelector(${JSON.stringify(selector)}).scrollTop`,
