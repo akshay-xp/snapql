@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { readMsgpack } from "./msgpack"
+import { decoders } from "./index"
+import { msgpack, readMsgpack } from "./msgpack"
+import { decodeRequest } from "./registry"
+import type { RequestView } from "./types"
 
 const read = (...data: number[]) => readMsgpack(new Uint8Array(data))
 const be = (size: number, write: (v: DataView) => void) => {
@@ -87,5 +90,49 @@ describe("readMsgpack errors", () => {
     error(2, 0x92, 0x01)
     error(1, 0x01, 0x02)
     error(0, 0xa5, 0x68)
+  })
+})
+
+describe("msgpack decoder", () => {
+  const req = (over: Partial<RequestView> = {}): RequestView => ({
+    method: "POST",
+    url: "http://x/api/m",
+    status: 200,
+    mimeType: "",
+    requestBody: { mimeType: "application/msgpack", text: "\x81\xa1a\x01" },
+    ...over,
+  })
+  const respond = (...data: number[]) =>
+    msgpack.decodeResponse?.(
+      { content: btoa(String.fromCharCode(...data)), encoding: "base64" },
+      { kind: "msgpack", title: "/api/m", data: undefined },
+      [],
+    )
+
+  it("decodes request bodies", () => {
+    expect(msgpack.decode(req())).toEqual({
+      title: "/api/m",
+      detail: "POST",
+      data: { body: { a: 1 } },
+    })
+    expect(decodeRequest(req(), decoders)?.kind).toBe("msgpack")
+  })
+
+  it("matches responses without a body", () => {
+    for (const mimeType of ["application/x-msgpack", "application/vnd.msgpack"])
+      expect(
+        msgpack.decode(req({ requestBody: undefined, mimeType }))?.data,
+      ).toBeUndefined()
+  })
+
+  it("decodes responses, malformed ones as hex", () => {
+    expect(respond(0x81, 0xa1, 0x61, 0x01)).toEqual({
+      summary: "4 bytes",
+      data: { body: { a: 1 } },
+    })
+    expect(respond(0xc1)?.data).toEqual({
+      error: "invalid msgpack at byte 0",
+      hex: "c1",
+    })
   })
 })

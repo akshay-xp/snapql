@@ -1,3 +1,4 @@
+import { cbor } from "./cbor"
 import { form } from "./form"
 import { graphql } from "./graphql"
 import { graphqlWs } from "./graphql-ws"
@@ -5,6 +6,7 @@ import { grpcWeb } from "./grpc-web"
 import { json } from "./json"
 import { jsonrpc } from "./jsonrpc"
 import { llm } from "./llm"
+import { msgpack } from "./msgpack"
 import { multipart } from "./multipart"
 import { protobuf } from "./protobuf"
 import { socketio } from "./socketio"
@@ -29,6 +31,8 @@ export const decoders: Decoder[] = [
   websocket,
   grpcWeb,
   protobuf,
+  msgpack,
+  cbor,
   sse,
   ndjson,
   json,

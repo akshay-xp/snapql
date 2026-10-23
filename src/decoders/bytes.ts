@@ -1,4 +1,5 @@
-import type { BodyView } from "./types"
+import { baseMime, count } from "./text"
+import type { BodyView, Decoder } from "./types"
 
 export function bytes(body: BodyView): Uint8Array {
   return body.encoding === "base64"
@@ -132,5 +133,35 @@ export function readItemAt<T>(
     return read(c)
   } catch (err) {
     throw err instanceof InvalidBytes ? err : new InvalidBytes(format, start)
+  }
+}
+
+// Binary formats matched by request or response mime; the value sits under key.
+export function binaryDecoder(
+  kind: string,
+  mimes: string[],
+  read: (data: Uint8Array) => unknown,
+  key = "body",
+): Decoder {
+  const matches = (mime = "") => mimes.includes(baseMime(mime))
+  const data = (candidates: Uint8Array[]) => {
+    const parsed = parseFirst(candidates, read)
+    return "value" in parsed ? { [key]: parsed.value } : parsed
+  }
+  return {
+    kind,
+    decode(req) {
+      const body = req.requestBody
+      if (!matches(body?.mimeType) && !matches(req.mimeType)) return
+      return {
+        title: new URL(req.url).pathname,
+        detail: req.method,
+        data: body && data(requestBytes(body.text)),
+      }
+    },
+    decodeResponse(body) {
+      const raw = bytes(body)
+      return { summary: count(raw.length, "byte"), data: data([raw]) }
+    },
   }
 }

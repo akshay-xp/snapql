@@ -1,6 +1,15 @@
-import { type Cursor, hex, keyText, readAll, readItemAt } from "./bytes"
+import {
+  binaryDecoder,
+  type Cursor,
+  hex,
+  keyText,
+  readAll,
+  readItemAt,
+} from "./bytes"
 
 const BREAK = Symbol("break")
+
+export const cbor = binaryDecoder("cbor", ["application/cbor"], readCbor)
 
 export function readCbor(data: Uint8Array): unknown {
   return readAll(data, "cbor", (c) => readValue(c))
