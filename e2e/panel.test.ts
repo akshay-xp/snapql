@@ -1326,8 +1326,11 @@ test("search bodies matches request and response body text", async () => {
   try {
     await panel.page.goto(`${panel.origin}/filters`)
     await expect.poll(async () => (await panel.rows()).length).toBe(5)
-    const toggle = 'button[aria-label="Search bodies"]'
+    const toggle = 'button[title="Search request and response bodies"]'
+    const input = "input[type=search]"
     const users = "/api/users/1 GET json"
+    expect(await panel.text(toggle)).toBe("Bodies")
+    expect(await panel.attr(input, "placeholder")).toBe("Filter requests")
 
     await panel.search("geo")
     await expect.poll(panel.rows).toEqual([])
@@ -1336,6 +1339,9 @@ test("search bodies matches request and response body text", async () => {
     await panel.click(toggle)
     expect(await panel.attr(toggle, "aria-pressed")).toBe("true")
     expect(await panel.style(toggle, "color")).not.toBe(offColor)
+    expect(await panel.attr(input, "placeholder")).toBe(
+      "Filter requests and bodies",
+    )
     await expect.poll(panel.rows).toEqual([users])
     expect(await panel.text("footer")).toBe("1 of 5")
 
@@ -1350,6 +1356,7 @@ test("search bodies matches request and response body text", async () => {
 
     await panel.click(toggle)
     await expect.poll(panel.rows).toEqual([])
+    expect(await panel.attr(input, "placeholder")).toBe("Filter requests")
   } finally {
     await panel.close()
   }

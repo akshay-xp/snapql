@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js"
+import { For, type JSX, Show } from "solid-js"
 import { type Filters, highlight } from "./filter"
 import { IconButton } from "./icon-button"
 
@@ -26,19 +26,23 @@ export function SearchBox(props: {
         </svg>
         <input
           type="search"
-          placeholder="Filter requests"
+          placeholder={
+            props.searchBodies
+              ? "Filter requests and bodies"
+              : "Filter requests"
+          }
           aria-label="Filter requests"
           class="min-w-0 flex-1 bg-transparent text-fg outline-none [&::-webkit-search-cancel-button]:hidden"
           value={props.query}
           onInput={(e) => props.onQuery(e.currentTarget.value)}
         />
-        <IconButton
-          label="Search bodies"
+        <Pill
+          title="Search request and response bodies"
           pressed={props.searchBodies}
           onClick={() => props.onSearchBodies(!props.searchBodies)}
         >
-          <path d="M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h6" />
-        </IconButton>
+          Bodies
+        </Pill>
         <Show when={props.query}>
           <IconButton label="Clear filter" onClick={() => props.onQuery("")}>
             <path d="M6 6l12 12M18 6 6 18" />
@@ -65,6 +69,29 @@ export function Marked(props: { text: string; query: string }) {
   )
 }
 
+function Pill(props: {
+  pressed: boolean
+  title?: string
+  onClick: () => void
+  children: JSX.Element
+}) {
+  return (
+    <button
+      type="button"
+      title={props.title}
+      aria-pressed={props.pressed}
+      class="shrink-0 rounded-full px-2 py-0.5 font-mono"
+      classList={{
+        "bg-accent/20 text-accent": props.pressed,
+        "bg-surface": !props.pressed,
+      }}
+      onClick={props.onClick}
+    >
+      {props.children}
+    </button>
+  )
+}
+
 export function FilterChips(props: {
   chips: Filters
   active: Filters
@@ -72,23 +99,14 @@ export function FilterChips(props: {
 }) {
   const group = (name: keyof Filters) => (
     <For each={props.chips[name]}>
-      {(value) => {
-        const pressed = () => props.active[name].includes(value)
-        return (
-          <button
-            type="button"
-            aria-pressed={pressed()}
-            class="shrink-0 rounded-full px-2 py-0.5 font-mono"
-            classList={{
-              "bg-accent/20 text-accent": pressed(),
-              "bg-surface": !pressed(),
-            }}
-            onClick={() => props.onToggle(name, value)}
-          >
-            {value}
-          </button>
-        )
-      }}
+      {(value) => (
+        <Pill
+          pressed={props.active[name].includes(value)}
+          onClick={() => props.onToggle(name, value)}
+        >
+          {value}
+        </Pill>
+      )}
     </For>
   )
   return (
