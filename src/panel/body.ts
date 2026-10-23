@@ -14,8 +14,8 @@ export type FormattedBody = {
 
 export type FormatOptions = { pretty?: boolean; mimeType?: string }
 
-// With the Response group, the panel's only getBody() caller, so bodies load
-// only where they are shown.
+// The panel's getBody() path: the Response group and Body tab use it where a
+// body is shown, and the body index while body search is on.
 export async function loadBody(
   entry: Pick<Entry, "getBody" | "mimeType">,
   options?: { pretty?: boolean },

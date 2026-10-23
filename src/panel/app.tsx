@@ -9,6 +9,7 @@ import {
   Show,
 } from "solid-js"
 import type { Store } from "../capture/store"
+import { createBodyIndex } from "./body-index"
 import { Detail } from "./detail"
 import {
   chipsFor,
@@ -48,9 +49,16 @@ export function App(props: {
     setQuery("")
     setFilters(noFilters)
   }
+  const [searchBodies, setSearchBodies] = createSignal(false)
+  const [bodyVersion, setBodyVersion] = createSignal(0)
+  const bodies = createBodyIndex(() => setBodyVersion((v) => v + 1))
+  createEffect(() => bodies.sync(entries(), searchBodies()))
   const visible = createMemo(() => {
+    bodyVersion()
     const shown = entries().filter(
-      (e) => matchesQuery(e, query()) && matchesFilters(e, active()),
+      (e) =>
+        matchesQuery(e, query(), searchBodies() ? bodies.text(e) : undefined) &&
+        matchesFilters(e, active()),
     )
     return newestFirst() ? shown.reverse() : shown
   })
@@ -81,7 +89,12 @@ export function App(props: {
         ref={row}
       >
         <section class="flex min-h-0 min-w-0 flex-1 flex-col">
-          <SearchBox query={query()} onQuery={setQuery} />
+          <SearchBox
+            query={query()}
+            onQuery={setQuery}
+            searchBodies={searchBodies()}
+            onSearchBodies={setSearchBodies}
+          />
           <Show when={entries().length}>
             <FilterChips
               chips={chips()}
