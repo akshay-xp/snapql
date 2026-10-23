@@ -1,5 +1,6 @@
 import { form } from "./form"
 import { graphql } from "./graphql"
+import { graphqlWs } from "./graphql-ws"
 import { json } from "./json"
 import { jsonrpc } from "./jsonrpc"
 import { llm } from "./llm"
@@ -22,6 +23,7 @@ export const decoders: Decoder[] = [
   multipart,
   form,
   socketio,
+  graphqlWs,
   websocket,
   sse,
   ndjson,
