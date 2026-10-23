@@ -174,6 +174,7 @@ export function App(props: {
               entry={entry()}
               schemas={props.schemas}
               base={base()}
+              bodyQuery={bodyQuery()}
               onCompare={setBaseId}
               stacked={stacked()}
               size={stacked() ? detailHeight() : detailWidth()}

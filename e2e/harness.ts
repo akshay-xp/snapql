@@ -370,6 +370,8 @@ export type Panel = {
   messages(): Promise<string[]>
   pressTab(key: string): Promise<void>
   detail(): Promise<string | null>
+  // Text of every highlight in the detail pane.
+  marks(): Promise<string[]>
   themeKind(): Promise<string | undefined>
   devtoolsTheme(): Promise<"light" | "dark">
   cssVar(name: string): Promise<string>
@@ -585,6 +587,10 @@ export async function openPanel(
     detail: () =>
       panelFrame.evaluate<string | null>(
         `document.querySelector('[role="tabpanel"]')?.innerText ?? null`,
+      ),
+    marks: () =>
+      panelFrame.evaluate<string[]>(
+        `[...document.querySelectorAll('[role="tabpanel"] mark')].map((m) => m.textContent)`,
       ),
     selectStarting: (prefix: string) =>
       panelFrame.evaluate<void>(
