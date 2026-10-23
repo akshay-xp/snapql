@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { readCbor } from "./cbor"
+import { cbor, readCbor } from "./cbor"
+import { decoders } from "./index"
+import { decodeRequest } from "./registry"
+import type { RequestView } from "./types"
 
 const read = (...data: number[]) => readCbor(new Uint8Array(data))
 const be = (size: number, write: (v: DataView) => void) => {
@@ -68,5 +71,49 @@ describe("readCbor", () => {
     error(0, 0x1c)
     error(2, 0x82, 0x01)
     error(1, 0x01, 0x02)
+  })
+})
+
+describe("cbor decoder", () => {
+  const req = (over: Partial<RequestView> = {}): RequestView => ({
+    method: "POST",
+    url: "http://x/api/m",
+    status: 200,
+    mimeType: "",
+    requestBody: { mimeType: "application/cbor", text: "\xa1aa\x01" },
+    ...over,
+  })
+  const respond = (...data: number[]) =>
+    cbor.decodeResponse?.(
+      { content: btoa(String.fromCharCode(...data)), encoding: "base64" },
+      { kind: "cbor", title: "/api/m", data: undefined },
+      [],
+    )
+
+  it("decodes request bodies", () => {
+    expect(cbor.decode(req())).toEqual({
+      title: "/api/m",
+      detail: "POST",
+      data: { body: { a: 1 } },
+    })
+    expect(decodeRequest(req(), decoders)?.kind).toBe("cbor")
+  })
+
+  it("matches responses without a body", () => {
+    for (const mimeType of ["application/cbor"])
+      expect(
+        cbor.decode(req({ requestBody: undefined, mimeType }))?.data,
+      ).toBeUndefined()
+  })
+
+  it("decodes responses, malformed ones as hex", () => {
+    expect(respond(0xa1, 0x61, 0x61, 0x01)).toEqual({
+      summary: "4 bytes",
+      data: { body: { a: 1 } },
+    })
+    expect(respond(0xff)?.data).toEqual({
+      error: "invalid cbor at byte 0",
+      hex: "ff",
+    })
   })
 })

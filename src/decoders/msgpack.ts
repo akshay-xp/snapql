@@ -1,4 +1,17 @@
-import { type Cursor, hex, keyText, readAll, readItemAt } from "./bytes"
+import {
+  binaryDecoder,
+  type Cursor,
+  hex,
+  keyText,
+  readAll,
+  readItemAt,
+} from "./bytes"
+
+export const msgpack = binaryDecoder(
+  "msgpack",
+  ["application/msgpack", "application/x-msgpack", "application/vnd.msgpack"],
+  readMsgpack,
+)
 
 export function readMsgpack(data: Uint8Array): unknown {
   return readAll(data, "msgpack", readValue)
