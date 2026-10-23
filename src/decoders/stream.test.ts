@@ -71,3 +71,37 @@ describe("NDJSON and JSON Lines", () => {
     expect(streamParser("")).toBeUndefined()
   })
 })
+
+describe("multipart/mixed", () => {
+  const first = '{"data":{"user":{"id":"1"}},"hasNext":true}'
+  const second =
+    '{"incremental":[{"data":{"name":"Ada"},"path":["user"]}],"hasNext":false}'
+  const text = [
+    "",
+    "---",
+    "Content-Type: application/json; charset=utf-8",
+    "",
+    first,
+    "---",
+    "Content-Type: application/json; charset=utf-8",
+    "",
+    second,
+    "-----",
+    "",
+    "ignored",
+  ].join("\r\n")
+  const events = [{ text: first }, { text: second }]
+
+  it("gives one event per part body, boundary from the mime", () => {
+    expect(parse('multipart/mixed; boundary="-"', text)).toEqual(events)
+  })
+
+  it("takes the boundary from the body when the mime has none", () => {
+    expect(parse("multipart/mixed", text)).toEqual(events)
+  })
+
+  it("gives the same events however the text is split", () => {
+    expectAnySplit('multipart/mixed; boundary="-"', text)
+    expectAnySplit("multipart/mixed", text)
+  })
+})

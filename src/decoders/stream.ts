@@ -12,6 +12,8 @@ export function streamParser(mimeType: string): StreamParser | undefined {
   if (mime === "text/event-stream") return eventStream()
   if (mime === "application/x-ndjson" || mime === "application/jsonl")
     return jsonLines()
+  if (mime === "multipart/mixed")
+    return mixedParts(mimeType.match(/boundary="?([^";]+)"?/i)?.[1])
 }
 
 // Splits on CRLF, LF or CR. A chunk-final CR is held back: the next chunk may
@@ -42,10 +44,20 @@ function lines() {
   }
 }
 
+function lineParser(
+  feed: (lines: string[]) => StreamEvent[],
+  flush: () => StreamEvent[] = () => [],
+): StreamParser {
+  const split = lines()
+  return {
+    push: (chunk) => feed(split.push(chunk)),
+    end: () => [...feed(split.end()), ...flush()],
+  }
+}
+
 // WHATWG event-stream parsing, except a trailing event without a blank line is
 // kept: a finished body may be cut off mid-event.
 function eventStream(): StreamParser {
-  const split = lines()
   let data: string[] = []
   let event: string | undefined
   let id: string | undefined
@@ -81,22 +93,53 @@ function eventStream(): StreamParser {
     return out
   }
 
-  return {
-    push: (chunk) => feed(split.push(chunk)),
-    end() {
-      const out = feed(split.end())
-      dispatch(out)
-      return out
-    },
-  }
+  return lineParser(feed, () => {
+    const out: StreamEvent[] = []
+    dispatch(out)
+    return out
+  })
 }
 
 function jsonLines(): StreamParser {
-  const split = lines()
-  const events = (all: string[]) =>
-    all.filter((line) => line.trim()).map((text) => ({ text }))
-  return {
-    push: (chunk) => events(split.push(chunk)),
-    end: () => events(split.end()),
+  return lineParser((all) =>
+    all.filter((line) => line.trim()).map((text) => ({ text })),
+  )
+}
+
+// One event per part body; part headers are dropped. Without a boundary
+// parameter, the first "--" line is taken as the delimiter.
+function mixedParts(boundary: string | undefined): StreamParser {
+  let delimiter = boundary && `--${boundary}`
+  let state: "preamble" | "headers" | "body" | "done" = "preamble"
+  let body: string[] = []
+
+  const emit = (out: StreamEvent[]) => {
+    if (state === "body") out.push({ text: body.join("\n") })
+    body = []
   }
+
+  const feed = (all: string[]) => {
+    const out: StreamEvent[] = []
+    for (const line of all) {
+      if (state === "done") break
+      const trimmed = line.trimEnd()
+      if (!delimiter && trimmed.startsWith("--")) delimiter = trimmed
+      if (trimmed === `${delimiter}--`) {
+        emit(out)
+        state = "done"
+      } else if (trimmed === delimiter) {
+        emit(out)
+        state = "headers"
+      } else if (state === "headers") {
+        if (line === "") state = "body"
+      } else if (state === "body") body.push(line)
+    }
+    return out
+  }
+
+  return lineParser(feed, () => {
+    const out: StreamEvent[] = []
+    emit(out)
+    return out
+  })
 }
