@@ -1267,3 +1267,53 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
     await panel.close()
   }
 })
+
+test("filter chips narrow by protocol and status", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    expect(await panel.chips()).toEqual([
+      "graphql",
+      "json",
+      "other",
+      "2xx",
+      "4xx",
+    ])
+    const a = "A query graphql"
+    const b = "B query 400 graphql"
+    const users = "/api/users/1 GET json"
+
+    await panel.toggleChip("graphql")
+    await expect.poll(async () => (await panel.rows()).sort()).toEqual([a, b])
+    expect(await panel.text("footer")).toBe("2 of 5")
+
+    await panel.toggleChip("json")
+    await expect
+      .poll(async () => (await panel.rows()).sort())
+      .toEqual([users, a, b])
+
+    await panel.toggleChip("json")
+    await panel.toggleChip("4xx")
+    await expect.poll(panel.rows).toEqual([b])
+
+    await panel.toggleChip("4xx")
+    await panel.search("gql-ok")
+    await expect.poll(panel.rows).toEqual([a])
+
+    await panel.clearSearch()
+    await panel.toggleChip("graphql")
+    await panel.toggleChip("json")
+    await panel.toggleChip("4xx")
+    await expect.poll(panel.rows).toEqual([])
+    expect(await panel.text("main")).toContain("No requests match the filters")
+    await panel.clickButton("Clear filter")
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    expect(await panel.pressedChips()).toEqual([])
+
+    await panel.clear()
+    await expect.poll(panel.chips).toEqual([])
+  } finally {
+    await panel.close()
+  }
+})

@@ -204,6 +204,21 @@ const mediaPage = `<!doctype html>
     fetch(url)
 </script>`
 
+const filtersPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  const gql = (url, query) =>
+    fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
+  gql("/api/gql-ok", "query A { a }")
+  gql("/api/gql-bad", "query B { b }")
+  fetch("/api/users/1")
+  fetch("/api/missing")
+</script>`
+
 // 3x2 red RGB PNG (73 bytes).
 export const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAEElEQVR4nGP4z8AAQQxwFgBB0gX7h/C5SAAAAABJRU5ErkJggg=="
@@ -339,6 +354,9 @@ export type Panel = {
   search(query: string): Promise<void>
   clearSearch(): Promise<void>
   clickButton(text: string): Promise<void>
+  chips(): Promise<string[]>
+  toggleChip(name: string): Promise<void>
+  pressedChips(): Promise<string[]>
   click(selector: string): Promise<void>
   pairs(): Promise<string>
   dock(side: "right" | "bottom"): Promise<void>
@@ -607,6 +625,18 @@ export async function openPanel(
       panelFrame.evaluate<void>(
         `document.querySelector(${JSON.stringify(selector)}).click()`,
       ),
+    chips: () =>
+      panelFrame.evaluate<string[]>(
+        `[...document.querySelectorAll('fieldset[aria-label="Filters"] button')].map((b) => b.textContent.trim())`,
+      ),
+    pressedChips: () =>
+      panelFrame.evaluate<string[]>(
+        `[...document.querySelectorAll('fieldset[aria-label="Filters"] button[aria-pressed="true"]')].map((b) => b.textContent.trim())`,
+      ),
+    toggleChip: (name: string) =>
+      panelFrame.evaluate<void>(
+        `[...document.querySelectorAll('fieldset[aria-label="Filters"] button')].find((b) => b.textContent.trim() === ${JSON.stringify(name)}).click()`,
+      ),
     clickButton: (text: string) =>
       panelFrame.evaluate<void>(
         `[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(text)}).click()`,
@@ -731,6 +761,16 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/filters")
+      return res
+        .writeHead(200, { "content-type": "text/html" })
+        .end(filtersPage)
+    if (req.url === "/api/gql-ok" || req.url === "/api/gql-bad")
+      return res
+        .writeHead(req.url === "/api/gql-ok" ? 200 : 400, {
+          "content-type": "application/json",
+        })
+        .end('{"data":null}')
     if (req.url === "/media")
       return res.writeHead(200, { "content-type": "text/html" }).end(mediaPage)
     const asset = media[req.url ?? ""]

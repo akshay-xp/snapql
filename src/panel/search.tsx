@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js"
-import { highlight } from "./filter"
+import { type Filters, highlight } from "./filter"
 import { IconButton } from "./icon-button"
 
 export function SearchBox(props: {
@@ -53,5 +53,40 @@ export function Marked(props: { text: string; query: string }) {
         )
       }
     </For>
+  )
+}
+
+export function FilterChips(props: {
+  chips: Filters
+  active: Filters
+  onToggle: (group: keyof Filters, value: string) => void
+}) {
+  const group = (name: keyof Filters) => (
+    <For each={props.chips[name]}>
+      {(value) => {
+        const pressed = () => props.active[name].includes(value)
+        return (
+          <button
+            type="button"
+            aria-pressed={pressed()}
+            class="shrink-0 rounded-full bg-surface px-2 py-0.5 font-mono"
+            classList={{ "bg-accent/20 text-accent": pressed() }}
+            onClick={() => props.onToggle(name, value)}
+          >
+            {value}
+          </button>
+        )
+      }}
+    </For>
+  )
+  return (
+    <fieldset
+      aria-label="Filters"
+      class="flex h-8 min-w-0 shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2"
+    >
+      {group("kinds")}
+      <span aria-hidden="true" class="mx-1 h-4 w-px shrink-0 bg-border" />
+      {group("statuses")}
+    </fieldset>
   )
 }
