@@ -98,6 +98,21 @@ const chatStream = [
   .map((data) => `data: ${data}\n\n`)
   .join("")
 
+const livePage = `<!doctype html>
+<link rel="icon" href="data:,">
+<button id="es">es</button>
+<button id="fetch">fetch</button>
+<script>
+  document.getElementById("es").onclick = () => {
+    const es = new EventSource("/api/live")
+    es.addEventListener("done", () => es.close())
+  }
+  document.getElementById("fetch").onclick = async () => {
+    const res = await fetch("/api/live-fetch?n=20")
+    await res.text()
+  }
+</script>`
+
 const bulkPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
@@ -147,6 +162,9 @@ export type Panel = {
   press(key: string, list?: string): Promise<void>
   select(row: string): Promise<void>
   selectedRow(): Promise<string | undefined>
+  // Clicks the first request row whose text starts with prefix (for rows that change).
+  selectStarting(prefix: string): Promise<void>
+  probed(): Promise<boolean>
   activeTab(): Promise<string | undefined>
   openTab(name: string): Promise<void>
   messages(): Promise<string[]>
@@ -357,6 +375,11 @@ export async function openPanel(
       panelFrame.evaluate<string | null>(
         `document.querySelector('[role="tabpanel"]')?.innerText ?? null`,
       ),
+    selectStarting: (prefix: string) =>
+      panelFrame.evaluate<void>(
+        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${rowText})(o).startsWith(${JSON.stringify(prefix)})).click()`,
+      ),
+    probed: () => page.evaluate(() => Symbol.for("snapql.probe") in window),
     selectedRow: () =>
       panelFrame.evaluate<string | undefined>(`(() => {
         const list = document.querySelector('[role="listbox"][aria-label="Requests"]')
@@ -415,6 +438,22 @@ export async function openPanel(
 
 function startServer(): Promise<Server> {
   const server = createServer((req, res) => {
+    const path = new URL(req.url ?? "", "http://x")
+    if (path.pathname.startsWith("/api/live")) {
+      // Held open: one event every 150 ms, then "done", then the end.
+      const total = Number(path.searchParams.get("n") ?? 10)
+      res.writeHead(200, { "content-type": "text/event-stream" })
+      let n = 0
+      const timer = setInterval(() => {
+        if (++n <= total) return res.write(`data: {"n":${n}}\n\n`)
+        clearInterval(timer)
+        res.end("event: done\ndata: {}\n\n")
+      }, 150)
+      req.on("close", () => clearInterval(timer))
+      return
+    }
+    if (req.url === "/live")
+      return res.writeHead(200, { "content-type": "text/html" }).end(livePage)
     if (req.url === "/api/one") return res.writeHead(200).end("one")
     if (req.url === "/api/two") return res.writeHead(201).end("two")
     if (req.url === "/api/three") return res.writeHead(200).end("three")

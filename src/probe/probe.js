@@ -65,7 +65,7 @@
             id,
             kind: "fetch",
             method: init?.method || (request && input.method) || "GET",
-            url: request ? input.url : String(input),
+            url: res.url || (request ? input.url : String(input)),
             status: res.status,
             mimeType,
             body: typeof init?.body === "string" ? init.body : undefined,

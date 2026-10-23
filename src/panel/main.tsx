@@ -1,13 +1,16 @@
 import { createSignal } from "solid-js"
 import { render } from "solid-js/web"
 import {
+  evalInPage,
   getHAR,
   getTheme,
   onNavigated,
   onRequestFinished,
   onThemeChanged,
+  probeScript,
 } from "../browser/devtools"
 import { startCapture } from "../capture/capture"
+import { pollProbe } from "../capture/probe-source"
 import { createStore } from "../capture/store"
 import { decoders } from "../decoders"
 import { App } from "./app"
@@ -28,8 +31,23 @@ onThemeChanged((kind) => applyTheme(defaultTheme(kind)))
 
 const store = createStore()
 const [preserveLog, setPreserveLog] = createSignal(false)
+const script = probeScript()
 startCapture(
-  { onRequestFinished, getHAR, onNavigated },
+  {
+    onRequestFinished,
+    getHAR,
+    onNavigated,
+    onProbe: (cb) =>
+      pollProbe(
+        {
+          evaluate: evalInPage,
+          script: () => script,
+          onNavigated,
+          visible: () => document.visibilityState === "visible",
+        },
+        cb,
+      ),
+  },
   store,
   decoders,
   preserveLog,

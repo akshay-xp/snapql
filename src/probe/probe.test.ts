@@ -92,6 +92,16 @@ describe("probe", () => {
       ])
     })
 
+    it("reports the response's absolute URL when it has one", async () => {
+      const res = streamed([], "text/event-stream")
+      Object.defineProperty(res, "url", { value: "http://x.test/s" })
+      const win: Record<PropertyKey, unknown> = { fetch: async () => res }
+      const state = run(win)
+      await (win.fetch as typeof globalThis.fetch)("/s")
+      await settle()
+      expect(state.drain().events[0]).toMatchObject({ url: "http://x.test/s" })
+    })
+
     it("ignores other responses and reads Request inputs", async () => {
       let type = "application/json"
       const win: Record<PropertyKey, unknown> = {
