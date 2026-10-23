@@ -19,6 +19,10 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - `bytes(body)`: exact `Uint8Array` (base64 decoded; text UTF-8 encoded). `text(body)`: base64 read as UTF-8 (invalid sequences U+FFFD), text as is. Text decoders call `text(body)` first.
 - `requestBytes(text)`: request bytes rebuilt from Chrome's HAR `postData.text`, as `Uint8Array[]` candidates (Latin-1 first). Chrome gives valid UTF-8 bodies decoded and anything else as one code unit per byte (Latin-1), pinned in e2e (`/binary`). Text with a code unit above U+00FF, or pure ASCII: one candidate, the UTF-8 encoding. Otherwise the Latin-1 bytes then the UTF-8 encoding, or just the UTF-8 encoding when the Latin-1 bytes are valid UTF-8 (Chrome would have decoded those). Latin-1 first: binary re-encoded as UTF-8 only gains C2/C3 bytes and often still parses (`10 96 01` → `10 c2 96 01`, still a varint), while UTF-8 read as Latin-1 shrinks and breaks length prefixes. The text alone can't tell these apart (`é\x01` is `C3 A9 01` or `E9 01`; e2e saw the former), so binary decoders keep the first candidate that parses fully. Firefox: unverified.
 - `hex(bytes)`: lowercase byte pairs joined by spaces (`0a ff`).
+- `InvalidBytes(format, offset)`: message `invalid <format> at byte <n>`. `parseFirst(candidates, read)`: `{ value }` from the first candidate `read` accepts, else `{ error, hex }` for the first candidate.
+- `Cursor`: big-endian reads (`take`, `int(size, signed)` with unsafe 64-bit as decimal strings, `float` with float32 to 7 significant digits, `text`); overruns throw `RangeError`. `readAll(data, format, read)`: one value must use every byte, leftovers blame the first unread byte. `readItemAt(c, format, read)`: a failing item blames its own start (an inner `InvalidBytes` passes through). Used by msgpack and CBOR.
+- `keyText(key)`: map keys as strings; numbers and booleans via `String`, others `JSON.stringify` (`{ "[1]": 2 }`). Duplicate keys: last wins.
+- `binaryDecoder(kind, mimes, read, key = "body")`: matches request body mime or response mime (base) in `mimes`; title = path, detail = method; request `data` = `{ [key]: value }` from `parseFirst(requestBytes(text), read)` or the error shape (`undefined` without a body); `decodeResponse` summary `count(n, "byte")`, same data shape from `bytes(body)`. Used by protobuf (`key` `message`), msgpack, CBOR.
 
 ## Registry (`src/decoders/registry.ts`)
 
@@ -27,7 +31,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `socketio`, `graphql-ws`, `websocket`, `grpc-web`, `protobuf`, `sse`, `ndjson`, `json` (catch-all, last).
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `socketio`, `graphql-ws`, `websocket`, `grpc-web`, `protobuf`, `msgpack`, `cbor`, `sse`, `ndjson`, `json` (catch-all, last).
 
 ## Adding a decoder
 
@@ -64,10 +68,10 @@ No capture, store, or UI change.
 
 ## Protobuf (`src/decoders/protobuf.ts`)
 
-- Kind `protobuf`: request body mime or response mime (base) is `application/x-protobuf`, `application/protobuf` or `application/vnd.google.protobuf`. Title = path, detail = method. `data` = `protobufData(requestBytes(text))`, `undefined` without a body. `decodeResponse`: summary `<n> bytes`, data `protobufData([bytes(body)])`.
+- Kind `protobuf`: `binaryDecoder` with `application/x-protobuf`, `application/protobuf`, `application/vnd.google.protobuf`, `readMessage`, key `message`.
 - `readMessage(bytes)`, schema-less: keys are field numbers (strings); repeated numbers become arrays in wire order. Varint: number (decimal string above `MAX_SAFE_INTEGER`; 64-bit values with the top bit set read as signed, as negative int32/int64 are encoded). Fixed32: `{ fixed32, float }` (float to 7 significant digits); fixed64: `{ fixed64, double }`. Length-delimited: `""` when empty, else a string when valid UTF-8 without control chars other than `\t\n\r`, else a nested message when it parses fully, else `hex`. Strings first: printable bytes like `hi` also parse as a message (`{ "13": 105 }`), real nested messages nearly always start with a control byte.
 - No sint/bool hints: every varint is ambiguous, so hints would double every number.
-- Invalid: field 0, wire types 3/4 (groups), 6, 7, or a value running past the end throw `ProtoError` (`offset`: the tag's start for a bad tag, the value's start for a bad value). Nested failures fall back to hex. `protobufData(candidates)`: `{ message }` from the first candidate that parses, else `{ error: "invalid protobuf at byte <n>", hex }` for the first candidate.
+- Invalid: field 0, wire types 3/4 (groups), 6, 7, or a value running past the end throw `InvalidBytes("protobuf", offset)` (`offset`: the tag's start for a bad tag, the value's start for a bad value). Nested failures fall back to hex. `protobufData(candidates)` (used by gRPC-web): `{ message }` from the first candidate that parses, else `{ error: "invalid protobuf at byte <n>", hex }` for the first candidate.
 
 ## gRPC-web (`src/decoders/grpc-web.ts`)
 
@@ -77,6 +81,16 @@ No capture, store, or UI change.
 - Data (request and response): message frames as `message` (one) or `message 1`, `message 2`, ... (several), each the protobuf tree (or its error shape); compressed frames `{ compressed: hex }` (no decompression). Response adds `status` (text `OK` or `<NAME>: <message>`) and `trailers` (rows, when a trailers frame exists).
 - `parseTrailers`: `name:value` lines, names lowercased, values trimmed, `grpc-message` percent-decoded (bad escapes kept raw). `statusOf(rows)`: code 0-16 named (`OK` ... `UNAUTHENTICATED`), else `CODE <n>`. Trailers-only responses: status from the response headers (normalized the same way).
 - Response summary: status name; `no status` when none (cut-off stream); `invalid framing` with `{ hex }` when the body doesn't frame.
+
+## msgpack (`src/decoders/msgpack.ts`)
+
+- Kind `msgpack`: `binaryDecoder` with `application/msgpack`, `application/x-msgpack`, `application/vnd.msgpack`, `readMsgpack`.
+- `readMsgpack(bytes)`: nil, bool, fixints, (u)int 8-64, float32/64, str (fix/8/16/32), bin as hex, arrays, maps (`keyText` keys). Ext: `{ type, data: hex }`; timestamp ext -1 (4, 8 or 12 bytes) as an ISO string (nanoseconds cut to ms). `c1` and unknown types are invalid.
+
+## CBOR (`src/decoders/cbor.ts`)
+
+- Kind `cbor`: `binaryDecoder` with `application/cbor`, `readCbor`.
+- `readCbor(bytes)`: major types 0/1 (negative as `-1 - n`, unsafe as decimal strings), 2 bytes as hex, 3 text, 4 arrays, 5 maps (`keyText` keys); indefinite lengths for 2-5 (byte chunks joined with a space, text chunks concatenated). Tags: 0 keeps the string, 1 epoch seconds as ISO, others `{ tag, value }`. Major 7: 20/21/22 false/true/null, 23 `undefined` (tree shows `undefined`), other simple values `{ simple: n }`, half floats (decoded by hand), float32/64. Additional info 28-30 and a break outside an indefinite item are invalid.
 
 ## LLM (`src/decoders/llm.ts`)
 
@@ -150,7 +164,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts`, `src/decoders/protobuf.ts`, `src/decoders/grpc-web.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/bytes.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts`, `src/decoders/protobuf.ts`, `src/decoders/grpc-web.ts`, `src/decoders/msgpack.ts`, `src/decoders/cbor.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/bytes.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
