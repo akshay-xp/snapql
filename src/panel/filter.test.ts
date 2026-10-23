@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  bodyHit,
   chipsFor,
   excerpt,
   highlight,
@@ -155,5 +156,25 @@ describe("excerpt", () => {
 
   it("is undefined without a match", () => {
     expect(excerpt("abc", "z")).toBeUndefined()
+  })
+})
+
+describe("bodyHit", () => {
+  it("prefers the response and counts its matches", () => {
+    expect(
+      bodyHit({ request: "apple", response: "Apple pie, apple" }, "apple"),
+    ).toEqual({ side: "response", count: 2, excerpt: "Apple pie, apple" })
+  })
+
+  it("falls back to the request", () => {
+    expect(bodyHit({ request: "plum", response: "ok" }, "plum")).toEqual({
+      side: "request",
+      count: 1,
+      excerpt: "plum",
+    })
+  })
+
+  it("is undefined without a match", () => {
+    expect(bodyHit({ request: "", response: "ok" }, "x")).toBeUndefined()
   })
 })
