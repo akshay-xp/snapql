@@ -1,7 +1,14 @@
+import { parseJson } from "../decoders/json"
 import { count } from "../decoders/text"
 
 export const OPEN_DEPTH = 3
 export const STRING_LIMIT = 200
+
+// Text worth a tree: JSON that parses to an object or array.
+export function treeValue(text: string): object | undefined {
+  const value = parseJson(text)
+  return typeof value === "object" && value !== null ? value : undefined
+}
 
 export function children(value: unknown): [string, unknown][] | undefined {
   if (Array.isArray(value)) return value.map((v, i) => [String(i), v])

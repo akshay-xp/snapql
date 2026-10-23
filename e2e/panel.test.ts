@@ -786,3 +786,40 @@ test("streamed responses list their messages", async () => {
     await panel.close()
   }
 })
+
+test("selecting a stream message shows it with a copy button", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/streams`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/sse GET sse"]))
+    await panel.select("/api/sse GET sse")
+    await panel.openTab("Messages")
+    await expect.poll(panel.messages).toHaveLength(3)
+    await panel.stubClipboard()
+
+    await panel.click("#message-0")
+    expect(await panel.attr("#message-0", "aria-selected")).toBe("true")
+    expect(await panel.text('[role="tabpanel"] section h2')).toBe("Message 1")
+    expect(await panel.text('[role="tabpanel"] [data-json="key"]')).toContain(
+      "n",
+    )
+    expect(await panel.text('[role="tabpanel"] [data-json="number"]')).toBe("1")
+    await panel.click('button[aria-label="Copy Message 1"]')
+    await expect.poll(panel.copied).toBe('{"n":1}')
+
+    await panel.click("#message-2")
+    expect(await panel.text('[role="tabpanel"] section pre')).toBe(
+      "line one line two",
+    )
+    await panel.click('button[aria-label="Copy Message 3"]')
+    await expect.poll(panel.copied).toBe("line one\nline two")
+
+    await panel.press("ArrowUp", "Messages")
+    expect(await panel.attr("#message-1", "aria-selected")).toBe("true")
+    expect(await panel.text('[role="tabpanel"] section h2')).toBe("Message 2")
+  } finally {
+    await panel.close()
+  }
+})

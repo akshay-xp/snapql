@@ -9,7 +9,6 @@ import {
 } from "solid-js"
 import type { Entry, NameValue } from "../capture/entry"
 import { decoders } from "../decoders"
-import { parseJson } from "../decoders/json"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
 import type { DecodedResponse } from "../decoders/types"
@@ -17,12 +16,13 @@ import { loadBody } from "./body"
 import { pairsText, valueText } from "./copy"
 import { CopyButton } from "./copy-button"
 import { summaryHeading } from "./heading"
-import { OPEN_DEPTH } from "./json"
+import { OPEN_DEPTH, treeValue } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
 import { bodyMessages } from "./messages"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
+import { Section, Text } from "./section"
 import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
 import { shownTab, type Tab, tabsFor } from "./tabs"
@@ -279,19 +279,8 @@ function LoadedBody(props: {
   )
 }
 
-function Text(props: { children: string }) {
-  return (
-    <pre class="font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">
-      {props.children}
-    </pre>
-  )
-}
-
 function BodyView(props: { text: string }) {
-  const json = () => {
-    const value = parseJson(props.text)
-    return typeof value === "object" && value !== null ? value : undefined
-  }
+  const json = () => treeValue(props.text)
   const [allOpen, setAllOpen] = createSignal(false)
   return (
     <>
@@ -435,28 +424,6 @@ function Tokens(props: { entry: Entry }) {
         )}
       </For>
     </Show>
-  )
-}
-
-function Section(props: {
-  title: string
-  copy?: () => string
-  children: JSX.Element
-}) {
-  return (
-    <section class="flex flex-col gap-1.5">
-      <div class="flex h-6 items-center justify-between">
-        <h2 class="font-semibold text-muted">{props.title}</h2>
-        <Show when={props.copy}>
-          {(copy) => (
-            <CopyButton label={`Copy ${props.title}`} value={copy()} />
-          )}
-        </Show>
-      </div>
-      <div data-block class="rounded-md bg-surface px-3 py-2">
-        {props.children}
-      </div>
-    </section>
   )
 }
 
