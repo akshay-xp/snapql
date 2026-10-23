@@ -22,18 +22,9 @@ import { nextTab } from "./keys"
 import { rawRequest, rawResponse } from "./raw"
 import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
+import { shownTab, type Tab, tabsFor } from "./tabs"
 import { timingRows } from "./timing"
 import { decodeValue, findTokens } from "./values"
-
-const tabs = [
-  "Summary",
-  "Body",
-  "Headers",
-  "Params/Cookies",
-  "Timing",
-  "Raw",
-] as const
-type Tab = (typeof tabs)[number]
 
 export function Detail(props: {
   entry: Entry
@@ -44,13 +35,15 @@ export function Detail(props: {
 }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
+  const tabs = () => tabsFor(props.entry)
+  const shown = () => shownTab(active(), tabs())
   const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
   const onTabKey = (e: KeyboardEvent) => {
-    const i = nextTab(e.key, tabs.indexOf(active()), tabs.length)
+    const i = nextTab(e.key, tabs().indexOf(shown()), tabs().length)
     if (i === undefined) return
     e.preventDefault()
-    setActive(tabs[i])
-    document.getElementById(`tab-${id(tabs[i])}`)?.focus()
+    setActive(tabs()[i])
+    document.getElementById(`tab-${id(tabs()[i])}`)?.focus()
   }
 
   return (
@@ -73,19 +66,19 @@ export function Detail(props: {
         class="flex h-10 shrink-0 overflow-x-auto border-b border-border px-1"
         onKeyDown={onTabKey}
       >
-        <For each={tabs}>
+        <For each={tabs()}>
           {(tab) => (
             <button
               type="button"
               role="tab"
               id={`tab-${id(tab)}`}
-              aria-selected={active() === tab}
+              aria-selected={shown() === tab}
               aria-controls={`panel-${id(tab)}`}
-              tabIndex={active() === tab ? 0 : -1}
+              tabIndex={shown() === tab ? 0 : -1}
               class="shrink-0 border-b-2 px-2.5"
               classList={{
-                "border-accent": active() === tab,
-                "border-transparent text-muted": active() !== tab,
+                "border-accent": shown() === tab,
+                "border-transparent text-muted": shown() !== tab,
               }}
               onClick={() => setActive(tab)}
             >
@@ -96,20 +89,20 @@ export function Detail(props: {
       </div>
       <div
         role="tabpanel"
-        id={`panel-${id(active())}`}
-        aria-labelledby={`tab-${id(active())}`}
+        id={`panel-${id(shown())}`}
+        aria-labelledby={`tab-${id(shown())}`}
         class="flex flex-1 flex-col gap-4 overflow-auto p-3"
       >
         <Switch>
-          <Match when={active() === "Summary"}>
+          <Match when={shown() === "Summary"}>
             <Summary entry={props.entry} />
           </Match>
-          <Match when={active() === "Body"}>
+          <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
               {(text) => <BodyView text={text} />}
             </LoadedBody>
           </Match>
-          <Match when={active() === "Headers"}>
+          <Match when={shown() === "Headers"}>
             <Pairs
               title="Request headers"
               pairs={props.entry.exchange.requestHeaders}
@@ -121,7 +114,7 @@ export function Detail(props: {
               decode
             />
           </Match>
-          <Match when={active() === "Params/Cookies"}>
+          <Match when={shown() === "Params/Cookies"}>
             <Pairs
               title="Query params"
               pairs={props.entry.exchange.queryString}
@@ -138,10 +131,10 @@ export function Detail(props: {
               decode
             />
           </Match>
-          <Match when={active() === "Timing"}>
+          <Match when={shown() === "Timing"}>
             <TimingPanel entry={props.entry} />
           </Match>
-          <Match when={active() === "Raw"}>
+          <Match when={shown() === "Raw"}>
             <RawPanel entry={props.entry} />
           </Match>
         </Switch>
