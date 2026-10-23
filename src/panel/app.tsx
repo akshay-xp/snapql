@@ -15,8 +15,8 @@ import { createBodyIndex } from "./body-index"
 import { Detail } from "./detail"
 import { download } from "./download"
 import {
+  bodyHit,
   chipsFor,
-  excerpt,
   type Filters,
   matchesFilters,
   matchesQuery,
@@ -74,11 +74,11 @@ export function App(props: {
   })
   const bodyQuery = () => (searchBodies() ? query() : "")
   // Only for rows that matched in a body alone, which have nothing to highlight.
-  const bodyExcerpt = (entry: Entry) => {
+  const hitOf = (entry: Entry) => {
     bodyVersion()
-    const text = bodyText(entry)
-    return bodyQuery() && text !== undefined && !matchesQuery(entry, query())
-      ? excerpt(text, query())
+    const texts = bodies.text(entry)
+    return bodyQuery() && texts && !matchesQuery(entry, query())
+      ? bodyHit(texts, query())
       : undefined
   }
   // Undefined until the first drag: the pane takes half the panel. Not persisted.
@@ -152,7 +152,7 @@ export function App(props: {
               <List
                 entries={visible()}
                 query={query()}
-                bodyExcerpt={bodyExcerpt}
+                bodyHit={hitOf}
                 selectedId={selectedId()}
                 onSelect={setSelectedId}
               />

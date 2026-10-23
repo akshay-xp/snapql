@@ -224,6 +224,9 @@ const searchPage = `<!doctype html>
 <script>
   fetch("/api/note")
   fetch("/api/long")
+  fetch("/api/fruit")
+  // Built here so the page's own text never contains the word.
+  fetch("/api/order", { method: "POST", body: "pl" + "um" })
 </script>`
 
 const secretsPage = `<!doctype html>
@@ -859,6 +862,11 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/plain" })
         .end("a hidden pearl")
+    if (req.url === "/api/fruit")
+      return res
+        .writeHead(200, { "content-type": "text/plain" })
+        .end("apple, apple pie, apple tart")
+    if (req.url === "/api/order") return res.writeHead(200).end("ok")
     if (req.url === "/api/long")
       return res
         .writeHead(200, { "content-type": "application/json" })
