@@ -752,3 +752,37 @@ test("M3 decoders summarize their requests", async () => {
     await panel.close()
   }
 })
+
+test("streamed responses list their messages", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/streams`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(
+        expect.arrayContaining(["/api/sse GET sse", "/api/ndjson GET ndjson"]),
+      )
+
+    await panel.select("/api/sse GET sse")
+    await panel.openTab("Body")
+    await expect.poll(panel.detail).toContain("event: ping")
+    await panel.openTab("Messages")
+    await expect
+      .poll(panel.messages)
+      .toEqual(['{"n":1} 7 B', 'ping {"n":2} 7 B', "line one line two 17 B"])
+
+    await panel.select("/api/ndjson GET ndjson")
+    await expect.poll(panel.messages).toHaveLength(3)
+
+    await panel.page.goto(`${panel.origin}/decoders`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["Deferred query graphql"]))
+    await panel.select("Deferred query graphql")
+    await panel.openTab("Messages")
+    await expect.poll(panel.messages).toHaveLength(2)
+    expect((await panel.messages()).join(" ")).not.toMatch(/\+\d/)
+  } finally {
+    await panel.close()
+  }
+})

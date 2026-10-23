@@ -11,6 +11,7 @@ import type { Entry, NameValue } from "../capture/entry"
 import { decoders } from "../decoders"
 import { parseJson } from "../decoders/json"
 import { decoderFor } from "../decoders/registry"
+import { parseStream } from "../decoders/stream"
 import type { DecodedResponse } from "../decoders/types"
 import { loadBody } from "./body"
 import { pairsText, valueText } from "./copy"
@@ -19,6 +20,8 @@ import { summaryHeading } from "./heading"
 import { OPEN_DEPTH } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
+import { bodyMessages } from "./messages"
+import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
 import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
@@ -100,6 +103,19 @@ export function Detail(props: {
           <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
               {(text) => <BodyView text={text} />}
+            </LoadedBody>
+          </Match>
+          <Match when={shown() === "Messages"}>
+            <LoadedBody entry={props.entry} pretty={false}>
+              {(text) => (
+                <Messages
+                  messages={bodyMessages(
+                    parseStream(props.entry.mimeType, text) ?? [],
+                    props.entry.startedAt,
+                  )}
+                  timed={false}
+                />
+              )}
             </LoadedBody>
           </Match>
           <Match when={shown() === "Headers"}>

@@ -61,6 +61,13 @@ const decodersPage = `<!doctype html>
 </script>`
 
 // No favicon request, so the last row is the last item.
+const streamsPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  fetch("/api/sse")
+  fetch("/api/ndjson")
+</script>`
+
 const bulkPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
@@ -112,6 +119,7 @@ export type Panel = {
   selectedRow(): Promise<string | undefined>
   activeTab(): Promise<string | undefined>
   openTab(name: string): Promise<void>
+  messages(): Promise<string[]>
   pressTab(key: string): Promise<void>
   detail(): Promise<string | null>
   themeKind(): Promise<string | undefined>
@@ -244,7 +252,7 @@ export async function openPanel(
       ),
     rows: () =>
       panelFrame.evaluate<string[]>(
-        `[...document.querySelectorAll('[role="option"]')].map(${rowText})`,
+        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].map(${rowText})`,
       ),
     dragDivider: (dx: number, dy = 0) =>
       panelFrame.evaluate<void>(`(() => {
@@ -268,34 +276,38 @@ export async function openPanel(
           return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }
         }
         return {
-          list: box(document.querySelector('[role="listbox"]')),
+          list: box(document.querySelector('[role="listbox"][aria-label="Requests"]')),
           detail: box(document.querySelector('[role="tablist"]').closest("section")),
         }
       })()`),
     paneWidths: () =>
       panelFrame.evaluate<{ list: number; detail: number }>(`({
-        list: document.querySelector('[role="listbox"]').getBoundingClientRect().width,
+        list: document.querySelector('[role="listbox"][aria-label="Requests"]').getBoundingClientRect().width,
         detail: document.querySelector('[role="tablist"]').closest("section").getBoundingClientRect().width,
       })`),
     optionCount: () =>
       panelFrame.evaluate<number>(
-        `document.querySelectorAll('[role="option"]').length`,
+        `document.querySelectorAll('[aria-label="Requests"] [role="option"]').length`,
       ),
     selectedVisible: () =>
       panelFrame.evaluate<boolean>(`(() => {
-        const list = document.querySelector('[role="listbox"]').getBoundingClientRect()
-        const row = document.querySelector('[role="option"][aria-selected="true"]')?.getBoundingClientRect()
+        const list = document.querySelector('[role="listbox"][aria-label="Requests"]').getBoundingClientRect()
+        const row = document.querySelector('[aria-label="Requests"] [role="option"][aria-selected="true"]')?.getBoundingClientRect()
         return !!row && row.top >= list.top && row.bottom <= list.bottom
       })()`),
     press: (key: string) =>
       panelFrame.evaluate<void>(`(() => {
-        const list = document.querySelector('[role="listbox"]')
+        const list = document.querySelector('[role="listbox"][aria-label="Requests"]')
         list.focus()
         list.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true }))
       })()`),
     select: (row: string) =>
       panelFrame.evaluate<void>(
-        `[...document.querySelectorAll('[role="option"]')].find((o) => (${rowText})(o) === ${JSON.stringify(row)}).click()`,
+        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${rowText})(o) === ${JSON.stringify(row)}).click()`,
+      ),
+    messages: () =>
+      panelFrame.evaluate<string[]>(
+        `[...document.querySelectorAll('[aria-label="Messages"] [role="option"]')].map(${rowText})`,
       ),
     activeTab: () =>
       panelFrame.evaluate<string | undefined>(
@@ -317,8 +329,8 @@ export async function openPanel(
       ),
     selectedRow: () =>
       panelFrame.evaluate<string | undefined>(`(() => {
-        const list = document.querySelector('[role="listbox"]')
-        const option = document.querySelector('[role="option"][aria-selected="true"]')
+        const list = document.querySelector('[role="listbox"][aria-label="Requests"]')
+        const option = document.querySelector('[aria-label="Requests"] [role="option"][aria-selected="true"]')
         if (!option || list.getAttribute("aria-activedescendant") !== option.id) return undefined
         return (${rowText})(option)
       })()`),
@@ -434,6 +446,20 @@ function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(decodersPage)
+    if (req.url === "/api/sse")
+      return res
+        .writeHead(200, { "content-type": "text/event-stream" })
+        .end(
+          'data: {"n":1}\n\nevent: ping\ndata: {"n":2}\n\ndata: line one\ndata: line two\n\n',
+        )
+    if (req.url === "/api/ndjson")
+      return res
+        .writeHead(200, { "content-type": "application/x-ndjson" })
+        .end('{"n":1}\n{"n":2}\n{"n":3}\n')
+    if (req.url === "/streams")
+      return res
+        .writeHead(200, { "content-type": "text/html" })
+        .end(streamsPage)
     if (req.url === "/bulk")
       return res.writeHead(200, { "content-type": "text/html" }).end(bulkPage)
     if (req.url === "/other")
