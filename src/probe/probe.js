@@ -78,4 +78,64 @@
       return promise
     }
   }
+
+  // Named events reach only listeners of their own type, so a recorder is
+  // added for each type the page listens to (plus "message").
+  const EventSource = window.EventSource
+  if (EventSource) {
+    window.EventSource = class extends EventSource {
+      #id = nextId++
+      #types = new Set()
+      #closed = false
+
+      constructor(...args) {
+        super(...args)
+        state.record({
+          type: "open",
+          id: this.#id,
+          kind: "eventsource",
+          method: "GET",
+          url: this.url,
+          mimeType: "text/event-stream",
+          time: Date.now(),
+        })
+        super.addEventListener("error", () => {
+          if (this.readyState === 2) this.#close()
+        })
+        this.#listen("message")
+      }
+
+      addEventListener(type, ...rest) {
+        // The native constructor may add listeners before fields exist.
+        if (#types in this) this.#listen(type)
+        return super.addEventListener(type, ...rest)
+      }
+
+      close() {
+        this.#close()
+        return super.close()
+      }
+
+      #listen(type) {
+        if (this.#types.has(type)) return
+        this.#types.add(type)
+        super.addEventListener(type, (e) =>
+          state.record({
+            type: "event",
+            id: this.#id,
+            time: Date.now(),
+            text: String(e.data),
+            event: type === "message" ? undefined : type,
+            lastId: e.lastEventId || undefined,
+          }),
+        )
+      }
+
+      #close() {
+        if (this.#closed) return
+        this.#closed = true
+        state.record({ type: "close", id: this.#id, time: Date.now() })
+      }
+    }
+  }
 })(window)
