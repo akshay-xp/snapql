@@ -219,6 +219,18 @@ const filtersPage = `<!doctype html>
   fetch("/api/missing")
 </script>`
 
+const diffPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  const post = (n, body) =>
+    fetch("/api/diff/" + n + "?v=" + n, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-v": String(n) },
+      body,
+    })
+  post(1, '{"a":1,"b":2}').then(() => post(2, '{"b":2,"a":3}'))
+</script>`
+
 // 3x2 red RGB PNG (73 bytes).
 export const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAEElEQVR4nGP4z8AAQQxwFgBB0gX7h/C5SAAAAABJRU5ErkJggg=="
@@ -761,6 +773,16 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/diff")
+      return res.writeHead(200, { "content-type": "text/html" }).end(diffPage)
+    if (req.url?.startsWith("/api/diff/"))
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end(
+          req.url.startsWith("/api/diff/1")
+            ? '{"id":1,"n":"x"}'
+            : '{"n":"x","id":1}',
+        )
     if (req.url === "/filters")
       return res
         .writeHead(200, { "content-type": "text/html" })
