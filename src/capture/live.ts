@@ -39,10 +39,12 @@ export function createLive(
       raw: "",
     }
     streams.set(key, stream)
+    const socket = ev.kind === "websocket"
     const req = {
       method: ev.method,
       url: ev.url,
-      status: ev.status ?? 200,
+      status: socket ? 101 : (ev.status ?? 200),
+      protocols: ev.protocols,
       mimeType: ev.mimeType,
       requestBody:
         ev.body === undefined ? undefined : { mimeType: "", text: ev.body },
@@ -62,6 +64,7 @@ export function createLive(
           : Promise.reject(new Error("available when the stream ends")),
       messages: [],
       open: true,
+      ...(socket && { socket: { protocol: "" } }),
     }
     store.add(entry)
   }
@@ -114,11 +117,27 @@ export function createLive(
               ev.time,
             ),
           )
+        } else if (ev.type === "ready") {
+          const { protocol } = ev
+          store.update(stream.entryId, (e) => ({
+            ...e,
+            socket: { ...e.socket, protocol },
+          }))
+        } else if (ev.type === "frame") {
+          const { dir, time, text, bytes } = ev
+          append(stream, [
+            { dir, time, text, ...(bytes !== undefined && { bytes }) },
+          ])
         } else {
           const tail = incoming(stream.parser?.end() ?? [], ev.time)
+          const { code, reason } = ev
           store.update(stream.entryId, (e) => ({
             ...appendMessages(e, tail),
             open: false,
+            ...(e.socket && {
+              time: ev.time - e.startedAt,
+              socket: { ...e.socket, closeCode: code, closeReason: reason },
+            }),
           }))
         }
       }

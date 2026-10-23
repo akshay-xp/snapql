@@ -354,4 +354,52 @@ describe("live capture", () => {
     fake.navigate()
     expect(store.snapshot()[0].open).toBe(false)
   })
+
+  describe("sockets", () => {
+    const socketOpen = {
+      type: "open",
+      id: 9,
+      kind: "websocket",
+      method: "WS",
+      url: "ws://x/sock",
+      protocols: ["chat"],
+      mimeType: "",
+      time: 1000,
+    } as ProbeEvent
+
+    it("opens a socket entry that grows with frames and records its close", async () => {
+      const { store, probe } = live()
+      probe([socketOpen])
+      const opened = store.snapshot()[0]
+      expect(opened).toMatchObject({
+        method: "WS",
+        status: 101,
+        open: true,
+        messages: [],
+        socket: { protocol: "" },
+      })
+      expect(opened.decoded).toMatchObject({
+        kind: "websocket",
+        detail: "chat",
+      })
+      await expect(opened.getBody()).rejects.toThrow()
+
+      probe([
+        { type: "ready", id: 9, time: 1001, protocol: "chat" },
+        { type: "frame", id: 9, time: 1002, dir: "out", text: "hi" },
+        { type: "frame", id: 9, time: 1003, dir: "in", text: "", bytes: 4 },
+        { type: "close", id: 9, time: 1500, code: 1000, reason: "bye" },
+      ])
+      const entry = store.snapshot()[0]
+      expect(entry.messages).toEqual([
+        { dir: "out", time: 1002, text: "hi" },
+        { dir: "in", time: 1003, text: "", bytes: 4 },
+      ])
+      expect(entry).toMatchObject({
+        open: false,
+        time: 500,
+        socket: { protocol: "chat", closeCode: 1000, closeReason: "bye" },
+      })
+    })
+  })
 })
