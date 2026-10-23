@@ -24,7 +24,7 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 ## Lazy bodies
 
 - `getBody()` calls `fetchBody()` on first use and memoizes the promise; concurrent and repeated calls share one fetch.
-- Nothing fetches bodies eagerly; listing requests costs no body memory.
+- Nothing fetches bodies eagerly unless body search is on (`docs/panel.md`, Search); otherwise listing requests costs no body memory.
 - A rejected fetch stays cached; no retry.
 
 ## Store (`src/capture/store.ts`)
@@ -65,7 +65,7 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 - Panel: "Preserve log" checkbox in the header. Off by default, not persisted across sessions.
 - `main.tsx` owns the signal: `createSignal(false)`; getter to `startCapture`, getter + setter to `App`.
 - `main.tsx`: `createStore()`, `startCapture({ onRequestFinished, getHAR, onNavigated }, store, decoders, preserveLog)`, renders `<App store preserveLog setPreserveLog />`.
-- `App` mirrors `store.snapshot()` into a Solid signal on each `subscribe` notification; the panel never calls `getBody()`.
+- `App` mirrors `store.snapshot()` into a Solid signal on each `subscribe` notification; the panel calls `getBody()` (via `loadBody`) only where a body is shown, or for all entries while body search is on.
 - Row: `METHOD STATUS KIND SUMMARY` when `decoded`, else `METHOD STATUS URL`; URL is the tooltip either way.
 - Capture runs in the panel page; devtools APIs are available there in Chrome. Firefox: pending manual verification.
 

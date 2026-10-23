@@ -16,7 +16,7 @@ DevTools extension that makes network traffic human readable. v0.2.0 (live on th
 
 1. Only `src/browser/` touches `chrome.*`.
 2. Capture/store code has no UI imports and runs in Vitest without a browser.
-3. Response bodies load only on demand.
+3. Response bodies load only on demand, or for every entry while body search is on.
 4. The entry store is capped; oldest entries evicted first.
 5. No runtime dependencies beyond Solid without explicit justification.
 6. Decoders read only the request side and run once per entry, at capture.
