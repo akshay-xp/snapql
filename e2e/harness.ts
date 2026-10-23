@@ -147,6 +147,38 @@ const protobufPage = `<!doctype html>
   })
 </script>`
 
+const grpcPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  const call = (method) =>
+    fetch("/example.UserService/" + method, {
+      method: "POST",
+      headers: { "content-type": "application/grpc-web+proto" },
+      body: new Uint8Array([0, 0, 0, 0, 7, 0x0a, 0x02, 0x68, 0x69, 0x10, 0x96, 0x01]),
+    })
+  call("GetUser")
+  call("ListUsers")
+</script>`
+
+const grpcFrame = (flag: number, data: Buffer | number[]) => {
+  const head = Buffer.alloc(5)
+  head[0] = flag
+  head.writeUInt32BE(data.length, 1)
+  return Buffer.concat([head, Buffer.from(data)])
+}
+
+const grpcReplies: Record<string, Buffer> = {
+  "/example.UserService/GetUser": Buffer.concat([
+    grpcFrame(0, [0x08, 0x01, 0x12, 0x03, 0x61, 0x62, 0x63]),
+    grpcFrame(0x80, Buffer.from("grpc-status:0\r\n")),
+  ]),
+  "/example.UserService/ListUsers": Buffer.concat([
+    grpcFrame(0, [0x08, 0x01]),
+    grpcFrame(0, [0x08, 0x02]),
+    grpcFrame(0x80, Buffer.from("grpc-status:5\r\ngrpc-message:gone\r\n")),
+  ]),
+}
+
 const socketPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <button id="open">open</button>
@@ -629,6 +661,13 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/grpc")
+      return res.writeHead(200, { "content-type": "text/html" }).end(grpcPage)
+    const grpcReply = grpcReplies[req.url ?? ""]
+    if (grpcReply)
+      return res
+        .writeHead(200, { "content-type": "application/grpc-web+proto" })
+        .end(grpcReply)
     if (req.url === "/protobuf")
       return res
         .writeHead(200, { "content-type": "text/html" })
