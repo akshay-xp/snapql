@@ -8,6 +8,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - `Decoder`: `{ kind, decode(req): Decoded | undefined }`. One call covers detect, decode, summarize, so the body is parsed once.
 - `Decoded`: `{ title, detail?, data }`. `title` names the request (operation, method, path, element); `detail` qualifies it (operation type, method, counts). Kept apart so the panel never parses text. `data` is the parsed request (decoder-specific).
 - `decodeResponse?(text, decoded)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response text and the stored `DecodeResult`. Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand.
+- `decodeMessage?(frame, frames)`: optional; titles one socket frame (`FrameView`: `{ dir, text, bytes? }`, which `Message` satisfies) as a `Decoded`, or `undefined` to fall back to the preview. `frames` is the entry's whole list, for protocols whose frames refer to earlier ones. Never run at capture: the panel calls it per rendered Messages row (and for the selected frame).
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
 - `RequestView.protocols?`: WebSockets only, the protocols requested at creation (from the probe), so socket decoders run at capture like the rest.
 - No headers or query params in `RequestView`: GET params come from `url`. Add when a decoder needs them.
@@ -19,7 +20,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `websocket`, `sse`, `ndjson`, `json` (catch-all, last).
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `socketio`, `graphql-ws`, `websocket`, `sse`, `ndjson`, `json` (catch-all, last).
 
 ## Adding a decoder
 
@@ -39,7 +40,20 @@ No capture, store, or UI change.
 
 ## WebSocket (`src/decoders/websocket.ts`)
 
+- `socketDecoder(kind, match)`: the shared socket `decode` (method `WS` and `match(req)`; title path, detail requested protocols). `websocket` is `socketDecoder("websocket", () => true)`, last of the three.
+
 - Kind `websocket`. Matches method `WS` (only probe socket entries have it). Title = URL path, detail = requested protocols joined `, ` (absent when none). No `data`.
+
+## Socket.IO (`src/decoders/socketio.ts`)
+
+- Kind `socketio`: a `WS` entry whose URL path contains `/socket.io/`.
+- `decodeMessage`: binary frames (attachments) are left alone. Engine.IO type is the first char: `0` open (data = handshake JSON), `1` close, `2` ping, `3` pong (text after it, e.g. `probe`, as detail), `5` upgrade, `6` noop, `4` message carrying a Socket.IO packet.
+- Packet grammar `<type>[<attachments>-][/<namespace>,][<ack id>][<JSON>]`: `0` connect, `1` disconnect, `4` connect_error (data = payload), `2` event and `5` binary event (title = event name, data `{ args, ack? }`), `3` ack and `6` binary ack (title `ack <id>`, data `{ args }`). Detail: a namespace other than `/`, and `binary`, joined `, `.
+
+## graphql-ws (`src/decoders/graphql-ws.ts`)
+
+- Kind `graphql-ws`: a `WS` entry requesting `graphql-transport-ws` (graphql-ws library) or `graphql-ws` (legacy subscriptions-transport-ws).
+- `decodeMessage` on JSON frames with a string `type`: control types (`connection_init`, `connection_ack`, `connection_error`, `connection_terminate`, `ping`, `pong`, `ka`) titled by type, data = `payload`. `subscribe`/`start`: title = operation name via `requestLabel(payload)` (exported from `graphql.ts`, so names match HTTP GraphQL rows, APQ included), `anonymous` without one; detail = type. `next`/`data`/`error`/`complete`/`stop`: title = the operation of the last `subscribe`/`start` in `frames` with the same `id` (the id itself when none), detail = type. Other types: `undefined`.
 
 ## LLM (`src/decoders/llm.ts`)
 
@@ -113,7 +127,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
