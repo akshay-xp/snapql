@@ -53,4 +53,18 @@ describe("readMessage", () => {
   it("reads an empty message", () => {
     expect(read()).toEqual({})
   })
+
+  it("reads printable length-delimited fields as strings", () => {
+    expect(read(0x0a, 2, 0x68, 0x69)).toEqual({ "1": "hi" })
+    expect(read(0x0a, 2, 0xc3, 0xa9)).toEqual({ "1": "é" })
+    expect(read(0x0a, 0)).toEqual({ "1": "" })
+  })
+
+  it("reads other length-delimited fields as messages, else hex", () => {
+    expect(read(0x0a, 3, 0x08, 0x96, 0x01)).toEqual({ "1": { "1": 150 } })
+    expect(read(0x0a, 5, 0x0a, 3, 0x08, 0x96, 0x01)).toEqual({
+      "1": { "1": { "1": 150 } },
+    })
+    expect(read(0x0a, 2, 0xff, 0xfe)).toEqual({ "1": "ff fe" })
+  })
 })
