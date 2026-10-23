@@ -1136,3 +1136,53 @@ test("msgpack and CBOR exchanges show their values", async () => {
     await panel.close()
   }
 })
+
+const userProto = `
+syntax = "proto3";
+package example;
+enum Role { ROLE_UNKNOWN = 0; ADMIN = 1; }
+message GetUserRequest { string name = 1; int32 id = 2; }
+message User { Role role = 1; string name = 2; repeated int32 scores = 3; }
+service UserService {
+  rpc GetUser(GetUserRequest) returns (User);
+  rpc ListUsers(GetUserRequest) returns (stream User);
+}
+`
+
+test(".proto schemas name gRPC-web fields", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/grpc`)
+    const unary = "GetUser example.UserService grpc-web"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([unary]))
+    await panel.select(unary)
+    await expect.poll(panel.detail).toContain("Response · OK")
+    expect(await panel.detail()).not.toContain("scores")
+
+    await panel.addSchema("user.proto", userProto)
+    await expect
+      .poll(() => panel.text("[data-schemas]"))
+      .toContain("user.proto")
+    await expect.poll(panel.detail).toContain("scores")
+    const detail = await panel.detail()
+    for (const text of ["name", "id", "role", '"ADMIN"', "150", '"abc"'])
+      expect(detail).toContain(text)
+
+    await panel.select("ListUsers example.UserService grpc-web")
+    await expect.poll(panel.detail).toContain("message 1")
+    expect(await panel.detail()).toContain("role")
+
+    await panel.addSchema("bad.proto", "message {")
+    await expect
+      .poll(() => panel.text("[data-schemas]"))
+      .toContain("bad.proto:1:")
+    expect(await panel.text("[data-schemas] ul")).not.toContain("bad.proto")
+
+    await panel.click('button[aria-label="Remove user.proto"]')
+    await panel.select(unary)
+    await expect.poll(panel.detail).toContain("Response · OK")
+    expect(await panel.detail()).not.toContain("scores")
+  } finally {
+    await panel.close()
+  }
+})

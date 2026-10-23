@@ -13,6 +13,7 @@ import { Detail } from "./detail"
 import { matchesQuery } from "./filter"
 import { Footer } from "./footer"
 import { List } from "./list"
+import type { Schemas } from "./schemas"
 import { SearchBox } from "./search"
 import { clampSize, isStacked } from "./splitter"
 
@@ -22,6 +23,7 @@ export function App(props: {
   setPreserveLog: (on: boolean) => void
   // Reloads with the probe injected first, so streams opened while loading are live.
   onReloadCapture: () => void
+  schemas: Schemas
 }) {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
@@ -87,12 +89,14 @@ export function App(props: {
             preserveLog={props.preserveLog()}
             onPreserveLog={props.setPreserveLog}
             onReloadCapture={props.onReloadCapture}
+            schemas={props.schemas}
           />
         </section>
         <Show when={selected()}>
           {(entry) => (
             <Detail
               entry={entry()}
+              schemas={props.schemas}
               stacked={stacked()}
               size={stacked() ? detailHeight() : detailWidth()}
               onResize={(clientX, clientY) => {

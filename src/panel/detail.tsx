@@ -9,6 +9,7 @@ import {
 } from "solid-js"
 import { type Body, type Entry, incoming, type Message } from "../capture/entry"
 import { decoders } from "../decoders"
+import { grpcRequestData, grpcResponse } from "../decoders/grpc-web"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
 import type { DecodedResponse } from "../decoders/types"
@@ -21,6 +22,7 @@ import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
+import type { Schemas } from "./schemas"
 import { Pairs, Section, Sections, Text } from "./section"
 import { socketRows } from "./socket"
 import { Splitter } from "./splitter.tsx"
@@ -38,6 +40,7 @@ function frameDecoder(entry: Entry) {
 
 export function Detail(props: {
   entry: Entry
+  schemas: Schemas
   stacked: boolean
   // Width side by side, height stacked; undefined means half the panel.
   size: number | undefined
@@ -105,7 +108,7 @@ export function Detail(props: {
       >
         <Switch>
           <Match when={shown() === "Summary"}>
-            <Summary entry={props.entry} />
+            <Summary entry={props.entry} schemas={props.schemas} />
           </Match>
           <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
@@ -300,12 +303,22 @@ function Toolbar(props: { children: JSX.Element }) {
   return <div class="flex justify-end gap-1">{props.children}</div>
 }
 
-function Summary(props: { entry: Entry }) {
+function Summary(props: { entry: Entry; schemas: Schemas }) {
+  const readers = useSchemaReaders(props)
+  const requestData = () => {
+    const r = readers()
+    const body = props.entry.requestBody
+    return r && body
+      ? grpcRequestData(body.mimeType, body.text, r.input)
+      : props.entry.decoded?.data
+  }
   const decodeResponse = () => {
     const decoded = props.entry.decoded
     if (!decoded) return
-    const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
     const headers = props.entry.exchange.responseHeaders
+    const r = readers()
+    if (r) return (body: Body) => grpcResponse(body, headers, r.output)
+    const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
     return decode && ((body: Body) => decode(body, decoded, headers))
   }
   const heading = () => summaryHeading(props.entry)
@@ -346,13 +359,32 @@ function Summary(props: { entry: Entry }) {
       <Show when={props.entry.socket}>
         <Pairs title="Socket" pairs={socketRows(props.entry)} />
       </Show>
-      <Sections data={props.entry.decoded?.data} />
+      <Sections data={requestData()} />
       <Tokens entry={props.entry} />
       <Show when={decodeResponse()}>
         {(decode) => <ResponseGroup entry={props.entry} decode={decode()} />}
       </Show>
     </>
   )
+}
+
+// gRPC-web methods found in the loaded schemas decode with field names. The
+// parser chunk loads only here and in the picker.
+function useSchemaReaders(props: { entry: Entry; schemas: Schemas }) {
+  const method = () =>
+    props.entry.decoded?.kind === "grpc-web"
+      ? props.schemas.schema().methods[new URL(props.entry.url).pathname]
+      : undefined
+  const [readers] = createResource(method, async (m) => {
+    const { messageReader } = await import("../decoders/proto-schema")
+    const schema = props.schemas.schema()
+    return {
+      input: messageReader(schema, m.input),
+      output: messageReader(schema, m.output),
+    }
+  })
+  // A resource keeps its last value when its source goes away.
+  return () => (method() ? readers() : undefined)
 }
 
 // Mounted only while Summary is shown, so the response body loads on demand.

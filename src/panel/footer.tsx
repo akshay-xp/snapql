@@ -1,5 +1,8 @@
+import { createSignal, Show } from "solid-js"
 import { count } from "../decoders/text"
 import { IconButton } from "./icon-button"
+import { SchemaPicker } from "./schema-picker"
+import type { Schemas } from "./schemas"
 
 export function Footer(props: {
   count: number
@@ -10,9 +13,11 @@ export function Footer(props: {
   preserveLog: boolean
   onPreserveLog: (on: boolean) => void
   onReloadCapture: () => void
+  schemas: Schemas
 }) {
+  const [picking, setPicking] = createSignal(false)
   return (
-    <footer class="flex h-8 shrink-0 items-center gap-0.5 border-t border-border px-1.5">
+    <footer class="relative flex h-8 shrink-0 items-center gap-0.5 border-t border-border px-1.5">
       <IconButton label="Clear" onClick={props.onClear}>
         <circle cx="12" cy="12" r="9" />
         <path d="m5.6 5.6 12.8 12.8" />
@@ -39,6 +44,16 @@ export function Footer(props: {
       <IconButton label="Reload and capture" onClick={props.onReloadCapture}>
         <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
       </IconButton>
+      <IconButton
+        label="Schemas"
+        pressed={picking()}
+        onClick={() => setPicking(!picking())}
+      >
+        <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1" />
+      </IconButton>
+      <Show when={picking()}>
+        <SchemaPicker schemas={props.schemas} />
+      </Show>
       <span class="ml-auto pr-1 text-muted">
         {props.total === undefined
           ? count(props.count, "request")
