@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { highlight, matchesQuery } from "./filter"
+import {
+  chipsFor,
+  highlight,
+  kindOf,
+  matchesQuery,
+  statusGroup,
+} from "./filter"
 
 const graphql = {
   method: "POST",
@@ -42,5 +48,40 @@ describe("highlight", () => {
       { text: "abc ", hit: false },
       { text: "a.c", hit: true },
     ])
+  })
+})
+
+const decoded = (kind: string) => ({ kind, title: "t", data: undefined })
+
+describe("filter chips", () => {
+  it("names kinds, with other for undecoded entries", () => {
+    expect(kindOf(graphql)).toBe("graphql")
+    expect(kindOf(two)).toBe("other")
+  })
+
+  it("groups statuses by hundreds, failed for 0", () => {
+    expect([0, 101, 200, 304, 404, 503].map(statusGroup)).toEqual([
+      "failed",
+      "1xx",
+      "2xx",
+      "3xx",
+      "4xx",
+      "5xx",
+    ])
+  })
+
+  it("lists present chips in order, sentinels last", () => {
+    expect(
+      chipsFor([
+        { status: 404 },
+        { status: 200, decoded: decoded("graphql") },
+        { status: 0, decoded: decoded("json") },
+        { status: 500, decoded: decoded("graphql") },
+      ]),
+    ).toEqual({
+      kinds: ["graphql", "json", "other"],
+      statuses: ["2xx", "4xx", "5xx", "failed"],
+    })
+    expect(chipsFor([])).toEqual({ kinds: [], statuses: [] })
   })
 })

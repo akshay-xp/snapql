@@ -29,3 +29,28 @@ export function highlight(text: string, query: string): Segment[] {
   if (from < text.length) segments.push({ text: text.slice(from), hit: false })
   return segments
 }
+
+export type Filters = { kinds: string[]; statuses: string[] }
+
+type Filterable = Pick<Entry, "status" | "decoded">
+
+export const kindOf = (entry: Pick<Entry, "decoded">) =>
+  entry.decoded?.kind ?? "other"
+
+export const statusGroup = (status: number) =>
+  status === 0 ? "failed" : `${Math.floor(status / 100)}xx`
+
+const sorted = (values: Iterable<string>, last: string) =>
+  [...new Set(values)].sort((a, b) =>
+    a === last ? 1 : b === last ? -1 : a.localeCompare(b),
+  )
+
+export function chipsFor(entries: readonly Filterable[]): Filters {
+  return {
+    kinds: sorted(entries.map(kindOf), "other"),
+    statuses: sorted(
+      entries.map((e) => statusGroup(e.status)),
+      "failed",
+    ),
+  }
+}
