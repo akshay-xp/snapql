@@ -1,7 +1,7 @@
 import { expect, test } from "vitest"
 import { requestBytes } from "../src/decoders/bytes"
 import { defaultTheme } from "../src/panel/themes"
-import { openPanel, PNG_BASE64 } from "./harness"
+import { bodiesToggle, openPanel, PNG_BASE64 } from "./harness"
 
 test("panel lists requests from the inspected page", async () => {
   const panel = await openPanel()
@@ -1326,11 +1326,15 @@ test("search bodies matches request and response body text", async () => {
   try {
     await panel.page.goto(`${panel.origin}/filters`)
     await expect.poll(async () => (await panel.rows()).length).toBe(5)
-    const toggle = 'button[title="Search request and response bodies"]'
+    const toggle = bodiesToggle
     const input = "input[type=search]"
     const users = "/api/users/1 GET json"
     const geo = '/api/users/1 body: …ofile":{"address":{"geo":{"lat":1}}}} json'
-    expect(await panel.text(toggle)).toBe("Bodies")
+    expect(await panel.text(toggle)).toBe("Include bodies")
+    expect(await panel.attr(toggle, "title")).toBe(
+      "Also match text inside request and response bodies. Matches show an excerpt in the list.",
+    )
+    expect(await panel.style(toggle, "box-shadow")).not.toBe("none")
     expect(await panel.attr(input, "placeholder")).toBe("Filter requests")
 
     await panel.search("geo")
@@ -1380,7 +1384,7 @@ test("Body tab highlights body search matches", async () => {
   try {
     await panel.page.goto(`${panel.origin}/filters`)
     await expect.poll(async () => (await panel.rows()).length).toBe(5)
-    await panel.click('button[title="Search request and response bodies"]')
+    await panel.click(bodiesToggle)
     await panel.search("lat")
     await expect.poll(async () => (await panel.rows()).length).toBe(1)
     await panel.selectStarting("/api/users/1")
@@ -1403,7 +1407,7 @@ test("Body tab highlights text bodies and scrolls to clipped matches", async () 
   try {
     await panel.page.goto(`${panel.origin}/search`)
     await expect.poll(async () => (await panel.rows()).length).toBe(3)
-    await panel.click('button[title="Search request and response bodies"]')
+    await panel.click(bodiesToggle)
 
     await panel.search("pearl")
     await expect.poll(panel.rows).toEqual(["/api/note body: a hidden pearl"])

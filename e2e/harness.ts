@@ -254,6 +254,8 @@ const diffPage = `<!doctype html>
 </script>`
 
 // 3x2 red RGB PNG (73 bytes).
+export const bodiesToggle = 'button[title^="Also match text"]'
+
 export const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAEElEQVR4nGP4z8AAQQxwFgBB0gX7h/C5SAAAAABJRU5ErkJggg=="
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="5"/>'

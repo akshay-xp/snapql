@@ -37,11 +37,12 @@ export function SearchBox(props: {
           onInput={(e) => props.onQuery(e.currentTarget.value)}
         />
         <Pill
-          title="Search request and response bodies"
+          title="Also match text inside request and response bodies. Matches show an excerpt in the list."
+          class="ring-1 ring-border ring-inset"
           pressed={props.searchBodies}
           onClick={() => props.onSearchBodies(!props.searchBodies)}
         >
-          Bodies
+          Include bodies
         </Pill>
         <Show when={props.query}>
           <IconButton label="Clear filter" onClick={() => props.onQuery("")}>
@@ -72,6 +73,7 @@ export function Marked(props: { text: string; query: string }) {
 function Pill(props: {
   pressed: boolean
   title?: string
+  class?: string
   onClick: () => void
   children: JSX.Element
 }) {
@@ -80,7 +82,7 @@ function Pill(props: {
       type="button"
       title={props.title}
       aria-pressed={props.pressed}
-      class="shrink-0 rounded-full px-2 py-0.5 font-mono"
+      class={`shrink-0 rounded-full px-2 py-0.5 font-mono ${props.class ?? ""}`}
       classList={{
         "bg-accent/20 text-accent": props.pressed,
         "bg-surface": !props.pressed,
