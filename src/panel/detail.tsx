@@ -105,17 +105,28 @@ export function Detail(props: {
             </LoadedBody>
           </Match>
           <Match when={shown() === "Messages"}>
-            <LoadedBody entry={props.entry} pretty={false}>
-              {(text) => (
-                <Messages
-                  messages={incoming(
-                    parseStream(props.entry.mimeType, text) ?? [],
-                    props.entry.startedAt,
-                  )}
-                  timed={false}
-                />
-              )}
-            </LoadedBody>
+            {/* Keyed: live entries replace their messages on every update, so
+                selection resets only when another entry is shown. */}
+            <Show when={props.entry.id} keyed>
+              <Show
+                when={props.entry.messages}
+                fallback={
+                  <LoadedBody entry={props.entry} pretty={false}>
+                    {(text) => (
+                      <Messages
+                        messages={incoming(
+                          parseStream(props.entry.mimeType, text) ?? [],
+                          props.entry.startedAt,
+                        )}
+                        timed={false}
+                      />
+                    )}
+                  </LoadedBody>
+                }
+              >
+                {(messages) => <Messages messages={messages()} timed />}
+              </Show>
+            </Show>
           </Match>
           <Match when={shown() === "Headers"}>
             <Pairs

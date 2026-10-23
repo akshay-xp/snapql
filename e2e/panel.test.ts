@@ -850,3 +850,43 @@ test("LLM streams show the reassembled reply in Summary", async () => {
     await panel.close()
   }
 })
+
+test("streams are captured live and merge when they finish", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/live`)
+    await expect.poll(panel.probed).toBe(true)
+    const liveRow = (prefix: string) => async () =>
+      (await panel.rows()).filter((r) => r.startsWith(`${prefix} `))
+
+    await panel.page.click("#es")
+    await expect
+      .poll(liveRow("/api/live"))
+      .toEqual([
+        expect.stringMatching(/^\/api\/live GET live [1-9] msgs? sse$/),
+      ])
+    await panel.selectStarting("/api/live ")
+    await panel.openTab("Messages")
+    await expect
+      .poll(async () => (await panel.messages())[0] ?? "")
+      .toMatch(/^\+0\.000s \{"n":1\}/)
+    await expect
+      .poll(liveRow("/api/live"), { timeout: 5000 })
+      .toEqual([expect.stringMatching(/^\/api\/live GET (\S+ )?11 msgs sse$/)])
+
+    await panel.page.click("#fetch")
+    await expect
+      .poll(liveRow("/api/live-fetch"))
+      .toEqual([expect.stringMatching(/ live \d+ msgs? sse$/)])
+    await panel.selectStarting("/api/live-fetch ")
+    await panel.openTab("Body")
+    await expect.poll(panel.detail).toContain('data: {"n":1}')
+    await expect
+      .poll(liveRow("/api/live-fetch"), { timeout: 6000 })
+      .toEqual([
+        expect.stringMatching(/^\/api\/live-fetch GET (\S+ )?21 msgs sse$/),
+      ])
+  } finally {
+    await panel.close()
+  }
+})

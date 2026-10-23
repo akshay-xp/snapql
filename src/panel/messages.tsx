@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, Show } from "solid-js"
+import { createSignal, Show } from "solid-js"
 import type { Message } from "../capture/entry"
 import { treeValue } from "./json"
 import { JsonTree } from "./json-tree"
@@ -13,12 +13,6 @@ export function Messages(props: {
 }) {
   const indexes = () => props.messages.map((_, i) => i)
   const [selected, setSelected] = createSignal<number>()
-  createEffect(
-    on(
-      () => props.messages,
-      () => setSelected(undefined),
-    ),
-  )
   const message = () => {
     const i = selected()
     return i === undefined ? undefined : props.messages[i]
