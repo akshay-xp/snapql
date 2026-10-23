@@ -122,11 +122,11 @@ function decodeUpload(parts: Part[]): Decoded | undefined {
 
 function decodeOperations(data: unknown): Decoded | undefined {
   if (!Array.isArray(data)) {
-    const op = label(data as GraphQLRequest)
+    const op = requestLabel(data)
     return op && { ...op, data }
   }
   const ops = data as NonNullable<GraphQLRequest>[]
-  const labels = ops.map(label)
+  const labels = ops.map((op) => requestLabel(op))
   if (!ops.length || !labels.every((l): l is Label => l !== undefined)) return
   const name = (i: number) => `${labels[i].detail} ${labels[i].title}`
   const operations = ops.map((op, i) => ({
@@ -147,7 +147,9 @@ function decodeOperations(data: unknown): Decoded | undefined {
 
 type Label = { title: string; detail: string }
 
-function label(data: GraphQLRequest): Label | undefined {
+// Also names graphql-ws subscribe payloads.
+export function requestLabel(value: unknown): Label | undefined {
+  const data = value as GraphQLRequest
   if (typeof data?.query === "string")
     return operationLabel(data.query, data.operationName)
   const hash = apqHash(data)

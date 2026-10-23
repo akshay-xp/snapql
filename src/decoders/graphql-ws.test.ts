@@ -51,4 +51,50 @@ describe("graphql-ws", () => {
     expect(decode("not json")).toBeUndefined()
     expect(decode({ type: 1 })).toBeUndefined()
   })
+
+  describe("operations", () => {
+    const payload = { query: "subscription OnMsg { msg }" }
+    const subscribe = { type: "subscribe", id: "1", payload }
+
+    it("titles subscribe and start frames by operation name", () => {
+      expect(decode(subscribe)).toEqual({
+        title: "OnMsg",
+        detail: "subscribe",
+        data: payload,
+      })
+      expect(decode({ ...subscribe, type: "start" })?.detail).toBe("start")
+      expect(
+        decode({ ...subscribe, payload: { query: "subscription { msg }" } })
+          ?.title,
+      ).toBe("anonymous")
+      expect(
+        decode({
+          ...subscribe,
+          payload: {
+            query: "subscription A { a } subscription B { b }",
+            operationName: "B",
+          },
+        })?.title,
+      ).toBe("B")
+      expect(
+        decode({
+          ...subscribe,
+          payload: {
+            extensions: { persistedQuery: { sha256Hash: "abcdef1234567890" } },
+          },
+        })?.title,
+      ).toBe("abcdef12")
+    })
+
+    it("names result and stop frames by the operation of their id", () => {
+      const frames = [frame(subscribe)]
+      for (const type of ["next", "data", "error", "complete", "stop"])
+        expect(decode({ type, id: "1", payload: { x: 1 } }, frames)).toEqual({
+          title: "OnMsg",
+          detail: type,
+          data: { x: 1 },
+        })
+      expect(decode({ type: "next", id: "9" }, frames)?.title).toBe("9")
+    })
+  })
 })
