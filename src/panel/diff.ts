@@ -87,9 +87,9 @@ type Diffable = Pick<
 
 // Sorted so header order, which browsers and servers vary freely, isn't a change.
 const headerText = (headers: readonly NameValue[]) =>
-  headers
+  [...headers]
+    .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
     .map((h) => `${h.name}: ${h.value}`)
-    .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
     .join("\n")
 
 const sortKeys = (value: unknown): unknown =>
