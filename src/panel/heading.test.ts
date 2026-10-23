@@ -64,4 +64,18 @@ describe("summaryHeading", () => {
     })
     expect(summaryHeading(entry({ status: 204 }, "")).status).toBe("204")
   })
+
+  it("describes how a socket closed", () => {
+    const socket = (closeCode?: number) =>
+      summaryHeading(
+        entry(
+          { method: "WS", status: 101, socket: { protocol: "", closeCode } },
+          "",
+        ),
+      )
+    expect(socket()).toMatchObject({ status: "101", ok: true })
+    expect(socket(1000)).toMatchObject({ status: "closed 1000", ok: true })
+    expect(socket(1005).ok).toBe(true)
+    expect(socket(1006)).toMatchObject({ status: "closed 1006", ok: false })
+  })
 })
