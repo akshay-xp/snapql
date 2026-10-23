@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { chromium, type Page } from "playwright"
+import { WebSocketServer } from "ws"
 
 const extensionDir = resolve("dist/chrome")
 
@@ -119,6 +120,22 @@ const earlyPage = `<!doctype html>
 <script>
   const es = new EventSource("/api/live?n=30")
   es.addEventListener("done", () => es.close())
+</script>`
+
+const socketPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<button id="open">open</button>
+<button id="close">close</button>
+<script>
+  let ws
+  document.getElementById("open").onclick = () => {
+    ws = new WebSocket(location.origin.replace("http", "ws") + "/sock", ["chat"])
+    ws.onopen = () => {
+      ws.send("hi")
+      ws.send(new Uint8Array([1, 2, 3, 4]))
+    }
+  }
+  document.getElementById("close").onclick = () => ws.close(1000, "bye")
 </script>`
 
 const bulkPage = `<!doctype html>
@@ -458,7 +475,7 @@ export async function openPanel(
   }
 }
 
-function startServer(): Promise<Server> {
+async function startServer(): Promise<Server> {
   const server = createServer((req, res) => {
     const path = new URL(req.url ?? "", "http://x")
     if (path.pathname.startsWith("/api/live")) {
@@ -475,6 +492,8 @@ function startServer(): Promise<Server> {
       req.on("close", () => clearInterval(timer))
       return
     }
+    if (req.url === "/socket")
+      return res.writeHead(200, { "content-type": "text/html" }).end(socketPage)
     if (req.url === "/early")
       return res.writeHead(200, { "content-type": "text/html" }).end(earlyPage)
     if (req.url === "/live")
@@ -570,6 +589,10 @@ function startServer(): Promise<Server> {
         .end('{"data":{}}')
     res.writeHead(200, { "content-type": "text/html" }).end(testPage)
   })
+  // Echoes every frame back, binary frames as binary.
+  new WebSocketServer({ server }).on("connection", (ws) =>
+    ws.on("message", (data, isBinary) => ws.send(data, { binary: isBinary })),
+  )
   return new Promise((done) =>
     server.listen(0, "127.0.0.1", () => done(server)),
   )
