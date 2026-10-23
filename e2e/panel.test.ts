@@ -1040,3 +1040,26 @@ test("Socket.IO and graphql-ws frames are titled by their protocol", async () =>
     await panel.close()
   }
 })
+
+// Pins Chrome's HAR text for binary request bodies: valid UTF-8 is decoded,
+// anything else maps each byte to one code unit (Latin-1), so no byte is lost.
+test("binary request bodies reach the HAR as UTF-8 or Latin-1 text", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/binary`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^\/api\/binary /),
+          expect.stringMatching(/^\/api\/binary-utf8 /),
+        ]),
+      )
+    const codes = async (url: string) =>
+      [...((await panel.postData(url)) ?? "")].map((c) => c.charCodeAt(0))
+    expect(await codes("/api/binary")).toEqual([0, 0xff, 0x80, 1, 0xc3, 0xa9])
+    expect(await codes("/api/binary-utf8")).toEqual([0xe9, 1])
+  } finally {
+    await panel.close()
+  }
+})

@@ -122,6 +122,21 @@ const earlyPage = `<!doctype html>
   es.addEventListener("done", () => es.close())
 </script>`
 
+const binaryPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  fetch("/api/binary", {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: new Uint8Array([0x00, 0xff, 0x80, 0x01, 0xc3, 0xa9]),
+  })
+  fetch("/api/binary-utf8", {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: new Uint8Array([0xc3, 0xa9, 0x01]),
+  })
+</script>`
+
 const socketPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <button id="open">open</button>
@@ -208,6 +223,8 @@ export type Panel = {
   // Clicks the first request row whose text starts with prefix (for rows that change).
   selectStarting(prefix: string): Promise<void>
   probed(): Promise<boolean>
+  // HAR postData.text of the first request whose URL ends with url.
+  postData(url: string): Promise<string | undefined>
   // Scrolls a listbox (by aria-label) to its top or bottom; scrollState reads it.
   scrollList(label: string, to: "top" | "bottom"): Promise<void>
   scrollState(label: string): Promise<{ top: number; gap: number }>
@@ -437,6 +454,13 @@ export async function openPanel(
         return { top: list.scrollTop, gap: list.scrollHeight - list.scrollTop - list.clientHeight }
       })()`),
     probed: () => page.evaluate(() => Symbol.for("snapql.probe") in window),
+    postData: (url) =>
+      panelFrame.evaluate<string | undefined>(`new Promise((done) =>
+        chrome.devtools.network.getHAR((har) =>
+          done(har.entries.find((e) => e.request.url.endsWith(${JSON.stringify(url)}))
+            ?.request.postData?.text),
+        ),
+      )`),
     selectedRow: () =>
       panelFrame.evaluate<string | undefined>(`(() => {
         const list = document.querySelector('[role="listbox"][aria-label="Requests"]')
@@ -595,6 +619,10 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/binary")
+      return res.writeHead(200, { "content-type": "text/html" }).end(binaryPage)
+    if (req.url === "/api/binary-utf8") return res.writeHead(200).end("ok")
+    if (req.url === "/api/binary") return res.writeHead(200).end("ok")
     if (req.url === "/bulk")
       return res.writeHead(200, { "content-type": "text/html" }).end(bulkPage)
     if (req.url === "/other")
