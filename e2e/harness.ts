@@ -114,7 +114,7 @@ export type Panel = {
   dragDivider(dx: number, dy?: number): Promise<void>
   paneWidths(): Promise<{ list: number; detail: number }>
   selectedVisible(): Promise<boolean>
-  press(key: string): Promise<void>
+  press(key: string, list?: string): Promise<void>
   select(row: string): Promise<void>
   selectedRow(): Promise<string | undefined>
   activeTab(): Promise<string | undefined>
@@ -295,9 +295,9 @@ export async function openPanel(
         const row = document.querySelector('[aria-label="Requests"] [role="option"][aria-selected="true"]')?.getBoundingClientRect()
         return !!row && row.top >= list.top && row.bottom <= list.bottom
       })()`),
-    press: (key: string) =>
+    press: (key: string, list = "Requests") =>
       panelFrame.evaluate<void>(`(() => {
-        const list = document.querySelector('[role="listbox"][aria-label="Requests"]')
+        const list = document.querySelector('[role="listbox"][aria-label="${list}"]')
         list.focus()
         list.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true }))
       })()`),
