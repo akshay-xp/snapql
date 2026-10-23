@@ -823,3 +823,30 @@ test("selecting a stream message shows it with a copy button", async () => {
     await panel.close()
   }
 })
+
+test("LLM streams show the reassembled reply in Summary", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/streams`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["gpt-test stream llm"]))
+    await panel.select("gpt-test stream llm")
+    await panel.stubClipboard()
+
+    await expect.poll(panel.detail).toContain("Response · tool_calls")
+    const detail = await panel.detail()
+    expect(detail).toContain("reply")
+    expect(detail).toContain("Hello")
+    expect(detail).toContain("tool get_weather")
+    expect(detail).toContain("city")
+    await panel.click('button[aria-label="Copy reply"]')
+    await expect.poll(panel.copied).toBe("Hello")
+
+    await panel.openTab("Messages")
+    await expect.poll(panel.messages).toHaveLength(7)
+    expect((await panel.messages()).at(-1)).toBe("[DONE] 6 B")
+  } finally {
+    await panel.close()
+  }
+})
