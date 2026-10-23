@@ -69,3 +69,68 @@ export function keyText(key: unknown): string {
     ? String(key)
     : JSON.stringify(key)
 }
+
+// Big-endian reads; overruns throw RangeError for readItemAt to place.
+export class Cursor {
+  offset = 0
+  private view: DataView
+
+  constructor(private data: Uint8Array) {
+    this.view = new DataView(data.buffer, data.byteOffset, data.byteLength)
+  }
+
+  take(n: number): Uint8Array {
+    if (this.offset + n > this.data.length) throw new RangeError("overrun")
+    this.offset += n
+    return this.data.subarray(this.offset - n, this.offset)
+  }
+
+  int(size: 1 | 2 | 4 | 8, signed = false): number | string {
+    const at = this.offset
+    this.take(size)
+    const v = this.view
+    if (size === 1) return signed ? v.getInt8(at) : v.getUint8(at)
+    if (size === 2) return signed ? v.getInt16(at) : v.getUint16(at)
+    if (size === 4) return signed ? v.getInt32(at) : v.getUint32(at)
+    const n = signed ? v.getBigInt64(at) : v.getBigUint64(at)
+    return Number.isSafeInteger(Number(n)) ? Number(n) : String(n)
+  }
+
+  float(size: 4 | 8): number {
+    const at = this.offset
+    this.take(size)
+    return size === 4
+      ? Number(this.view.getFloat32(at).toPrecision(7))
+      : this.view.getFloat64(at)
+  }
+
+  text(n: number): string {
+    return new TextDecoder().decode(this.take(n))
+  }
+}
+
+// The whole input must be one value; leftovers blame the first unread byte.
+export function readAll(
+  data: Uint8Array,
+  format: string,
+  read: (c: Cursor) => unknown,
+): unknown {
+  const c = new Cursor(data)
+  const value = read(c)
+  if (c.offset < data.length) throw new InvalidBytes(format, c.offset)
+  return value
+}
+
+// An item that runs past the end or is reserved blames its own start.
+export function readItemAt<T>(
+  c: Cursor,
+  format: string,
+  read: (c: Cursor) => T,
+): T {
+  const start = c.offset
+  try {
+    return read(c)
+  } catch (err) {
+    throw err instanceof InvalidBytes ? err : new InvalidBytes(format, start)
+  }
+}

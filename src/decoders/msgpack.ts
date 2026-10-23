@@ -1,58 +1,11 @@
-import { hex, InvalidBytes, keyText } from "./bytes"
-
-class Cursor {
-  offset = 0
-  private view: DataView
-
-  constructor(private data: Uint8Array) {
-    this.view = new DataView(data.buffer, data.byteOffset, data.byteLength)
-  }
-
-  take(n: number): Uint8Array {
-    if (this.offset + n > this.data.length) throw new RangeError("overrun")
-    this.offset += n
-    return this.data.subarray(this.offset - n, this.offset)
-  }
-
-  int(size: 1 | 2 | 4 | 8, signed = false): number | string {
-    const at = this.offset
-    this.take(size)
-    const v = this.view
-    if (size === 1) return signed ? v.getInt8(at) : v.getUint8(at)
-    if (size === 2) return signed ? v.getInt16(at) : v.getUint16(at)
-    if (size === 4) return signed ? v.getInt32(at) : v.getUint32(at)
-    const n = signed ? v.getBigInt64(at) : v.getBigUint64(at)
-    return Number.isSafeInteger(Number(n)) ? Number(n) : String(n)
-  }
-
-  float(size: 4 | 8): number {
-    const at = this.offset
-    this.take(size)
-    return size === 4
-      ? Number(this.view.getFloat32(at).toPrecision(7))
-      : this.view.getFloat64(at)
-  }
-
-  text(n: number): string {
-    return new TextDecoder().decode(this.take(n))
-  }
-}
+import { type Cursor, hex, keyText, readAll, readItemAt } from "./bytes"
 
 export function readMsgpack(data: Uint8Array): unknown {
-  const c = new Cursor(data)
-  const value = readValue(c)
-  if (c.offset < data.length) throw new InvalidBytes("msgpack", c.offset)
-  return value
+  return readAll(data, "msgpack", readValue)
 }
 
-// A value that runs past the end or has a reserved type blames its own start.
 function readValue(c: Cursor): unknown {
-  const start = c.offset
-  try {
-    return readItem(c)
-  } catch (err) {
-    throw err instanceof InvalidBytes ? err : new InvalidBytes("msgpack", start)
-  }
+  return readItemAt(c, "msgpack", readItem)
 }
 
 function readItem(c: Cursor): unknown {
