@@ -34,14 +34,14 @@ describe("requestBytes", () => {
     expect(of("é€")).toEqual([[0xc3, 0xa9, 0xe2, 0x82, 0xac]])
   })
 
-  it("adds a Latin-1 candidate when the text could be either", () => {
+  it("puts a Latin-1 candidate first when the text could be either", () => {
     expect(of("é\x01")).toEqual([
-      [0xc3, 0xa9, 0x01],
       [0xe9, 0x01],
+      [0xc3, 0xa9, 0x01],
     ])
     expect(of("\x00\xff\x80\x01")).toEqual([
-      [0, 0xc3, 0xbf, 0xc2, 0x80, 1],
       [0, 0xff, 0x80, 1],
+      [0, 0xc3, 0xbf, 0xc2, 0x80, 1],
     ])
   })
 
