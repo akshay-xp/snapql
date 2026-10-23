@@ -943,3 +943,44 @@ test("Reload and capture catches streams opened while loading", async () => {
     await panel.close()
   }
 })
+
+test("WebSockets show their frames live and close into one row", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/socket`)
+    await expect.poll(panel.probed).toBe(true)
+    const sockets = async () =>
+      (await panel.rows()).filter((r) => r.startsWith("/sock "))
+
+    await panel.page.click("#open")
+    await expect.poll(sockets).toEqual(["/sock chat live 4 msgs websocket"])
+    await panel.selectStarting("/sock ")
+    expect(await panel.text('[role="tablist"]')).toBe(
+      "Summary Messages Headers",
+    )
+    await panel.openTab("Messages")
+    await expect
+      .poll(panel.messages)
+      .toEqual([
+        expect.stringMatching(/^\+\d+\.\d{3}s ↑ hi 2 B$/),
+        expect.stringMatching(/^\+\d+\.\d{3}s ↑ binary 4 B 4 B$/),
+        expect.stringMatching(/^\+\d+\.\d{3}s ↓ hi 2 B$/),
+        expect.stringMatching(/^\+\d+\.\d{3}s ↓ binary 4 B 4 B$/),
+      ])
+
+    await panel.page.click("#close")
+    await expect
+      .poll(sockets, { timeout: 5000 })
+      .toEqual(["/sock chat closed 1000 4 msgs websocket"])
+    await panel.openTab("Summary")
+    const summary = await panel.detail()
+    expect(summary).toContain("closed 1000")
+    expect(summary).toContain("frames sent")
+    expect(summary).toContain("bye")
+    await panel.openTab("Headers")
+    await expect.poll(panel.detail, { timeout: 5000 }).toContain("Upgrade")
+    expect(await sockets()).toHaveLength(1)
+  } finally {
+    await panel.close()
+  }
+})
