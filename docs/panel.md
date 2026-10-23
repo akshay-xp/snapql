@@ -23,16 +23,19 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - `visible`: `createMemo` in `App`: entries filtered by `matchesQuery`, then reversed when `newestFirst`. `List`, `Footer`, the no-match check and `selected()` all read it.
 - `newestFirst`: signal in `App`, default `true`, not persisted. `App` passes `List` the reversed list when on; `List` knows nothing of order, so ↑/↓/Home/End follow the displayed order.
 
-## List (`src/panel/list.tsx`, `src/panel/keys.ts`)
+## List (`src/panel/list.tsx`, `src/panel/virtual-listbox.tsx`, `src/panel/keys.ts`)
+
+- `VirtualListbox<T>({ items, key, selected, onSelect, label, idPrefix, children(item, selected) })` owns everything below except row contents: listbox ARIA, virtualization, keys, the `h-7` `role="option"` row wrapper. Used by the request list (`Requests`, `entry-`) and Messages (`Messages`, `message-`).
 
 - `role="listbox"`, `tabIndex=0`, holds focus; rows are `role="option"` with `id="entry-<id>"` and `aria-selected`. The listbox's `aria-activedescendant` points at the selected row, so focus never moves to rows (survives virtualization later). Rows are therefore not focusable and have no key handlers (two Biome a11y rules suppressed with that reason).
-- Row: 28px (`h-7`), parts from `rowLabel(entry)` (`src/panel/row.ts`, pure), in order: title (`flex-1 truncate`, URL tooltip), detail, failure pill, kind tag.
+- Row: 28px (`h-7`), parts from `rowLabel(entry)` (`src/panel/row.ts`, pure), in order: title (`flex-1 truncate`, URL tooltip), detail, failure pill, message count, kind tag.
   - Decoded: the decoder's `title`, `detail`, `kind`. Undecoded: title = path + query (repeated calls to one endpoint stay distinguishable), detail = method, no kind.
   - `failure`: status code when `>= 400`, `failed` when status is 0; pill `bg-error text-bg` (no extra token, passes contrast). No method/status columns.
+  - `count`: `<n> msgs` (muted) only when the entry has `messages` (live streams, sockets). Finished-body streams show none: counting them would load every body.
   - Kind tag `w-[11ch]` (fits the longest kind, `multipart`, in mono), bordered; rendered empty with a transparent border when undecoded so tags align in a column.
   - Selected row `bg-selected`; detail and tag drop `text-muted` there (muted on `selected` is under 4.5:1 in both themes).
 - Virtualized (`src/panel/virtual.ts`), no library. The listbox is the scroll container holding a spacer `div` of height `count * ROW_HEIGHT`; the rendered slice `[start, end)` sits in an inner `div` with `translateY(start * ROW_HEIGHT)`.
-  - `ROW_HEIGHT = 24` in `list.tsx` must match the rows' `h-6` (border-box, border included). Overscan 10 rows each side.
+  - `ROW_HEIGHT = 28` in `virtual-listbox.tsx` must match the rows' `h-7` (border-box, border included). Overscan 10 rows each side.
   - `visibleRange(scrollTop, viewportHeight, rowHeight, count, overscan)` (pure): `start = max(0, floor(scrollTop/rowHeight) - overscan)`, `end = min(count, ceil((scrollTop+viewportHeight)/rowHeight) + overscan)`.
   - `scrollTop` comes from `onScroll`, viewport height from a `ResizeObserver` on the listbox (disconnected on cleanup).
   - Keyboard moves call `scrollToRow(index, scrollTop, viewportHeight, rowHeight)` (pure: new `scrollTop` aligning the row's top or bottom edge, or `undefined` if fully visible) and set `scrollTop`, so the selected row is rendered and `aria-activedescendant` always resolves.
@@ -48,7 +51,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## Detail (`src/panel/detail.tsx`, `src/panel/summary.ts`)
 
-- Active tab underlined in `border-accent`. Tabs, in order: Summary, Body, Headers, Params/Cookies, Timing, Raw. `role="tablist"`, each tab `aria-selected`/`aria-controls`, id `tab-<slug>` (`Params/Cookies` becomes `params-cookies`); one `role="tabpanel"` for the active tab.
+- Active tab underlined in `border-accent`. Tabs, in order: Summary, Body, Messages, Headers, Params/Cookies, Timing, Raw. `tabsFor(entry)` (`src/panel/tabs.ts`, pure) includes Messages only for a stream mime (`streamParser` exists) or an entry with `messages`; `shownTab(active, tabs)` falls back to Summary when the kept active tab is hidden for the new entry. `role="tablist"`, each tab `aria-selected`/`aria-controls`, id `tab-<slug>` (`Params/Cookies` becomes `params-cookies`); one `role="tabpanel"` for the active tab.
 - Spacing: tab bar `h-10` (scrolls horizontally if the tabs don't fit); tabpanel `p-3`, `flex-col gap-4`, so every top-level block (heading, sections, Response group, toolbar) is 16px apart and sections carry no margins. Section: `h-6` heading row, `gap-1.5`, block `px-3 py-2`. Raw shows Request and Response as `Section`s.
 - Wrapping: text wraps at spaces first, breaking long tokens only when needed (`overflow-wrap: anywhere`, not `break-all`) in `<pre>`, pairs, JSON trees and the heading title. Pairs key column `fit-content(40%)`, so long keys wrap instead of squeezing values.
 - Click switches. ←/→ on the tablist move via `nextTab(key, current, count)` (pure, wraps at both ends, per the WAI-ARIA tabs pattern) and focus the new tab. Only the active tab is in the Tab order (`tabIndex` 0, others -1), so Tab moves list, then active tab, then panel content.
@@ -60,9 +63,16 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - Summary heading (`src/panel/heading.ts`, `src/panel/copy.ts`, `summaryHeading(entry)`, pure): `<header>` with the title (`rowLabel`'s, 15px semibold) and a tag `<kind> <detail>` (absent when undecoded); then a muted meta line `METHOD path · <status> · <ms> ms · HH:MM:SS`.
   - `path` = pathname + search; the full URL is its tooltip (`data-path`). The host is not shown.
   - `status`: `<code> <statusText>` (trimmed), `failed` for 0; `data-status` in `success` when `0 < status < 400`, else `error`. Clock is local time from `startedAt`.
-- `Section(title, children)`: `<section>` with a muted semibold `<h2>` and a `data-block` `surface` block. Used by decoded sections, `Pairs` and Tokens (one block per token).
+- `Section(title, copy?, children)` and `Text` live in `src/panel/section.tsx` (shared with Messages): `<section>` with a muted semibold `<h2>` and a `data-block` `surface` block. Used by decoded sections, `Pairs` and Tokens (one block per token).
 - `dataSections(decoded.data)`: a field holding a non-empty array of `{ name: string, value: string }` becomes a rows section, rendered with `Pairs` (decoders use this for form fields, parts, calls). Other fields become labelled sections: strings as `{ name, text }` (`<pre>`, e.g. GraphQL query text), everything else as `{ name, json }` (`JsonTree`, e.g. variables). Non-object data is one `data` section; `null`/`undefined` none. Protocol-agnostic: no per-decoder UI.
 - Response group: when `decoderFor(decoded.kind, decoders)` has `decodeResponse` (`decoders` imported from `src/decoders/index.ts`), `ResponseGroup` loads `loadBody(entry, { pretty: false })` and renders a group heading `Response · <summary>` over its `Sections` (the same `dataSections` rendering). Mounted only inside Summary, so the body loads only while Summary is shown for such an entry. Nothing renders when `decodeResponse` returns `undefined`.
+
+## Messages (`src/panel/messages.tsx`, `src/panel/messages.ts`)
+
+- Tab content: `LoadedBody` (`pretty: false`, so the body loads only while the tab is shown), `parseStream(entry.mimeType, text)`, then `bodyMessages(events, entry.startedAt)` (`dir: "in"`, start time). `Messages({ messages, timed })` lists them in a bordered `VirtualListbox` (`min-h-24 flex-1`).
+- Row, mono (offset, event and size drop their muted/syntax color on the selected row, as request rows do): offset `+1.234s` from the first message (only when `timed`; body-parsed messages share one time, so `timed={false}` until live capture), `event` in `syntax-key`, `preview(text)` (whitespace collapsed, CSS-truncated), size muted at the right.
+- Labels (pure): `byteLabel` base 1000 (`999 B`, `1.2 kB`, `1.5 MB`); `messageBytes` = `bytes` (binary frames) or UTF-8 length; `offsetLabel`.
+- Selecting (click, ↑/↓) shows `Message <n>` below the list (`max-h-1/2`, scrolls): `Section` with Copy (raw text), `JsonTree` when `treeValue(text)` (`src/panel/json.ts`: JSON object or array, shared with Body) else `Text`. Keyed by message, so a `Copied` state never carries to another message. Selection resets when the messages change.
 
 ## JSON tree (`src/panel/json-tree.tsx`, `src/panel/json.ts`)
 
@@ -113,13 +123,14 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 
 ## E2E harness (`e2e/harness.ts`)
 
+- Request-row helpers (`rows`, `select`, `press`, `selectedRow`, `optionCount`, `paneBoxes`, ...) are scoped to the `Requests` listbox, since Messages adds a second one. `messages()` reads rendered Messages rows; `press(key, list = "Requests")` targets a listbox by label. Server `/streams` fetches `/api/sse` (3 events: plain, `event: ping`, two-line data) and `/api/ndjson` (3 lines); `/api/gql-defer` (on `/decoders`) is multipart/mixed.
 - `rows()` reads rendered `[role="option"]` text (only the visible window). `optionCount()` counts rendered options; `dragDivider(dx)` dispatches pointerdown on the handle and pointermove/up on `window`; `paneWidths()` gives `{ list, detail }` (the headless panel is ~550px wide, so drags stay small); `selectedVisible()` checks the selected option lies inside the listbox. Server `/bulk` fetches `/api/item?i=0..999` in sequence (no favicon), then sets `document.title = "done"`; capture can trail the page, so the test retries Home (newest first) until the last item is selected. `press(key)` focuses the listbox and dispatches `keydown`; `select(row)` clicks the option with that text; `selectedRow()` requires `aria-activedescendant` to match; `activeTab()`, `openTab(name)`, `pressTab(key)` (focuses the active tab, dispatches `keydown`), `detail()` (tabpanel text or `null`), `text(selector)` (collapsed innerText or `null`), `attr(selector, name)`; `clear()`, `toggleSort()` and `togglePreserveLog()` click footer buttons by `aria-label`; `search(q)` sets the search input and dispatches `input`; `clearSearch()` clicks the × (`aria-label="Clear filter"`); `clickButton(text)` clicks a button by its text; `click(selector)` clicks the first match; `stubClipboard()` replaces `navigator.clipboard.writeText` in the panel with a recorder read by `copied()`; `pairs()` gives the tabpanel's `dt`/`dd` pairs as `name = value` lines (value from `[data-value]`). Server `/api/users/1` returns nested JSON with a 250-char `bio` to exercise collapsing and show more.
 - `openPanel({ devtoolsTheme })` writes DevTools' `ui-theme` into `<userDataDir>/Default/Preferences` before launch: headless DevTools ignores emulated color schemes. `themeKind()`, `devtoolsTheme()` (DevTools `theme-with-dark-background` class), `cssVar(name)`, `style(selector, property)` (computed style of the first match, `""` if none). `dock(side)` docks DevTools `right` (default, ~554×606 panel, stacked) or `bottom` (wide, side by side) via `DockController`; window emulation would not change the panel width, the dock split sets it. `screenshot(file)` saves a PNG of the DevTools window for visual review (not used by assertions). `paneBoxes()` gives list and detail rects; `overflowing(selector)` lists matches whose content is wider than their box; `dragDivider(dx, dy?)`.
 
 ## Key files
 
-- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/footer.tsx`, `src/panel/search.tsx`, `src/panel/icon-button.tsx`, `src/panel/json-tree.tsx`, `src/panel/copy-button.tsx`, `src/panel/list.tsx`, `src/panel/detail.tsx`, `src/panel/splitter.tsx`
-- `src/panel/keys.ts`, `src/panel/row.ts`, `src/panel/heading.ts`, `src/panel/filter.ts`, `src/panel/json.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts` (+ `.test.ts`)
+- `src/panel/main.tsx`, `src/panel/app.tsx`, `src/panel/footer.tsx`, `src/panel/search.tsx`, `src/panel/icon-button.tsx`, `src/panel/json-tree.tsx`, `src/panel/copy-button.tsx`, `src/panel/list.tsx`, `src/panel/virtual-listbox.tsx`, `src/panel/detail.tsx`, `src/panel/section.tsx`, `src/panel/messages.tsx`, `src/panel/splitter.tsx`
+- `src/panel/keys.ts`, `src/panel/row.ts`, `src/panel/heading.ts`, `src/panel/filter.ts`, `src/panel/json.ts`, `src/panel/virtual.ts`, `src/panel/splitter.ts`, `src/panel/summary.ts`, `src/panel/body.ts`, `src/panel/raw.ts`, `src/panel/timing.ts`, `src/panel/themes.ts`, `src/panel/tabs.ts`, `src/panel/messages.ts` (+ `.test.ts`)
 - `src/panel/index.css`
 - `e2e/harness.ts`, `e2e/panel.test.ts`
 
