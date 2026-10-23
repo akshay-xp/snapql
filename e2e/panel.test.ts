@@ -1329,6 +1329,7 @@ test("search bodies matches request and response body text", async () => {
     const toggle = 'button[title="Search request and response bodies"]'
     const input = "input[type=search]"
     const users = "/api/users/1 GET json"
+    const geo = '/api/users/1 body: …ofile":{"address":{"geo":{"lat":1}}}} json'
     expect(await panel.text(toggle)).toBe("Bodies")
     expect(await panel.attr(input, "placeholder")).toBe("Filter requests")
 
@@ -1342,16 +1343,28 @@ test("search bodies matches request and response body text", async () => {
     expect(await panel.attr(input, "placeholder")).toBe(
       "Filter requests and bodies",
     )
-    await expect.poll(panel.rows).toEqual([users])
+    await expect.poll(panel.rows).toEqual([geo])
+    expect(await panel.text('[aria-label="Requests"] mark')).toBe("geo")
     expect(await panel.text("footer")).toBe("1 of 5")
+
+    // The URL match keeps its detail; the page's own script is a body match.
+    await panel.search("users")
+    await expect
+      .poll(panel.rows)
+      .toEqual([
+        users,
+        '/filters body: …{ b }") fetch("/api/users/1") fetch("/api/missing") </script>',
+      ])
 
     // Quoted as JSON, so the /filters document's own script doesn't match.
     await panel.search('"query":"query B')
-    await expect.poll(panel.rows).toEqual(["B query 400 graphql"])
+    await expect
+      .poll(panel.rows)
+      .toEqual(['B body: {"query":"query B { b }"} {"data":null} 400 graphql'])
 
     await panel.search("geo")
     await panel.page.evaluate(() => fetch("/api/users/1"))
-    await expect.poll(panel.rows).toEqual([users, users])
+    await expect.poll(panel.rows).toEqual([geo, geo])
     expect(await panel.text("footer")).toBe("2 of 6")
 
     await panel.click(toggle)
