@@ -34,20 +34,27 @@ export function Messages(props: {
           label="Messages"
           idPrefix="message-"
         >
-          {(i) => {
+          {(i, selected) => {
             const m = props.messages[i]
+            // Muted and syntax colors fall under 4.5:1 on the selected row.
+            const muted = () => ({ "text-muted": !selected() })
             return (
               <>
                 <Show when={props.timed}>
-                  <span class="shrink-0 text-muted">
+                  <span class="shrink-0" classList={muted()}>
                     {offsetLabel(m.time - props.messages[0].time)}
                   </span>
                 </Show>
                 <Show when={m.event}>
-                  <span class="shrink-0 text-syntax-key">{m.event}</span>
+                  <span
+                    class="shrink-0"
+                    classList={{ "text-syntax-key": !selected() }}
+                  >
+                    {m.event}
+                  </span>
                 </Show>
                 <span class="min-w-0 flex-1 truncate">{preview(m.text)}</span>
-                <span class="shrink-0 text-muted">
+                <span class="shrink-0" classList={muted()}>
                   {byteLabel(messageBytes(m))}
                 </span>
               </>
