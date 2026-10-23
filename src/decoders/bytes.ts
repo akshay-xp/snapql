@@ -14,12 +14,14 @@ export function text(body: BodyView): string {
 
 // Chrome's HAR gives valid UTF-8 request bodies decoded and anything else as
 // one code unit per byte. Text that fits both (é + 01: C3 A9 01 or E9 01) gets
-// both candidates, UTF-8 first; binary decoders keep the first that parses.
+// both candidates; binary decoders keep the first that parses. Latin-1 goes
+// first: re-encoding binary as UTF-8 only adds bytes and often still parses,
+// while reading UTF-8 as Latin-1 shrinks it and breaks length prefixes.
 export function requestBytes(body: string): Uint8Array[] {
   const utf8 = new TextEncoder().encode(body)
   if (/[\u0100-\uffff]/.test(body) || utf8.length === body.length) return [utf8]
   const latin1 = Uint8Array.from(body, (c) => c.charCodeAt(0))
-  return isUtf8(latin1) ? [utf8] : [utf8, latin1]
+  return isUtf8(latin1) ? [utf8] : [latin1, utf8]
 }
 
 function isUtf8(data: Uint8Array): boolean {
