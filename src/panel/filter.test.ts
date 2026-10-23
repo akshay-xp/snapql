@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   chipsFor,
+  excerpt,
   highlight,
   kindOf,
   matchesFilters,
@@ -133,5 +134,26 @@ describe("matchesFilters", () => {
         { kinds: ["json"], statuses: ["2xx"] },
       ),
     ).toEqual({ kinds: ["json"], statuses: [] })
+  })
+})
+
+describe("excerpt", () => {
+  it("keeps short text whole", () => {
+    expect(excerpt("one two three", "two")).toBe("one two three")
+  })
+
+  it("cuts around the first match, keeping its case", () => {
+    const text = `${"x".repeat(30)}Needle${"y".repeat(100)}`
+    expect(excerpt(text, "needle")).toBe(
+      `…${"x".repeat(20)}Needle${"y".repeat(60)}…`,
+    )
+  })
+
+  it("collapses whitespace", () => {
+    expect(excerpt("a\n   b", "b")).toBe("a b")
+  })
+
+  it("is undefined without a match", () => {
+    expect(excerpt("abc", "z")).toBeUndefined()
   })
 })
