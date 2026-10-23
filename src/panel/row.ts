@@ -7,10 +7,14 @@ export type RowLabel = {
   kind?: string
   failure?: string
   count?: string
+  live?: true
 }
 
 export function rowLabel(
-  entry: Pick<Entry, "method" | "url" | "status" | "decoded" | "messages">,
+  entry: Pick<
+    Entry,
+    "method" | "url" | "status" | "decoded" | "messages" | "open"
+  >,
 ): RowLabel {
   const { decoded, status } = entry
   const failure =
@@ -26,6 +30,7 @@ export function rowLabel(
         }
       : { detail: entry.method }),
     ...(failure && { failure }),
+    ...(entry.open && { live: true as const }),
     ...(entry.messages && { count: count(entry.messages.length, "msg") }),
   }
 }
