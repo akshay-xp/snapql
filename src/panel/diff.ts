@@ -1,3 +1,6 @@
+import type { Entry, NameValue } from "../capture/entry"
+import { parseJson } from "../decoders/json"
+
 export type DiffLine = { op: " " | "+" | "-"; text: string }
 
 const lines = (text: string) => (text ? text.split("\n") : [])
@@ -73,4 +76,84 @@ function myers(a: string[], b: string[]): DiffLine[] {
     else out.push({ op: "-", text: a[--x] })
   }
   return out.reverse()
+}
+
+export type DiffSection = { name: string; lines: DiffLine[]; changed: boolean }
+
+type Diffable = Pick<
+  Entry,
+  "method" | "url" | "status" | "requestBody" | "exchange"
+>
+
+// Sorted so header order, which browsers and servers vary freely, isn't a change.
+const headerText = (headers: readonly NameValue[]) =>
+  headers
+    .map((h) => `${h.name}: ${h.value}`)
+    .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    .join("\n")
+
+const sortKeys = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(sortKeys)
+    : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((k) => [k, sortKeys((value as Record<string, unknown>)[k])]),
+        )
+      : value
+
+// JSON key order carries no meaning, so both sides are compared sorted.
+function normalize(text: string): string {
+  const value = parseJson(text)
+  return value === undefined ? text : JSON.stringify(sortKeys(value), null, 2)
+}
+
+export function diffSections(
+  base: Diffable,
+  other: Diffable,
+  baseBody: string,
+  otherBody: string,
+): DiffSection[] {
+  const parts = (e: Diffable, body: string): [string, string][] => [
+    ["Request line", `${e.method} ${e.url}`],
+    ["Status", `${e.status} ${e.exchange.statusText}`.trim()],
+    ["Request headers", headerText(e.exchange.requestHeaders)],
+    [
+      "Query",
+      e.exchange.queryString.map((q) => `${q.name}=${q.value}`).join("\n"),
+    ],
+    ["Request body", normalize(e.requestBody?.text ?? "")],
+    ["Response headers", headerText(e.exchange.responseHeaders)],
+    ["Response body", normalize(body)],
+  ]
+  const after = parts(other, otherBody)
+  return parts(base, baseBody).map(([name, text], i) => {
+    const lines = diffLines(text, after[i][1])
+    return { name, lines, changed: lines.some((l) => l.op !== " ") }
+  })
+}
+
+export function collapse(lines: DiffLine[], context = 3): DiffLine[] {
+  const out: DiffLine[] = []
+  let run: DiffLine[] = []
+  const flush = () => {
+    if (run.length > 2 * context)
+      out.push(
+        ...run.slice(0, context),
+        { op: " ", text: `… ${run.length - 2 * context} unchanged lines` },
+        ...run.slice(-context),
+      )
+    else out.push(...run)
+    run = []
+  }
+  for (const line of lines) {
+    if (line.op === " ") run.push(line)
+    else {
+      flush()
+      out.push(line)
+    }
+  }
+  flush()
+  return out
 }
