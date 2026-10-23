@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { brackets, children, clip, sizeLabel, startsOpen } from "./json"
+import {
+  brackets,
+  children,
+  clip,
+  hasMatch,
+  sizeLabel,
+  startsOpen,
+} from "./json"
 
 describe("children", () => {
   it("lists object keys and array indexes", () => {
@@ -48,5 +55,19 @@ describe("clip", () => {
     const a200 = "a".repeat(200)
     expect(clip(a200)).toEqual({ head: a200, clipped: false })
     expect(clip(`${a200}a`)).toEqual({ head: a200, clipped: true })
+  })
+})
+
+describe("hasMatch", () => {
+  it("finds values and keys at any depth", () => {
+    expect(hasMatch({ a: { b: "Needle" } }, "needle")).toBe(true)
+    expect(hasMatch({ a: { needle: 1 } }, "needle")).toBe(true)
+    expect(hasMatch([1, 22], "2")).toBe(true)
+    expect(hasMatch({ a: null }, "null")).toBe(true)
+  })
+
+  it("is false without a match or a query", () => {
+    expect(hasMatch({ a: 1 }, "x")).toBe(false)
+    expect(hasMatch({ a: 1 }, "")).toBe(false)
   })
 })

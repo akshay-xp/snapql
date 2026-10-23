@@ -15,6 +15,16 @@ export function children(value: unknown): [string, unknown][] | undefined {
   if (typeof value === "object" && value !== null) return Object.entries(value)
 }
 
+export function hasMatch(value: unknown, query: string): boolean {
+  const q = query.toLowerCase()
+  if (!q) return false
+  const kids = children(value)
+  if (!kids) return String(value).toLowerCase().includes(q)
+  return kids.some(
+    ([name, kid]) => name.toLowerCase().includes(q) || hasMatch(kid, q),
+  )
+}
+
 export function sizeLabel(value: object): string {
   const array = Array.isArray(value)
   const n = Object.keys(value).length
