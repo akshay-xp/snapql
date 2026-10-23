@@ -31,6 +31,15 @@ export function highlight(text: string, query: string): Segment[] {
   return segments
 }
 
+export function excerpt(text: string, query: string): string | undefined {
+  const flat = text.replace(/\s+/g, " ").trim()
+  const at = flat.toLowerCase().indexOf(query.toLowerCase())
+  if (at === -1) return
+  const from = Math.max(0, at - 20)
+  const to = at + query.length + 60
+  return `${from > 0 ? "…" : ""}${flat.slice(from, to)}${to < flat.length ? "…" : ""}`
+}
+
 export type Filters = { kinds: string[]; statuses: string[] }
 
 type Filterable = Pick<Entry, "status" | "decoded">
