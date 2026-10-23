@@ -401,5 +401,32 @@ describe("live capture", () => {
         socket: { protocol: "chat", closeCode: 1000, closeReason: "bye" },
       })
     })
+
+    it("merges the handshake Chrome reports after close", async () => {
+      const { store, probe, emit } = live()
+      await new Promise((r) => setTimeout(r)) // HAR read settles
+      probe([
+        socketOpen,
+        { type: "frame", id: 9, time: 1002, dir: "out", text: "hi" },
+        { type: "close", id: 9, time: 1500, code: 1000, reason: "bye" },
+      ])
+      const exchange = { ...emptyExchange, statusText: "Switching Protocols" }
+
+      emit({ ...request("ws://x/sock"), status: 101, exchange })
+
+      expect(store.snapshot()).toHaveLength(1)
+      const [entry] = store.snapshot()
+      expect(entry).toMatchObject({
+        method: "WS",
+        status: 101,
+        socket: { closeCode: 1000 },
+        exchange,
+      })
+      expect(entry.messages).toHaveLength(1)
+      expect(entry.decoded?.kind).toBe("websocket")
+
+      emit({ ...request("ws://x/sock"), status: 101 })
+      expect(store.snapshot()).toHaveLength(2)
+    })
   })
 })

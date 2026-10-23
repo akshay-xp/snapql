@@ -27,13 +27,18 @@ export function startCapture(
     const liveId = live.claim(req)
     if (liveId === undefined)
       return store.add(toEntry(req, id++, decodeRequest(req, decoders)))
-    // Keeps the live entry's id, decode result and messages.
-    store.update(liveId, (e) => ({
-      ...toEntry(req, e.id, e.decoded),
-      messages: e.messages,
-      droppedMessages: e.droppedMessages,
-      open: false,
-    }))
+    // Keeps the live entry's id, decode result and messages. A socket keeps
+    // everything else too; its handshake only adds the headers.
+    store.update(liveId, (e) =>
+      e.socket
+        ? { ...e, exchange: req.exchange }
+        : {
+            ...toEntry(req, e.id, e.decoded),
+            messages: e.messages,
+            droppedMessages: e.droppedMessages,
+            open: false,
+          },
+    )
   }
   // Live requests wait for the HAR read so backfilled ones keep their place.
   // Chrome also delivers already-finished requests live after the HAR read, so

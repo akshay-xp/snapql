@@ -77,7 +77,9 @@ export function createLive(
     // request then fills in instead of adding a row.
     claim(req: { method: string; url: string }): number | undefined {
       for (const stream of streams.values()) {
-        if (stream.claimed || stream.method !== req.method) continue
+        // Chrome reports a socket's handshake, after close, as a GET.
+        const method = stream.method === "WS" ? "GET" : stream.method
+        if (stream.claimed || method !== req.method) continue
         if (stream.url !== req.url) continue
         stream.claimed = true
         return stream.entryId
