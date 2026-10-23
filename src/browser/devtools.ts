@@ -80,6 +80,23 @@ export function onNavigated(cb: () => void): () => void {
   return () => chrome.devtools.network.onNavigated.removeListener(listener)
 }
 
+// Callback form, as for getContent. Evaluation errors resolve undefined.
+export function evalInPage<T>(expression: string): Promise<T | undefined> {
+  return new Promise((resolve) =>
+    chrome.devtools.inspectedWindow.eval(expression, (result, info) =>
+      resolve(info?.isException || info?.isError ? undefined : (result as T)),
+    ),
+  )
+}
+
+export function reloadWithScript(injectedScript: string) {
+  chrome.devtools.inspectedWindow.reload({ injectedScript })
+}
+
+export function probeScript(): Promise<string> {
+  return fetch(chrome.runtime.getURL("probe.js")).then((r) => r.text())
+}
+
 export type ThemeKind = "light" | "dark"
 
 const toThemeKind = (name: string | undefined): ThemeKind =>

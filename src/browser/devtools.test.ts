@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { emptyExchange } from "../capture/test-helpers"
 import {
+  evalInPage,
   getHAR,
   getTheme,
   onNavigated,
   onRequestFinished,
   onThemeChanged,
+  probeScript,
+  reloadWithScript,
   toFinishedRequest,
 } from "./devtools"
 
@@ -248,5 +251,47 @@ describe("onThemeChanged", () => {
 
     expect(matchMedia).not.toHaveBeenCalled()
     expect(cb).not.toHaveBeenCalled()
+  })
+})
+
+describe("inspected page", () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const stubEval = (result: unknown, exceptionInfo?: object) => {
+    const evalFn = vi.fn(
+      (_expr: string, cb: (result: unknown, info?: object) => void) =>
+        cb(result, exceptionInfo),
+    )
+    const reload = vi.fn()
+    vi.stubGlobal("chrome", {
+      devtools: { inspectedWindow: { eval: evalFn, reload } },
+      runtime: { getURL: (path: string) => `chrome-extension://id/${path}` },
+    })
+    return { evalFn, reload }
+  }
+
+  it("evaluates in the page, giving undefined on errors", async () => {
+    const { evalFn } = stubEval(2)
+    await expect(evalInPage("1+1")).resolves.toBe(2)
+    expect(evalFn).toHaveBeenCalledWith("1+1", expect.any(Function))
+
+    stubEval(undefined, { isException: true, value: "boom" })
+    await expect(evalInPage("x")).resolves.toBeUndefined()
+    stubEval(undefined, { isError: true, code: "E" })
+    await expect(evalInPage("x")).resolves.toBeUndefined()
+  })
+
+  it("reloads with a script injected first", () => {
+    const { reload } = stubEval(undefined)
+    reloadWithScript("s")
+    expect(reload).toHaveBeenCalledWith({ injectedScript: "s" })
+  })
+
+  it("reads the probe from the extension", async () => {
+    stubEval(undefined)
+    const fetch = vi.fn(async () => new Response("probe text"))
+    vi.stubGlobal("fetch", fetch)
+    await expect(probeScript()).resolves.toBe("probe text")
+    expect(fetch).toHaveBeenCalledWith("chrome-extension://id/probe.js")
   })
 })
