@@ -9,6 +9,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - `Decoded`: `{ title, detail?, data }`. `title` names the request (operation, method, path, element); `detail` qualifies it (operation type, method, counts). Kept apart so the panel never parses text. `data` is the parsed request (decoder-specific).
 - `decodeResponse?(text, decoded)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response text and the stored `DecodeResult`. Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand.
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
+- `RequestView.protocols?`: WebSockets only, the protocols requested at creation (from the probe), so socket decoders run at capture like the rest.
 - No headers or query params in `RequestView`: GET params come from `url`. Add when a decoder needs them.
 
 ## Registry (`src/decoders/registry.ts`)
@@ -18,7 +19,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `sse`, `ndjson`, `json` (catch-all, last).
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `websocket`, `sse`, `ndjson`, `json` (catch-all, last).
 
 ## Adding a decoder
 
@@ -35,6 +36,10 @@ No capture, store, or UI change.
 - `application/x-ndjson`, `application/jsonl`: one event per non-empty line.
 - `multipart/mixed` (GraphQL `@defer`/`@stream`): one event per part body, part headers dropped. Boundary from the mime's `boundary` param, else the first line starting `--` is the delimiter; `--<b>--` ends the stream (later text ignored).
 - Decoders `sse` (`text/event-stream`) and `ndjson` (`application/x-ndjson`, `application/jsonl`) match on response mime only: title = path, detail = method, no `data`. Placed just before `json`, so a stream whose request another decoder claims (GraphQL over SSE, LLM) keeps that kind, and a JSON POST to an SSE endpoint is `sse`, not `json`. `multipart/mixed` gets no kind of its own.
+
+## WebSocket (`src/decoders/websocket.ts`)
+
+- Kind `websocket`. Matches method `WS` (only probe socket entries have it). Title = URL path, detail = requested protocols joined `, ` (absent when none). No `data`.
 
 ## LLM (`src/decoders/llm.ts`)
 
@@ -108,7 +113,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
