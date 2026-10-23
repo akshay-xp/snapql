@@ -8,7 +8,10 @@ export type StreamParser = {
 }
 
 export function streamParser(mimeType: string): StreamParser | undefined {
-  if (baseMime(mimeType) === "text/event-stream") return eventStream()
+  const mime = baseMime(mimeType)
+  if (mime === "text/event-stream") return eventStream()
+  if (mime === "application/x-ndjson" || mime === "application/jsonl")
+    return jsonLines()
 }
 
 // Splits on CRLF, LF or CR. A chunk-final CR is held back: the next chunk may
@@ -85,5 +88,15 @@ function eventStream(): StreamParser {
       dispatch(out)
       return out
     },
+  }
+}
+
+function jsonLines(): StreamParser {
+  const split = lines()
+  const events = (all: string[]) =>
+    all.filter((line) => line.trim()).map((text) => ({ text }))
+  return {
+    push: (chunk) => events(split.push(chunk)),
+    end: () => events(split.end()),
   }
 }
