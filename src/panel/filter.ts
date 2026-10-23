@@ -1,4 +1,5 @@
 import type { Entry } from "../capture/entry"
+import type { BodyTexts } from "./body-index"
 import { rowLabel } from "./row"
 
 export type Segment = { text: string; hit: boolean }
@@ -38,6 +39,21 @@ export function excerpt(text: string, query: string): string | undefined {
   const from = Math.max(0, at - 20)
   const to = at + query.length + 60
   return `${from > 0 ? "…" : ""}${flat.slice(from, to)}${to < flat.length ? "…" : ""}`
+}
+
+export type BodyHit = {
+  side: "request" | "response"
+  count: number
+  excerpt: string
+}
+
+export function bodyHit(texts: BodyTexts, query: string): BodyHit | undefined {
+  for (const side of ["response", "request"] as const) {
+    const shown = excerpt(texts[side], query)
+    if (shown === undefined) continue
+    const count = highlight(texts[side], query).filter((s) => s.hit).length
+    return { side, count, excerpt: shown }
+  }
 }
 
 export type Filters = { kinds: string[]; statuses: string[] }
