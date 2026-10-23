@@ -1,5 +1,5 @@
 import { parseJson } from "./json"
-import type { StreamEvent } from "./stream"
+import { parseStream, type StreamEvent } from "./stream"
 import type { Decoder } from "./types"
 
 type Body = Record<string, unknown>
@@ -17,6 +17,41 @@ export const llm: Decoder = {
     if (!Array.isArray(body.messages) && !("input" in body)) return
     return { title: body.model, detail: "stream", data: body }
   },
+  decodeResponse(text) {
+    const reply = reassemble(parseStream("text/event-stream", text) ?? [])
+    return (
+      reply && {
+        summary: reply.stopReason ?? "incomplete",
+        data: replyData(reply),
+      }
+    )
+  },
+}
+
+// Section order: reply, thinking, one section per tool call, then usage rows.
+function replyData(reply: Reassembled): Body {
+  const data: Body = { reply: reply.text }
+  if (reply.thinking) data.thinking = reply.thinking
+  for (const call of reply.toolCalls) {
+    let key = `tool ${call.name}`
+    for (let n = 2; key in data; n++) key = `tool ${call.name} ${n}`
+    const args = parseJson(call.arguments)
+    data[key] = {
+      ...(call.id && { id: call.id }),
+      arguments: args === undefined ? call.arguments : args,
+    }
+  }
+  const usage = [
+    ...(reply.stopReason
+      ? [{ name: "stop reason", value: reply.stopReason }]
+      : []),
+    ...Object.entries(reply.usage ?? {}).map(([name, v]) => ({
+      name,
+      value: typeof v === "string" ? v : JSON.stringify(v),
+    })),
+  ]
+  if (usage.length) data.usage = usage
+  return data
 }
 
 export type ToolCall = { id?: string; name: string; arguments: string }

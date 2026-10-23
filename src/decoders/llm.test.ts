@@ -219,3 +219,62 @@ describe("reassemble", () => {
     expect(reassemble(noThinking)).not.toHaveProperty("thinking")
   })
 })
+
+describe("llm.decodeResponse", () => {
+  const sseBody = (stream: StreamEvent[]) =>
+    stream.map((e) => `data: ${e.text}\n\n`).join("")
+  const decoded = { kind: "llm", title: "m", data: {} }
+  const decode = (text: string) => llm.decodeResponse?.(text, decoded)
+
+  it("turns a reassembled reply into Summary sections", () => {
+    const res = decode(sseBody(chatStream))
+    expect(res?.summary).toBe("tool_calls")
+    expect(Object.keys(res?.data as object)).toEqual([
+      "reply",
+      "tool get_weather",
+      "tool get_time",
+      "usage",
+    ])
+    expect(res?.data).toEqual({
+      reply: "Hello",
+      "tool get_weather": { id: "call_1", arguments: { city: "Paris" } },
+      "tool get_time": { id: "call_2", arguments: {} },
+      usage: [
+        { name: "stop reason", value: "tool_calls" },
+        { name: "prompt_tokens", value: "5" },
+        { name: "completion_tokens", value: "7" },
+        { name: "total_tokens", value: "12" },
+      ],
+    })
+  })
+
+  it("puts thinking after the reply", () => {
+    const keys = Object.keys(decode(sseBody(anthropicStream))?.data as object)
+    expect(keys.slice(0, 2)).toEqual(["reply", "thinking"])
+  })
+
+  it("keeps unparseable arguments as text and names repeated tools apart", () => {
+    const res = decode(
+      sseBody(
+        events(
+          chunk({
+            tool_calls: [
+              { index: 0, function: { name: "f", arguments: "{bad" } },
+              { index: 1, function: { name: "f", arguments: "{}" } },
+            ],
+          }),
+        ),
+      ),
+    )
+    expect(res?.summary).toBe("incomplete")
+    expect(res?.data).not.toHaveProperty("usage")
+    expect(res?.data).toMatchObject({
+      "tool f": { arguments: "{bad" },
+      "tool f 2": { arguments: {} },
+    })
+  })
+
+  it("gives undefined for other bodies", () => {
+    expect(decode("data: hello\n\n")).toBeUndefined()
+  })
+})
