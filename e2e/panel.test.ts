@@ -273,7 +273,7 @@ test("selecting opens the detail pane; Esc and Clear close it", async () => {
 })
 
 test("Summary shows the request and its decoded data", async () => {
-  const panel = await openPanel()
+  const panel = await openPanel({ devtoolsTheme: "dark" })
   try {
     await panel.page.goto(panel.origin)
     const row = "GetUser query graphql"
@@ -654,7 +654,7 @@ test("dragging the divider resizes the detail pane", async () => {
 })
 
 test("M3 decoders summarize their requests", async () => {
-  const panel = await openPanel()
+  const panel = await openPanel({ devtoolsTheme: "light" })
   try {
     await panel.page.goto(`${panel.origin}/decoders`)
     await expect
@@ -687,7 +687,7 @@ test("M3 decoders summarize their requests", async () => {
     )
     expect(
       await panel.style('[role="tabpanel"] header [data-status]', "color"),
-    ).toBe("rgb(242, 184, 181)")
+    ).toBe("rgb(179, 38, 30)")
 
     await panel.select("/api/form 2 fields form")
     const form = await panel.pairs()
@@ -715,7 +715,7 @@ test("M3 decoders summarize their requests", async () => {
       await expect.poll(panel.pairs).toContain(pair)
     expect(
       await panel.style('[data-section="errors"] [data-value]', "color"),
-    ).toBe("rgb(242, 184, 181)")
+    ).toBe("rgb(179, 38, 30)")
 
     await panel.select("Deferred query graphql")
     for (const text of ["no errors", 'id: "1"', 'name: "Ada"', "parts"])
