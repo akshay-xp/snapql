@@ -49,4 +49,10 @@ describe("rowLabel", () => {
     expect(rowLabel(entry({ messages: [msg] })).count).toBe("1 msg")
     expect(rowLabel(entry())).not.toHaveProperty("count")
   })
+
+  it("marks open streams live", () => {
+    expect(rowLabel(entry({ open: true })).live).toBe(true)
+    expect(rowLabel(entry({ open: false }))).not.toHaveProperty("live")
+    expect(rowLabel(entry())).not.toHaveProperty("live")
+  })
 })
