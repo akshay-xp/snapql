@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { readMessage } from "./protobuf"
+import { protobufData, readMessage } from "./protobuf"
 
 const read = (...data: number[]) => readMessage(new Uint8Array(data))
 
@@ -66,5 +66,33 @@ describe("readMessage", () => {
       "1": { "1": { "1": 150 } },
     })
     expect(read(0x0a, 2, 0xff, 0xfe)).toEqual({ "1": "ff fe" })
+  })
+})
+
+describe("protobufData", () => {
+  const data = (...candidates: number[][]) =>
+    protobufData(candidates.map((c) => new Uint8Array(c)))
+  const error = (at: number, hex: string) => ({
+    error: `invalid protobuf at byte ${at}`,
+    hex,
+  })
+
+  it("gives the message of valid input", () => {
+    expect(data([0x08, 1])).toEqual({ message: { "1": 1 } })
+  })
+
+  it("reports where malformed input broke", () => {
+    expect(data([0x08, 0x96])).toEqual(error(1, "08 96"))
+    expect(data([0x0b])).toEqual(error(0, "0b"))
+    expect(data([0x00, 0x01])).toEqual(error(0, "00 01"))
+    expect(data([0x0a, 5, 0x68])).toEqual(error(1, "0a 05 68"))
+  })
+
+  it("keeps the first candidate that parses", () => {
+    expect(data([0xe9, 1], [0x0a, 1, 0x41])).toEqual({ message: { "1": "A" } })
+  })
+
+  it("reports the first candidate when none parses", () => {
+    expect(data([0x0b], [0x08])).toEqual(error(0, "0b"))
   })
 })
