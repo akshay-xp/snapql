@@ -12,7 +12,14 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
   - `size` (response `content.size`), `timings` (`Timings`: `blocked, dns, connect, ssl, send, wait, receive` ms): missing `-1`, which also means "phase n/a" in HAR.
 - `Entry.requestBody`: the request body, kept for the Raw tab (decoders read it from `FinishedRequest` at capture).
 - `Body`: `{ content, encoding }`; `encoding` is `""` or `"base64"`, as reported by the browser.
+- `Message`: one stream event or socket frame. `dir` (`"in"` | `"out"`), `time` (epoch ms), `text`; optional `bytes` (binary frame size; `text` is `""`), `event`, `id` (SSE fields), `truncated`.
+- `Entry.messages?`, `open?` (stream still open), `droppedMessages?` (count evicted by the cap). Absent on ordinary requests.
 - `toEntry(req, id, decoded?)`: maps one to the other. Capture owns `FinishedRequest` so this module never references `chrome.*`, not even in types.
+
+## Growing entries
+
+- `appendMessages(entry, msgs)`: returns a copy (same `getBody`) with `msgs` appended. Never mutates.
+- `MESSAGE_CAP = 2000` per entry, oldest dropped, added to `droppedMessages`; `FRAME_LIMIT = 1024 * 1024` chars per frame, cut and flagged `truncated`. Why: one chatty socket or huge frame can't exhaust panel memory.
 
 ## Lazy bodies
 
@@ -24,9 +31,10 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 - `createStore(cap = DEFAULT_CAP)`; `DEFAULT_CAP = 5000`.
 - `add(entry)`: appends; drops oldest beyond `cap`.
+- `update(id, fn)`: replaces that entry with `fn(entry)` and notifies. Other entries keep their references. Unknown id (e.g. evicted by the cap): silent no-op, `fn` not called, no notification.
 - `clear()`: empties.
 - `snapshot()`: current `readonly Entry[]`. Immutable: each change replaces the array, so an old snapshot never changes and reference equality signals change (what Solid needs).
-- `subscribe(fn)`: `fn` runs after every `add`/`clear`; returns an unsubscribe function.
+- `subscribe(fn)`: `fn` runs after every `add`/`update`/`clear`; returns an unsubscribe function.
 
 ## Browser adapter (`src/browser/devtools.ts`)
 
