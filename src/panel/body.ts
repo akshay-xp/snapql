@@ -79,7 +79,7 @@ function bodyView(base64: boolean, mimeType: string): BodyViewKind | undefined {
   if (base64) return FONT_MIMES.has(mime) ? "font" : "hex"
 }
 
-function base64Bytes(content: string): number {
+export function base64Bytes(content: string): number {
   const padding = content.endsWith("==") ? 2 : content.endsWith("=") ? 1 : 0
   return Math.floor((content.length * 3) / 4) - padding
 }
