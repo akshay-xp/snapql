@@ -1114,3 +1114,25 @@ test("gRPC-web calls show method, messages and status", async () => {
     await panel.close()
   }
 })
+
+test("msgpack and CBOR exchanges show their values", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/packed`)
+    const msgpack = "/api/msgpack POST msgpack"
+    const cbor = "/api/cbor POST cbor"
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([msgpack, cbor]))
+
+    await panel.select(msgpack)
+    await expect.poll(panel.detail).toContain('"ok"')
+    expect(await panel.detail()).toContain("256")
+
+    await panel.select(cbor)
+    await expect.poll(panel.detail).toContain("Response · 1 byte")
+    expect(await panel.detail()).toContain("2023-11-14T22:13:20.000Z")
+  } finally {
+    await panel.close()
+  }
+})
