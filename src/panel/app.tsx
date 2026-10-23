@@ -9,12 +9,14 @@ import {
   Show,
 } from "solid-js"
 import { version } from "../../package.json"
+import type { Entry } from "../capture/entry"
 import type { Store } from "../capture/store"
 import { createBodyIndex } from "./body-index"
 import { Detail } from "./detail"
 import { download } from "./download"
 import {
   chipsFor,
+  excerpt,
   type Filters,
   matchesFilters,
   matchesQuery,
@@ -66,6 +68,15 @@ export function App(props: {
     )
     return newestFirst() ? shown.reverse() : shown
   })
+  const bodyQuery = () => (searchBodies() ? query() : "")
+  // Only for rows that matched in a body alone, which have nothing to highlight.
+  const bodyExcerpt = (entry: Entry) => {
+    bodyVersion()
+    const text = bodies.text(entry)
+    return bodyQuery() && text !== undefined && !matchesQuery(entry, query())
+      ? excerpt(text, query())
+      : undefined
+  }
   // Undefined until the first drag: the pane takes half the panel. Not persisted.
   const [detailWidth, setDetailWidth] = createSignal<number>()
   const [detailHeight, setDetailHeight] = createSignal<number>()
@@ -137,6 +148,7 @@ export function App(props: {
               <List
                 entries={visible()}
                 query={query()}
+                bodyExcerpt={bodyExcerpt}
                 selectedId={selectedId()}
                 onSelect={setSelectedId}
               />

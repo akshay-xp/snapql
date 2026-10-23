@@ -7,6 +7,7 @@ import { VirtualListbox } from "./virtual-listbox"
 export function List(props: {
   entries: readonly Entry[]
   query: string
+  bodyExcerpt: (entry: Entry) => string | undefined
   selectedId: number | undefined
   onSelect: (id: number | undefined) => void
 }) {
@@ -26,11 +27,25 @@ export function List(props: {
             <span class="min-w-0 flex-1 truncate" title={entry.url}>
               <Marked text={label.title} query={props.query} />
             </span>
-            <Show when={label.detail}>
-              {(detail) => (
-                <Muted selected={selected()}>
-                  <Marked text={detail()} query={props.query} />
-                </Muted>
+            <Show
+              when={props.bodyExcerpt(entry)}
+              fallback={
+                <Show when={label.detail}>
+                  {(detail) => (
+                    <Muted selected={selected()}>
+                      <Marked text={detail()} query={props.query} />
+                    </Muted>
+                  )}
+                </Show>
+              }
+            >
+              {(text) => (
+                <span
+                  class="min-w-0 truncate"
+                  classList={{ "text-muted": !selected() }}
+                >
+                  body: <Marked text={text()} query={props.query} />
+                </span>
               )}
             </Show>
             <Show when={label.failure}>
