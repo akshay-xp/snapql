@@ -54,3 +54,29 @@ export function chipsFor(entries: readonly Filterable[]): Filters {
     ),
   }
 }
+
+const allows = (selected: string[], value: string) =>
+  !selected.length || selected.includes(value)
+
+export const matchesFilters = (entry: Filterable, filters: Filters) =>
+  allows(filters.kinds, kindOf(entry)) &&
+  allows(filters.statuses, statusGroup(entry.status))
+
+export function toggle(
+  filters: Filters,
+  group: keyof Filters,
+  value: string,
+): Filters {
+  const values = filters[group]
+  return {
+    ...filters,
+    [group]: values.includes(value)
+      ? values.filter((v) => v !== value)
+      : [...values, value],
+  }
+}
+
+export const prune = (filters: Filters, chips: Filters): Filters => ({
+  kinds: filters.kinds.filter((k) => chips.kinds.includes(k)),
+  statuses: filters.statuses.filter((s) => chips.statuses.includes(s)),
+})

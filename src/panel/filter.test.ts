@@ -3,8 +3,11 @@ import {
   chipsFor,
   highlight,
   kindOf,
+  matchesFilters,
   matchesQuery,
+  prune,
   statusGroup,
+  toggle,
 } from "./filter"
 
 const graphql = {
@@ -83,5 +86,46 @@ describe("filter chips", () => {
       statuses: ["2xx", "4xx", "5xx", "failed"],
     })
     expect(chipsFor([])).toEqual({ kinds: [], statuses: [] })
+  })
+})
+
+describe("matchesFilters", () => {
+  const gql = (status: number) => ({ status, decoded: decoded("graphql") })
+  const json = (status: number) => ({ status, decoded: decoded("json") })
+  const none = { kinds: [], statuses: [] }
+
+  it("matches everything with nothing selected", () => {
+    expect(matchesFilters(gql(200), none)).toBe(true)
+    expect(matchesFilters(two, none)).toBe(true)
+  })
+
+  it("ORs within a group", () => {
+    const kinds = (k: string[]) => ({ ...none, kinds: k })
+    expect(matchesFilters(gql(200), kinds(["graphql"]))).toBe(true)
+    expect(matchesFilters(json(200), kinds(["graphql"]))).toBe(false)
+    expect(matchesFilters(json(200), kinds(["graphql", "json"]))).toBe(true)
+  })
+
+  it("ANDs across groups", () => {
+    const f = { kinds: ["graphql"], statuses: ["4xx"] }
+    expect(matchesFilters(gql(404), f)).toBe(true)
+    expect(matchesFilters(gql(200), f)).toBe(false)
+    expect(matchesFilters(json(404), f)).toBe(false)
+  })
+
+  it("toggles a value without mutating", () => {
+    const on = toggle(none, "kinds", "json")
+    expect(on).toEqual({ kinds: ["json"], statuses: [] })
+    expect(none.kinds).toEqual([])
+    expect(toggle(on, "kinds", "json")).toEqual(none)
+  })
+
+  it("prunes values no longer present", () => {
+    expect(
+      prune(
+        { kinds: ["graphql", "json"], statuses: ["4xx"] },
+        { kinds: ["json"], statuses: ["2xx"] },
+      ),
+    ).toEqual({ kinds: ["json"], statuses: [] })
   })
 })
