@@ -66,7 +66,37 @@ const streamsPage = `<!doctype html>
 <script>
   fetch("/api/sse")
   fetch("/api/ndjson")
+  fetch("/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ model: "gpt-test", messages: [{ role: "user", content: "hi" }], stream: true }),
+  })
 </script>`
+
+const chatChunk = (delta: object, finish_reason: string | null = null) =>
+  JSON.stringify({ choices: [{ index: 0, delta, finish_reason }] })
+
+const chatStream = [
+  chatChunk({ role: "assistant", content: "Hel" }),
+  chatChunk({ content: "lo" }),
+  chatChunk({
+    tool_calls: [
+      {
+        index: 0,
+        id: "call_1",
+        function: { name: "get_weather", arguments: "" },
+      },
+    ],
+  }),
+  chatChunk({ tool_calls: [{ index: 0, function: { arguments: '{"city"' } }] }),
+  chatChunk({
+    tool_calls: [{ index: 0, function: { arguments: ':"Paris"}' } }],
+  }),
+  chatChunk({}, "tool_calls"),
+  "[DONE]",
+]
+  .map((data) => `data: ${data}\n\n`)
+  .join("")
 
 const bulkPage = `<!doctype html>
 <link rel="icon" href="data:,">
@@ -456,6 +486,10 @@ function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "application/x-ndjson" })
         .end('{"n":1}\n{"n":2}\n{"n":3}\n')
+    if (req.url === "/v1/chat/completions")
+      return res
+        .writeHead(200, { "content-type": "text/event-stream" })
+        .end(chatStream)
     if (req.url === "/streams")
       return res
         .writeHead(200, { "content-type": "text/html" })
