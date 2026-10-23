@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { byteLabel, messageBytes, offsetLabel, preview } from "./messages"
+import {
+  arrow,
+  byteLabel,
+  messageBytes,
+  messageText,
+  offsetLabel,
+  preview,
+} from "./messages"
 
 describe("message labels", () => {
   it("formats byte sizes in base 1000", () => {
@@ -21,5 +28,12 @@ describe("message labels", () => {
 
   it("previews on one line", () => {
     expect(preview('  {\n  "a": 1 }')).toBe('{ "a": 1 }')
+  })
+
+  it("labels binary frames by size and shows direction arrows", () => {
+    expect(messageText({ text: "", bytes: 4 })).toBe("binary 4 B")
+    expect(messageText({ text: "  a\n b" })).toBe("a b")
+    expect(arrow("out")).toBe("↑")
+    expect(arrow("in")).toBe("↓")
   })
 })

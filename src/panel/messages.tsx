@@ -2,7 +2,13 @@ import { createSignal, Show } from "solid-js"
 import type { Message } from "../capture/entry"
 import { treeValue } from "./json"
 import { JsonTree } from "./json-tree"
-import { byteLabel, messageBytes, offsetLabel, preview } from "./messages"
+import {
+  arrow,
+  byteLabel,
+  messageBytes,
+  messageText,
+  offsetLabel,
+} from "./messages"
 import { Section, Text } from "./section"
 import { VirtualListbox } from "./virtual-listbox"
 
@@ -10,6 +16,8 @@ export function Messages(props: {
   messages: readonly Message[]
   // Body-parsed messages share the request's start time, so offsets mean nothing.
   timed: boolean
+  // Sockets go both ways; streams only arrive, so arrows would be noise.
+  directions?: boolean
 }) {
   const indexes = () => props.messages.map((_, i) => i)
   const [selected, setSelected] = createSignal<number>()
@@ -40,6 +48,11 @@ export function Messages(props: {
                     {offsetLabel(m.time - props.messages[0].time)}
                   </span>
                 </Show>
+                <Show when={props.directions}>
+                  <span class="shrink-0" classList={muted()}>
+                    {arrow(m.dir)}
+                  </span>
+                </Show>
                 <Show when={m.event}>
                   <span
                     class="shrink-0"
@@ -48,7 +61,7 @@ export function Messages(props: {
                     {m.event}
                   </span>
                 </Show>
-                <span class="min-w-0 flex-1 truncate">{preview(m.text)}</span>
+                <span class="min-w-0 flex-1 truncate">{messageText(m)}</span>
                 <span class="shrink-0" classList={muted()}>
                   {byteLabel(messageBytes(m))}
                 </span>
@@ -65,7 +78,12 @@ export function Messages(props: {
               title={`Message ${(selected() ?? 0) + 1}`}
               copy={() => m.text}
             >
-              <Show when={treeValue(m.text)} fallback={<Text>{m.text}</Text>}>
+              <Show
+                when={treeValue(m.text)}
+                fallback={
+                  <Text>{m.bytes === undefined ? m.text : messageText(m)}</Text>
+                }
+              >
                 {(value) => <JsonTree value={value()} />}
               </Show>
             </Section>
