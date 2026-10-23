@@ -13,6 +13,9 @@ export type Decoded = { title: string; detail?: string; data: unknown }
 
 export type DecodedResponse = { summary: string; data: unknown }
 
+// A socket frame or stream message, as the panel holds it.
+export type FrameView = { dir: "in" | "out"; text: string; bytes?: number }
+
 export type Decoder = {
   kind: string
   decode(req: RequestView): Decoded | undefined
@@ -21,6 +24,12 @@ export type Decoder = {
     text: string,
     decoded: DecodeResult,
   ): DecodedResponse | undefined
+  // Run lazily by the panel for each visible frame; frames is the whole list,
+  // for protocols whose frames refer to earlier ones.
+  decodeMessage?(
+    frame: FrameView,
+    frames: readonly FrameView[],
+  ): Decoded | undefined
 }
 
 export type DecodeResult = Decoded & { kind: string }
