@@ -890,3 +890,35 @@ test("streams are captured live and merge when they finish", async () => {
     await panel.close()
   }
 })
+
+test("Messages follows new messages only from the bottom", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/live`)
+    await expect.poll(panel.probed).toBe(true)
+    await panel.page.evaluate(() => {
+      const es = new EventSource("/api/live?n=80&ms=40")
+      es.addEventListener("done", () => es.close())
+    })
+    const count = async () => {
+      const row = (await panel.rows()).find((r) => r.startsWith("/api/live "))
+      return Number(row?.match(/(\d+) msgs?/)?.[1] ?? 0)
+    }
+    await expect.poll(count, { timeout: 5000 }).toBeGreaterThan(0)
+    await panel.selectStarting("/api/live ")
+    await panel.openTab("Messages")
+
+    await expect.poll(count, { timeout: 5000 }).toBeGreaterThan(30)
+    await panel.scrollList("Messages", "bottom")
+    const seen = await count()
+    await expect.poll(count, { timeout: 5000 }).toBeGreaterThan(seen + 10)
+    expect((await panel.scrollState("Messages")).gap).toBeLessThanOrEqual(28)
+
+    await panel.scrollList("Messages", "top")
+    const later = await count()
+    await expect.poll(count, { timeout: 5000 }).toBeGreaterThan(later + 5)
+    expect((await panel.scrollState("Messages")).top).toBe(0)
+  } finally {
+    await panel.close()
+  }
+})

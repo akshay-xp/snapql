@@ -1,4 +1,12 @@
-import { createSignal, For, type JSX, onCleanup, onMount } from "solid-js"
+import {
+  createEffect,
+  createSignal,
+  For,
+  type JSX,
+  on,
+  onCleanup,
+  onMount,
+} from "solid-js"
 import { nextIndex } from "./keys"
 import { scrollToRow, visibleRange } from "./virtual"
 
@@ -13,6 +21,8 @@ export function VirtualListbox<T>(props: {
   onSelect: (key: number | undefined) => void
   label: string
   idPrefix: string
+  // Keep the newest rows in view while the list is scrolled to the bottom.
+  follow?: boolean
   children: (item: T, selected: () => boolean) => JSX.Element
 }) {
   let el!: HTMLDivElement
@@ -25,6 +35,20 @@ export function VirtualListbox<T>(props: {
     observer.observe(el)
     onCleanup(() => observer.disconnect())
   })
+  let atBottom = true
+  const onScroll = () => {
+    setScrollTop(el.scrollTop)
+    atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - ROW_HEIGHT
+  }
+  createEffect(
+    on(
+      () => props.items.length,
+      () => {
+        if (props.follow && atBottom) el.scrollTop = el.scrollHeight
+      },
+      { defer: true },
+    ),
+  )
   const range = () =>
     visibleRange(
       scrollTop(),
@@ -64,7 +88,7 @@ export function VirtualListbox<T>(props: {
       }
       class="flex-1 overflow-y-auto outline-none"
       ref={el}
-      onScroll={() => setScrollTop(el.scrollTop)}
+      onScroll={onScroll}
       onKeyDown={onKeyDown}
     >
       <div style={{ height: `${props.items.length * ROW_HEIGHT}px` }}>

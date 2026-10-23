@@ -165,6 +165,9 @@ export type Panel = {
   // Clicks the first request row whose text starts with prefix (for rows that change).
   selectStarting(prefix: string): Promise<void>
   probed(): Promise<boolean>
+  // Scrolls a listbox (by aria-label) to its top or bottom; scrollState reads it.
+  scrollList(label: string, to: "top" | "bottom"): Promise<void>
+  scrollState(label: string): Promise<{ top: number; gap: number }>
   activeTab(): Promise<string | undefined>
   openTab(name: string): Promise<void>
   messages(): Promise<string[]>
@@ -379,6 +382,17 @@ export async function openPanel(
       panelFrame.evaluate<void>(
         `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${rowText})(o).startsWith(${JSON.stringify(prefix)})).click()`,
       ),
+    scrollList: (label: string, to: "top" | "bottom") =>
+      panelFrame.evaluate<void>(`(() => {
+        const list = document.querySelector('[role="listbox"][aria-label="${label}"]')
+        list.scrollTop = ${to === "top" ? "0" : "list.scrollHeight"}
+        list.dispatchEvent(new Event("scroll"))
+      })()`),
+    scrollState: (label: string) =>
+      panelFrame.evaluate<{ top: number; gap: number }>(`(() => {
+        const list = document.querySelector('[role="listbox"][aria-label="${label}"]')
+        return { top: list.scrollTop, gap: list.scrollHeight - list.scrollTop - list.clientHeight }
+      })()`),
     probed: () => page.evaluate(() => Symbol.for("snapql.probe") in window),
     selectedRow: () =>
       panelFrame.evaluate<string | undefined>(`(() => {
@@ -440,15 +454,16 @@ function startServer(): Promise<Server> {
   const server = createServer((req, res) => {
     const path = new URL(req.url ?? "", "http://x")
     if (path.pathname.startsWith("/api/live")) {
-      // Held open: one event every 150 ms, then "done", then the end.
+      // Held open: n events (default 10) every ms (default 150), then "done", then the end.
       const total = Number(path.searchParams.get("n") ?? 10)
+      const ms = Number(path.searchParams.get("ms") ?? 150)
       res.writeHead(200, { "content-type": "text/event-stream" })
       let n = 0
       const timer = setInterval(() => {
         if (++n <= total) return res.write(`data: {"n":${n}}\n\n`)
         clearInterval(timer)
         res.end("event: done\ndata: {}\n\n")
-      }, 150)
+      }, ms)
       req.on("close", () => clearInterval(timer))
       return
     }
