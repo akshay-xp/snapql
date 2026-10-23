@@ -46,6 +46,7 @@ export type Message = {
 }
 
 export const MESSAGE_CAP = 2000
+export const FRAME_LIMIT = 1024 * 1024
 
 export type Entry = {
   id: number
@@ -89,7 +90,15 @@ export function toEntry(
 }
 
 export function appendMessages(entry: Entry, msgs: readonly Message[]): Entry {
-  const all = [...(entry.messages ?? []), ...msgs]
+  const all = [
+    ...(entry.messages ?? []),
+    ...msgs.map(
+      (m): Message =>
+        m.text.length > FRAME_LIMIT
+          ? { ...m, text: m.text.slice(0, FRAME_LIMIT), truncated: true }
+          : m,
+    ),
+  ]
   const dropped = all.length - MESSAGE_CAP
   if (dropped <= 0) return { ...entry, messages: all }
   return {
