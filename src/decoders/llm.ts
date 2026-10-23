@@ -49,6 +49,7 @@ export function reassemble(events: StreamEvent[]): Reassembled | undefined {
 
 function folderFor(payload: Body): Folder | undefined {
   if (Array.isArray(payload.choices)) return chatCompletions()
+  if (str(payload.type)?.startsWith("response.")) return responses()
 }
 
 // Tool calls arrive as fragments keyed by index: id and name once, arguments in pieces.
@@ -62,40 +63,87 @@ function toolCalls() {
       call.arguments += part.arguments ?? ""
       calls.set(key, call)
     },
+    has: (key: number) => calls.has(key),
     list: () =>
       [...calls.entries()].sort(([a], [b]) => a - b).map(([, call]) => call),
   }
 }
 
+type Draft = {
+  text: string
+  thinking: string
+  stopReason?: string
+  usage?: Body
+  calls: ReturnType<typeof toolCalls>
+}
+
+const draft = (): Draft => ({ text: "", thinking: "", calls: toolCalls() })
+
+const finish = (d: Draft): Reassembled => ({
+  text: d.text,
+  ...(d.thinking && { thinking: d.thinking }),
+  toolCalls: d.calls.list(),
+  ...(d.stopReason && { stopReason: d.stopReason }),
+  ...(d.usage && { usage: d.usage }),
+})
+
 function chatCompletions(): Folder {
-  let text = ""
-  let stopReason: string | undefined
-  let usage: Body | undefined
-  const calls = toolCalls()
+  const d = draft()
   return {
     fold(payload) {
       const choice = list(payload.choices)[0]
       if (isObject(choice)) {
         const delta = isObject(choice.delta) ? choice.delta : {}
-        text += str(delta.content) ?? ""
+        d.text += str(delta.content) ?? ""
         for (const call of list(delta.tool_calls)) {
           if (!isObject(call)) continue
           const fn = isObject(call.function) ? call.function : {}
-          calls.add(typeof call.index === "number" ? call.index : 0, {
+          d.calls.add(typeof call.index === "number" ? call.index : 0, {
             id: str(call.id),
             name: str(fn.name),
             arguments: str(fn.arguments),
           })
         }
-        stopReason = str(choice.finish_reason) ?? stopReason
+        d.stopReason = str(choice.finish_reason) ?? d.stopReason
       }
-      if (isObject(payload.usage)) usage = payload.usage
+      if (isObject(payload.usage)) d.usage = payload.usage
     },
-    result: () => ({
-      text,
-      toolCalls: calls.list(),
-      ...(stopReason && { stopReason }),
-      ...(usage && { usage }),
-    }),
+    result: () => finish(d),
+  }
+}
+
+function responses(): Folder {
+  const d = draft()
+  return {
+    fold(payload) {
+      const index =
+        typeof payload.output_index === "number" ? payload.output_index : 0
+      switch (payload.type) {
+        case "response.output_text.delta":
+          d.text += str(payload.delta) ?? ""
+          break
+        case "response.output_item.added": {
+          const item = isObject(payload.item) ? payload.item : {}
+          if (item.type === "function_call")
+            d.calls.add(index, {
+              id: str(item.call_id),
+              name: str(item.name),
+              arguments: str(item.arguments),
+            })
+          break
+        }
+        case "response.function_call_arguments.delta":
+          if (d.calls.has(index))
+            d.calls.add(index, { arguments: str(payload.delta) })
+          break
+        case "response.completed":
+        case "response.incomplete": {
+          const response = isObject(payload.response) ? payload.response : {}
+          d.stopReason = str(response.status)
+          if (isObject(response.usage)) d.usage = response.usage
+        }
+      }
+    },
+    result: () => finish(d),
   }
 }

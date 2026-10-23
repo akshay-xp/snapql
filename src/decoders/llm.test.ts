@@ -112,4 +112,58 @@ describe("reassemble", () => {
     expect(reassemble(events("not json", { a: 1 }))).toBeUndefined()
     expect(reassemble([])).toBeUndefined()
   })
+
+  it("folds OpenAI Responses events", () => {
+    expect(
+      reassemble(
+        events(
+          { type: "response.created", response: { status: "in_progress" } },
+          { type: "response.output_text.delta", output_index: 0, delta: "Hi " },
+          {
+            type: "response.output_text.delta",
+            output_index: 0,
+            delta: "there",
+          },
+          {
+            type: "response.output_item.added",
+            output_index: 1,
+            item: {
+              type: "function_call",
+              id: "fc_1",
+              call_id: "call_9",
+              name: "lookup",
+              arguments: "",
+            },
+          },
+          {
+            type: "response.output_item.added",
+            output_index: 2,
+            item: { type: "message", id: "msg_1" },
+          },
+          {
+            type: "response.function_call_arguments.delta",
+            output_index: 1,
+            delta: '{"q":',
+          },
+          {
+            type: "response.function_call_arguments.delta",
+            output_index: 1,
+            delta: '"x"}',
+          },
+          {
+            type: "response.completed",
+            response: {
+              status: "completed",
+              usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 },
+            },
+          },
+        ),
+      ),
+    ).toEqual({
+      text: "Hi there",
+      toolCalls: [{ id: "call_9", name: "lookup", arguments: '{"q":"x"}' }],
+      stopReason: "completed",
+      usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 },
+    })
+  })
 })
