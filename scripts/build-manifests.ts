@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import type { Plugin } from "vite"
 
 export type Target = "chrome" | "firefox"
@@ -38,6 +39,21 @@ export function manifestPlugin(target: Target, version: string): Plugin {
         type: "asset",
         fileName: "manifest.json",
         source: JSON.stringify(manifestFor(target, version), null, 2),
+      })
+    },
+  }
+}
+
+// Shipped unbundled and unminified: what store reviewers read is exactly what
+// the panel injects into pages.
+export function probePlugin(): Plugin {
+  return {
+    name: "snapql-probe",
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "probe.js",
+        source: readFileSync("src/probe/probe.js", "utf8"),
       })
     },
   }

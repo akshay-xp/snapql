@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
-import { manifestFor } from "./build-manifests"
+import { readFileSync } from "node:fs"
+import { describe, expect, it, vi } from "vitest"
+import { manifestFor, probePlugin } from "./build-manifests"
 
 describe("manifestFor", () => {
   it("builds the Chrome manifest", () => {
@@ -27,5 +28,18 @@ describe("manifestFor", () => {
       },
     })
     expect(chrome).not.toHaveProperty("browser_specific_settings")
+  })
+})
+
+describe("probePlugin", () => {
+  it("emits the probe verbatim as probe.js", () => {
+    const emitFile = vi.fn()
+    const hook = probePlugin().generateBundle as (this: unknown) => void
+    hook.call({ emitFile })
+    expect(emitFile).toHaveBeenCalledWith({
+      type: "asset",
+      fileName: "probe.js",
+      source: readFileSync("src/probe/probe.js", "utf8"),
+    })
   })
 })
