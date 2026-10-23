@@ -5,6 +5,7 @@ import { json } from "./json"
 import { jsonrpc } from "./jsonrpc"
 import { llm } from "./llm"
 import { multipart } from "./multipart"
+import { protobuf } from "./protobuf"
 import { socketio } from "./socketio"
 import { ndjson, sse } from "./sse"
 import { trpc } from "./trpc"
@@ -25,6 +26,7 @@ export const decoders: Decoder[] = [
   socketio,
   graphqlWs,
   websocket,
+  protobuf,
   sse,
   ndjson,
   json,
