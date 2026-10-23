@@ -29,10 +29,53 @@
   }
   window[KEY] = state
 
+  // Must match the stream mimes the panel parses (src/decoders/stream.ts).
+  const STREAM = /event-stream|ndjson|jsonl|multipart\/mixed/i
+  let nextId = 1
+
+  async function readStream(id, res) {
+    const reader = res.clone().body.getReader()
+    const decoder = new TextDecoder()
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value, { stream: true })
+        if (text) state.record({ type: "chunk", id, time: Date.now(), text })
+      }
+    } finally {
+      state.record({ type: "close", id, time: Date.now() })
+    }
+  }
+
   const fetch = window.fetch
   if (fetch) {
     window.fetch = function (...args) {
-      return fetch.apply(this, args)
+      const [input, init] = args
+      const promise = fetch.apply(this, args)
+      const time = Date.now()
+      promise.then(
+        (res) => {
+          const mimeType = res.headers.get("content-type") || ""
+          if (!STREAM.test(mimeType) || !res.body) return
+          const request = typeof input === "object" && "url" in input
+          const id = nextId++
+          state.record({
+            type: "open",
+            id,
+            kind: "fetch",
+            method: init?.method || (request && input.method) || "GET",
+            url: request ? input.url : String(input),
+            status: res.status,
+            mimeType,
+            body: typeof init?.body === "string" ? init.body : undefined,
+            time,
+          })
+          readStream(id, res).catch(() => {})
+        },
+        () => {},
+      )
+      return promise
     }
   }
 })(window)
