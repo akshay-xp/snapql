@@ -1398,6 +1398,30 @@ test("Body tab highlights body search matches", async () => {
   }
 })
 
+test("Body tab highlights text bodies and scrolls to clipped matches", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/search`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(3)
+    await panel.click('button[title="Search request and response bodies"]')
+
+    await panel.search("pearl")
+    await expect.poll(panel.rows).toEqual(["/api/note body: a hidden pearl"])
+    await panel.select("/api/note body: a hidden pearl")
+    await panel.openTab("Body")
+    await expect.poll(panel.marks).toEqual(["pearl"])
+
+    // Past the 200-character clip, at the end of a long body.
+    await panel.search("needle")
+    await panel.selectStarting("/api/long")
+    await panel.openTab("Body")
+    await expect.poll(panel.marks).toEqual(["needle"])
+    expect(await panel.scrollTop('[role="tabpanel"]')).toBeGreaterThan(0)
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Copy as copies cURL and fetch, not for sockets", async () => {
   const panel = await openPanel()
   try {

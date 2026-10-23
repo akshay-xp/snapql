@@ -119,8 +119,13 @@ function Leaf(props: { value: unknown; query: string }) {
 }
 
 function StringLeaf(props: { value: string; query: string }) {
-  const [full, setFull] = createSignal(false)
+  const [expanded, setExpanded] = createSignal(false)
   const clipped = () => clip(props.value)
+  // A match past the clip would otherwise stay hidden.
+  const full = () =>
+    expanded() ||
+    (hasMatch(props.value, props.query) &&
+      !hasMatch(clipped().head, props.query))
   return (
     <>
       <span data-json="string" class="text-syntax-string">
@@ -134,7 +139,7 @@ function StringLeaf(props: { value: string; query: string }) {
         <button
           type="button"
           class="font-sans text-accent"
-          onClick={() => setFull(true)}
+          onClick={() => setExpanded(true)}
         >
           show more
         </button>
