@@ -34,14 +34,15 @@ function tokenize(text: string): Token[] {
 }
 
 // A field type as written, resolved once every file's names are known.
-type Pending = { field: Field; scope: string }
+type Pending = { type: string; scope: string; set: (type: string) => void }
+
+const SKIPPED = new Set(["option", "reserved", "extensions"])
 
 export function parseProto(files: ProtoFile[]): Schema {
   const schema: Schema = { messages: {}, enums: {}, methods: {} }
   const pending: Pending[] = []
   for (const file of files) new FileParser(file, schema, pending).parse()
-  for (const { field, scope } of pending)
-    field.type = resolve(field.type, scope, schema)
+  for (const p of pending) p.set(resolve(p.type, p.scope, schema))
   return schema
 }
 
@@ -85,19 +86,45 @@ class FileParser {
     const fields: Record<number, Field> = {}
     this.schema.messages[name] = { fields }
     this.expect("{")
+    this.body(name, fields)
+  }
+
+  private body(scope: string, fields: Record<number, Field>) {
     while (this.peek() !== "}") {
       const word = this.next()
-      if (word === "message") this.message(name)
-      else if (word === "enum") this.enumBody(name)
-      else {
-        const field: Field = { name: this.next(), type: word }
-        this.expect("=")
-        fields[Number(this.next())] = field
-        this.expect(";")
-        this.pending.push({ field, scope: name })
-      }
+      if (word === "message") this.message(scope)
+      else if (word === "enum") this.enumBody(scope)
+      else if (word === "oneof") {
+        this.next()
+        this.expect("{")
+        this.body(scope, fields)
+      } else if (SKIPPED.has(word)) this.skipStatement()
+      else this.field(word, scope, fields)
     }
     this.next()
+  }
+
+  private field(word: string, scope: string, fields: Record<number, Field>) {
+    const repeated = word === "repeated"
+    if (repeated || word === "optional") word = this.next()
+    let field: Field
+    if (word === "map") {
+      this.expect("<")
+      const map = { key: this.next(), value: "" }
+      this.expect(",")
+      const value = this.next()
+      this.expect(">")
+      field = { name: this.next(), type: "map", map }
+      this.pending.push({ type: value, scope, set: (t) => (map.value = t) })
+    } else {
+      field = { name: this.next(), type: word }
+      if (repeated) field.repeated = true
+      this.pending.push({ type: word, scope, set: (t) => (field.type = t) })
+    }
+    this.expect("=")
+    fields[Number(this.next())] = field
+    if (this.peek() === "[") this.skipBracketed()
+    this.expect(";")
   }
 
   private enumBody(scope: string) {
@@ -114,7 +141,21 @@ class FileParser {
   }
 
   private skipStatement() {
-    while (this.next() !== ";");
+    while (this.peek() !== ";") {
+      if (this.peek() === "{" || this.peek() === "[") this.skipBracketed()
+      else this.next()
+    }
+    this.next()
+  }
+
+  // Skips a balanced [...] or {...}, e.g. field options with aggregate values.
+  private skipBracketed() {
+    let depth = 0
+    do {
+      const t = this.next()
+      if (t === "[" || t === "{") depth++
+      if (t === "]" || t === "}") depth--
+    } while (depth)
   }
 
   private peek() {
