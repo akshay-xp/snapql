@@ -606,8 +606,11 @@ function Summary(props: {
               type="button"
               data-compare
               aria-pressed={props.isBase}
-              class="rounded px-1.5 py-0.5 text-muted hover:bg-selected hover:text-fg"
-              classList={{ "text-accent": props.isBase }}
+              class="rounded px-1.5 py-0.5 hover:bg-selected hover:text-fg"
+              classList={{
+                "text-accent": props.isBase,
+                "text-muted": !props.isBase,
+              }}
               onClick={() =>
                 props.onCompare(props.isBase ? undefined : props.entry.id)
               }

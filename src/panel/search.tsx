@@ -78,8 +78,11 @@ export function FilterChips(props: {
           <button
             type="button"
             aria-pressed={pressed()}
-            class="shrink-0 rounded-full bg-surface px-2 py-0.5 font-mono"
-            classList={{ "bg-accent/20 text-accent": pressed() }}
+            class="shrink-0 rounded-full px-2 py-0.5 font-mono"
+            classList={{
+              "bg-accent/20 text-accent": pressed(),
+              "bg-surface": !pressed(),
+            }}
             onClick={() => props.onToggle(name, value)}
           >
             {value}
