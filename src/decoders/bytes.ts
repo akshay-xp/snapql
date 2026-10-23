@@ -60,3 +60,12 @@ export function parseFirst<T>(
   }
   return { error: (first as Error).message, hex: hex(candidates[0]) }
 }
+
+// Tree keys must be strings; non-string map keys keep a readable form.
+export function keyText(key: unknown): string {
+  return typeof key === "string" ||
+    typeof key === "number" ||
+    typeof key === "boolean"
+    ? String(key)
+    : JSON.stringify(key)
+}
