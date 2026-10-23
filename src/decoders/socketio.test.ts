@@ -45,4 +45,51 @@ describe("socketio", () => {
     expect(decode("", 4)).toBeUndefined()
     expect(decode("x")).toBeUndefined()
   })
+
+  it("titles connect, disconnect and connect errors", () => {
+    expect(decode("40")).toEqual({ title: "connect" })
+    expect(decode('40{"sid":"b"}')).toEqual({
+      title: "connect",
+      data: { sid: "b" },
+    })
+    expect(decode("41")).toEqual({ title: "disconnect" })
+    expect(decode('44{"message":"no"}')).toEqual({
+      title: "connect_error",
+      data: { message: "no" },
+    })
+  })
+
+  it("titles events by name, with namespace and ack id", () => {
+    expect(decode('42["chat",{"text":"hi"}]')).toEqual({
+      title: "chat",
+      data: { args: [{ text: "hi" }] },
+    })
+    expect(decode('42/admin,["chat"]')).toEqual({
+      title: "chat",
+      detail: "/admin",
+      data: { args: [] },
+    })
+    expect(decode('4212["chat"]')).toEqual({
+      title: "chat",
+      data: { args: [], ack: 12 },
+    })
+    expect(decode('431["ok"]')).toEqual({
+      title: "ack 1",
+      data: { args: ["ok"] },
+    })
+  })
+
+  it("marks binary events and acks", () => {
+    expect(decode('451-["up",{"_placeholder":true,"num":0}]')).toEqual({
+      title: "up",
+      detail: "binary",
+      data: { args: [{ _placeholder: true, num: 0 }] },
+    })
+    expect(decode("461-0[]")).toEqual({
+      title: "ack 0",
+      detail: "binary",
+      data: { args: [] },
+    })
+    expect(decode('451-/admin,["up"]')?.detail).toBe("/admin, binary")
+  })
 })
