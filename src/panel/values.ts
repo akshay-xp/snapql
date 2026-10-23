@@ -1,4 +1,5 @@
 import type { Exchange, NameValue } from "../capture/entry"
+import { text } from "../decoders/bytes"
 import { parseJson } from "../decoders/json"
 
 export type Jwt = {
@@ -8,9 +9,7 @@ export type Jwt = {
 }
 
 export function decodeBase64(content: string): string {
-  return new TextDecoder().decode(
-    Uint8Array.from(atob(content), (c) => c.charCodeAt(0)),
-  )
+  return text({ content, encoding: "base64" })
 }
 
 // Decoded for display only; the signature is never verified.

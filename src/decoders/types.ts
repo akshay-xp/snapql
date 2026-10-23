@@ -9,6 +9,9 @@ export type RequestView = {
   protocols?: string[]
 }
 
+// A body as the browser reports it; encoding is "" or "base64".
+export type BodyView = { content: string; encoding: string }
+
 export type Decoded = { title: string; detail?: string; data: unknown }
 
 export type DecodedResponse = { summary: string; data: unknown }
