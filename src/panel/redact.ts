@@ -1,5 +1,7 @@
 import type { NameValue } from "../capture/entry"
+import { parseJson } from "../decoders/json"
 import type { Har, HarEntry } from "./har"
+import { decodeJwt } from "./values"
 
 const REDACTED = "[redacted]"
 const SECRET = /token|secret|key|auth|session|csrf|password/i
@@ -52,26 +54,70 @@ function redactUrl(url: string): string {
   )
 }
 
+// decodeJwt confirms each candidate, so dotted text like 127.0.0.1 survives.
+const redactJwts = (text: string) =>
+  text.replace(/[\w-]+\.[\w-]+\.[\w-]*/g, (m) => (decodeJwt(m) ? REDACTED : m))
+
+const redactJson = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(redactJson)
+    : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.entries(value).map(([k, v]) => [
+            k,
+            secretName(k) ? REDACTED : redactJson(v),
+          ]),
+        )
+      : value
+
+function redactText(text: string, mimeType = ""): string {
+  const json = parseJson(text)
+  if (json && typeof json === "object")
+    return redactJwts(JSON.stringify(redactJson(json)))
+  if (mimeType.includes("x-www-form-urlencoded"))
+    return redactJwts(redactSearch(text))
+  return redactJwts(text)
+}
+
+const redactValues = (pairs: readonly NameValue[]) =>
+  pairs.map((p) => ({ ...p, value: redactJwts(p.value) }))
+
 // Cookie headers are always redacted, so the parsed lists must be too.
 const redactCookies = (cookies: readonly NameValue[]) =>
   redactPairs(cookies, () => true)
 
 function redactEntry(entry: HarEntry): HarEntry {
   const { request, response } = entry
+  const { content } = response
   return {
     ...entry,
     request: {
       ...request,
-      url: redactUrl(request.url),
-      headers: redactPairs(request.headers, secretHeader),
+      url: redactJwts(redactUrl(request.url)),
+      headers: redactValues(redactPairs(request.headers, secretHeader)),
       cookies: redactCookies(request.cookies),
-      queryString: redactPairs(request.queryString, secretName),
+      queryString: redactValues(redactPairs(request.queryString, secretName)),
+      ...(request.postData && {
+        postData: {
+          ...request.postData,
+          text: redactText(request.postData.text, request.postData.mimeType),
+        },
+      }),
     },
     response: {
       ...response,
-      headers: redactPairs(response.headers, secretHeader),
+      headers: redactValues(redactPairs(response.headers, secretHeader)),
       cookies: redactCookies(response.cookies),
+      content:
+        content.text === undefined || content.encoding === "base64"
+          ? content
+          : { ...content, text: redactText(content.text, content.mimeType) },
     },
+    ...(entry._webSocketMessages && {
+      _webSocketMessages: entry._webSocketMessages.map((m) =>
+        m.opcode === 1 ? { ...m, data: redactText(m.data) } : m,
+      ),
+    }),
   }
 }
 
