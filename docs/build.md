@@ -49,7 +49,8 @@
 ## CI
 
 - `.github/workflows/ci.yml`: one `ci` job on push and PR to `master`.
-- Steps: `pnpm install --frozen-lockfile`, then `lint`, `typecheck`, `test`, `build`, `playwright install --with-deps chromium`, `e2e` as separate steps; first failure fails the job.
+- Steps: `pnpm install --frozen-lockfile`, then `lint`, `typecheck`, `test`, `build`, Chromium, `e2e` as separate steps; first failure fails the job.
+- Chromium: `~/.cache/ms-playwright` cached by `actions/cache`, keyed on `playwright --version`; `playwright install chromium` only on a miss. No `--with-deps`: its apt step took 9+ min on a slow mirror (PR #64) while the browser download takes seconds, and the runner image already ships Chrome's system libraries. `Check Chromium libraries` runs `ldd` on both binaries and fails listing any `not found`, so a runner image change shows up as a clear error rather than a browser launch failure.
 - Node 22: the `engines` minimum, so CI catches use of newer Node APIs.
 - pnpm version comes from `packageManager` in `package.json` (read by `pnpm/action-setup`); not repeated in the workflow.
 - Validate locally: `pnpm dlx @action-validator/cli .github/workflows/ci.yml`.
