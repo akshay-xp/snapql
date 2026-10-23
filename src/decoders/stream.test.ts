@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { type StreamEvent, streamParser } from "./stream"
+import { parseStream, type StreamEvent, streamParser } from "./stream"
 
 function parse(mimeType: string, ...chunks: string[]): StreamEvent[] {
   const parser = streamParser(mimeType)
@@ -103,5 +103,15 @@ describe("multipart/mixed", () => {
   it("gives the same events however the text is split", () => {
     expectAnySplit('multipart/mixed; boundary="-"', text)
     expectAnySplit("multipart/mixed", text)
+  })
+})
+
+describe("parseStream", () => {
+  it("parses a whole body, or gives undefined for other mimes", () => {
+    expect(parseStream("text/event-stream", "data: a\n\ndata: b")).toEqual([
+      { text: "a" },
+      { text: "b" },
+    ])
+    expect(parseStream("text/html", "x")).toBeUndefined()
   })
 })
