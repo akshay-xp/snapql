@@ -1431,6 +1431,11 @@ test("Body tab highlights text bodies and scrolls to clipped matches", async () 
     await panel.openTab("Body")
     await expect.poll(panel.marks).toEqual(["needle"])
     expect(await panel.scrollTop('[role="tabpanel"]')).toBeGreaterThan(0)
+    // The toolbar stays put while the body scrolls under it.
+    expect(await panel.inView("[data-match-nav]")).toBe(true)
+    expect(
+      await panel.inView('[role="tabpanel"] button[aria-label="Copy"]'),
+    ).toBe(true)
   } finally {
     await panel.close()
   }
@@ -1475,9 +1480,9 @@ test("steps through body matches", async () => {
     await expect.poll(async () => (await panel.rows()).length).toBe(1)
     await panel.selectStarting("/api/fruit")
     const nav = "[data-match-nav]"
-    const next = 'button[aria-label="Next match"]'
+    const next = 'button[aria-label="Next match (Enter)"]'
 
-    await expect.poll(() => panel.text(nav)).toBe("1 of 3")
+    await expect.poll(() => panel.text(nav)).toBe("Match 1 of 3")
     expect(await panel.text("mark[data-current]")).toBe("apple")
     expect(await panel.count("mark[data-current]")).toBe(1)
     expect(
@@ -1491,20 +1496,20 @@ test("steps through body matches", async () => {
 
     await panel.click(next)
     await panel.click(next)
-    expect(await panel.text(nav)).toBe("3 of 3")
+    expect(await panel.text(nav)).toBe("Match 3 of 3")
     await panel.click(next)
-    expect(await panel.text(nav)).toBe("1 of 3")
-    await panel.click('button[aria-label="Previous match"]')
-    expect(await panel.text(nav)).toBe("3 of 3")
+    expect(await panel.text(nav)).toBe("Match 1 of 3")
+    await panel.click('button[aria-label="Previous match (Shift+Enter)"]')
+    expect(await panel.text(nav)).toBe("Match 3 of 3")
     expect(await panel.count("mark[data-current]")).toBe(1)
 
     await panel.pressSearch("Enter")
-    expect(await panel.text(nav)).toBe("1 of 3")
+    expect(await panel.text(nav)).toBe("Match 1 of 3")
     await panel.pressSearch("Enter")
-    expect(await panel.text(nav)).toBe("2 of 3")
+    expect(await panel.text(nav)).toBe("Match 2 of 3")
     await panel.pressSearch("Enter", { shift: true })
     await panel.pressSearch("Enter", { shift: true })
-    expect(await panel.text(nav)).toBe("3 of 3")
+    expect(await panel.text(nav)).toBe("Match 3 of 3")
 
     await panel.search("zzz")
     await expect.poll(() => panel.count(nav)).toBe(0)

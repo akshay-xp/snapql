@@ -42,12 +42,15 @@ export function MatchNav(props: {
   return (
     <Show when={props.count}>
       <span data-match-nav class="self-center text-muted">
-        {props.index + 1} of {props.count}
+        Match {props.index + 1} of {props.count}
       </span>
-      <IconButton label="Previous match" onClick={() => props.onMove(-1)}>
+      <IconButton
+        label="Previous match (Shift+Enter)"
+        onClick={() => props.onMove(-1)}
+      >
         <path d="m18 15-6-6-6 6" />
       </IconButton>
-      <IconButton label="Next match" onClick={() => props.onMove(1)}>
+      <IconButton label="Next match (Enter)" onClick={() => props.onMove(1)}>
         <path d="m6 9 6 6 6-6" />
       </IconButton>
     </Show>
