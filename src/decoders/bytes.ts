@@ -1,7 +1,7 @@
 import { baseMime, count } from "./text"
 import type { BodyView, Decoder } from "./types"
 
-export function bytes(body: BodyView): Uint8Array {
+export function bytes(body: BodyView): Uint8Array<ArrayBuffer> {
   return body.encoding === "base64"
     ? Uint8Array.from(atob(body.content), (c) => c.charCodeAt(0))
     : new TextEncoder().encode(body.content)

@@ -197,6 +197,31 @@ const packedPage = `<!doctype html>
     [0xa1, 0x61, 0x74, 0xc1, 0x1a, 0x65, 0x53, 0xf1, 0x00])
 </script>`
 
+const mediaPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  for (const url of ["/api/png", "/api/svg", "/api/font", "/api/badfont", "/api/bin"])
+    fetch(url)
+</script>`
+
+// 3x2 red RGB PNG (73 bytes).
+export const PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAEElEQVR4nGP4z8AAQQxwFgBB0gX7h/C5SAAAAABJRU5ErkJggg=="
+const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="5"/>'
+const media: Record<string, [string, () => Promise<Buffer> | Buffer]> = {
+  "/api/png": ["image/png", () => Buffer.from(PNG_BASE64, "base64")],
+  "/api/svg": ["image/svg+xml", () => Buffer.from(SVG)],
+  "/api/font": [
+    "font/ttf",
+    () => readFile(new URL("./fixtures/glyph.ttf", import.meta.url)),
+  ],
+  "/api/badfont": ["font/woff2", () => Buffer.from([0, 1, 2, 3])],
+  "/api/bin": [
+    "application/octet-stream",
+    () => Buffer.from([0, 0xff, 0x10, 0x41]),
+  ],
+}
+
 const socketPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <button id="open">open</button>
@@ -706,6 +731,15 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/html" })
         .end(streamsPage)
+    if (req.url === "/media")
+      return res.writeHead(200, { "content-type": "text/html" }).end(mediaPage)
+    const asset = media[req.url ?? ""]
+    if (asset) {
+      const [type, data] = asset
+      return void Promise.resolve(data()).then((body) =>
+        res.writeHead(200, { "content-type": type }).end(body),
+      )
+    }
     if (req.url === "/packed")
       return res.writeHead(200, { "content-type": "text/html" }).end(packedPage)
     if (req.url === "/api/msgpack")

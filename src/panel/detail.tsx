@@ -9,22 +9,32 @@ import {
 } from "solid-js"
 import { type Body, type Entry, incoming, type Message } from "../capture/entry"
 import { decoders } from "../decoders"
+import { bytes } from "../decoders/bytes"
 import { grpcRequestData, grpcResponse } from "../decoders/grpc-web"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
+import { baseMime } from "../decoders/text"
 import type { DecodedResponse } from "../decoders/types"
 import {
   type BinaryFormat,
   binaryFormat,
   decodeBinaryFrame,
 } from "./binary-frames"
-import { BODY_LIMIT, loadBody } from "./body"
+import {
+  BODY_LIMIT,
+  type BodyViewKind,
+  type FormattedBody,
+  imageSrc,
+  loadBody,
+} from "./body"
 import { valueText } from "./copy"
 import { CopyButton } from "./copy-button"
 import { summaryHeading } from "./heading"
+import { hexDump } from "./hex-dump"
 import { OPEN_DEPTH, treeValue } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
+import { byteLabel } from "./messages"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
 import type { Schemas } from "./schemas"
@@ -136,7 +146,9 @@ export function Detail(props: {
           </Match>
           <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
-              {(text) => <BodyView text={text} />}
+              {(text, body) => (
+                <BodyView text={text} view={body.view} entry={props.entry} />
+              )}
             </LoadedBody>
           </Match>
           <Match when={shown() === "Messages"}>
@@ -298,7 +310,7 @@ function TimingPanel(props: { entry: Entry }) {
 function LoadedBody(props: {
   entry: Entry
   pretty: boolean
-  children: (text: string) => JSX.Element
+  children: (text: string, body: FormattedBody) => JSX.Element
 }) {
   const [body] = createResource(
     () => props.entry,
@@ -311,14 +323,14 @@ function LoadedBody(props: {
           <For each={b().notes}>
             {(note) => <p class="text-muted">{note}</p>}
           </For>
-          {props.children(b().text)}
+          {props.children(b().text, b())}
         </>
       )}
     </Show>
   )
 }
 
-function BodyView(props: { text: string }) {
+function BodyView(props: { text: string; view?: BodyViewKind; entry: Entry }) {
   const json = () => treeValue(props.text)
   const [allOpen, setAllOpen] = createSignal(false)
   return (
@@ -335,15 +347,98 @@ function BodyView(props: { text: string }) {
         </Show>
         <CopyButton label="Copy" captioned value={() => props.text} />
       </Toolbar>
-      <Show when={json()} fallback={<Text>{props.text}</Text>}>
-        {(value) => (
-          <JsonTree
-            value={value()}
-            openDepth={allOpen() ? Number.POSITIVE_INFINITY : OPEN_DEPTH}
-          />
-        )}
+      <Switch
+        fallback={
+          <Show when={json()} fallback={<Text>{props.text}</Text>}>
+            {(value) => (
+              <JsonTree
+                value={value()}
+                openDepth={allOpen() ? Number.POSITIVE_INFINITY : OPEN_DEPTH}
+              />
+            )}
+          </Show>
+        }
+      >
+        <Match when={props.view === "image"}>
+          <ImagePreview text={props.text} mimeType={props.entry.mimeType} />
+        </Match>
+        <Match when={props.view === "font"}>
+          <FontPreview text={props.text} id={props.entry.id} />
+        </Match>
+        <Match when={props.view === "hex"}>
+          <Text>{hexDump(fromBase64(props.text))}</Text>
+        </Match>
+      </Switch>
+    </>
+  )
+}
+
+const fromBase64 = (content: string) => bytes({ content, encoding: "base64" })
+
+function ImagePreview(props: { text: string; mimeType: string }) {
+  const svg = () => baseMime(props.mimeType) === "image/svg+xml"
+  const size = () =>
+    svg()
+      ? new TextEncoder().encode(props.text).length
+      : fromBase64(props.text).length
+  const [shown, setShown] = createSignal<string>()
+  return (
+    <>
+      <img
+        src={imageSrc(props.text, props.mimeType)}
+        alt=""
+        class="max-w-full self-start"
+        onLoad={(e) =>
+          setShown(
+            `${e.currentTarget.naturalWidth} × ${e.currentTarget.naturalHeight} px · ${byteLabel(size())}`,
+          )
+        }
+        onError={() => setShown("image failed to load")}
+      />
+      <Show when={shown()}>
+        {(caption) => <p class="text-muted">{caption()}</p>}
+      </Show>
+      <Show when={svg()}>
+        <Text>{props.text}</Text>
       </Show>
     </>
+  )
+}
+
+const FONT_SAMPLE = "The quick brown fox jumps over the lazy dog 0123456789"
+
+// Loaded under a per-entry family name so previews never clash.
+function FontPreview(props: { text: string; id: number }) {
+  const family = () => `snapql-font-${props.id}`
+  const [loaded] = createResource(
+    () => props.text,
+    async (text) => {
+      try {
+        const face = new FontFace(family(), fromBase64(text))
+        document.fonts.add(await face.load())
+        return true
+      } catch {
+        return false
+      }
+    },
+  )
+  return (
+    <Show when={loaded() !== undefined}>
+      <Show
+        when={loaded()}
+        fallback={<p class="text-error">font failed to load</p>}
+      >
+        <For each={[12, 18, 28]}>
+          {(px) => (
+            <p
+              style={{ "font-family": `"${family()}"`, "font-size": `${px}px` }}
+            >
+              {FONT_SAMPLE}
+            </p>
+          )}
+        </For>
+      </Show>
+    </Show>
   )
 }
 

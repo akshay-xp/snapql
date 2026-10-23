@@ -1,7 +1,7 @@
 import { expect, test } from "vitest"
 import { requestBytes } from "../src/decoders/bytes"
 import { defaultTheme } from "../src/panel/themes"
-import { openPanel } from "./harness"
+import { openPanel, PNG_BASE64 } from "./harness"
 
 test("panel lists requests from the inspected page", async () => {
   const panel = await openPanel()
@@ -1225,6 +1225,44 @@ test("binary socket frames decode by protocol or Decode as", async () => {
     await expect
       .poll(titles)
       .toEqual(['↑ {"a":1} cbor 4 B', '↓ {"a":1} cbor 4 B'])
+  } finally {
+    await panel.close()
+  }
+})
+
+test("the Body tab previews images and fonts and dumps other binary", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/media`)
+    const rows = ["png", "svg", "font", "badfont", "bin"].map(
+      (r) => `/api/${r} GET`,
+    )
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining(rows))
+    const body = async (row: string) => {
+      await panel.select(row)
+      await panel.openTab("Body")
+    }
+
+    await body("/api/png GET")
+    await expect.poll(panel.detail).toContain("3 × 2 px · 73 B")
+    await panel.stubClipboard()
+    await panel.clickButton("Copy")
+    expect(await panel.copied()).toBe(PNG_BASE64)
+
+    await body("/api/svg GET")
+    await expect.poll(panel.detail).toContain("4 × 5 px")
+    expect(await panel.detail()).toContain("<svg")
+
+    await body("/api/font GET")
+    await expect
+      .poll(async () => (await panel.detail())?.split("quick brown fox").length)
+      .toBe(4)
+
+    await body("/api/badfont GET")
+    await expect.poll(panel.detail).toContain("font failed to load")
+
+    await body("/api/bin GET")
+    await expect.poll(panel.detail).toContain("00000000  00 ff 10 41")
   } finally {
     await panel.close()
   }
