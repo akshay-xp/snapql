@@ -1,4 +1,4 @@
-import { Show } from "solid-js"
+import { type JSX, Show } from "solid-js"
 import type { Entry } from "../capture/entry"
 import { rowLabel } from "./row"
 import { Marked } from "./search"
@@ -28,12 +28,9 @@ export function List(props: {
             </span>
             <Show when={label.detail}>
               {(detail) => (
-                <span
-                  class="shrink-0"
-                  classList={{ "text-muted": !selected() }}
-                >
+                <Muted selected={selected()}>
                   <Marked text={detail()} query={props.query} />
-                </span>
+                </Muted>
               )}
             </Show>
             <Show when={label.failure}>
@@ -46,10 +43,11 @@ export function List(props: {
                 live
               </span>
             </Show>
+            <Show when={label.closed}>
+              <Muted selected={selected()}>{label.closed}</Muted>
+            </Show>
             <Show when={label.count}>
-              <span class="shrink-0" classList={{ "text-muted": !selected() }}>
-                {label.count}
-              </span>
+              <Muted selected={selected()}>{label.count}</Muted>
             </Show>
             {/* Present but empty when undecoded, so tags align in a column. */}
             <span
@@ -66,5 +64,14 @@ export function List(props: {
         )
       }}
     </VirtualListbox>
+  )
+}
+
+// Muted on the selected row falls under 4.5:1, so selected rows drop it.
+function Muted(props: { selected: boolean; children: JSX.Element }) {
+  return (
+    <span class="shrink-0" classList={{ "text-muted": !props.selected }}>
+      {props.children}
+    </span>
   )
 }

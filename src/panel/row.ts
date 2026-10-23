@@ -8,12 +8,13 @@ export type RowLabel = {
   failure?: string
   count?: string
   live?: true
+  closed?: string
 }
 
 export function rowLabel(
   entry: Pick<
     Entry,
-    "method" | "url" | "status" | "decoded" | "messages" | "open"
+    "method" | "url" | "status" | "decoded" | "messages" | "open" | "socket"
   >,
 ): RowLabel {
   const { decoded, status } = entry
@@ -31,6 +32,9 @@ export function rowLabel(
       : { detail: entry.method }),
     ...(failure && { failure }),
     ...(entry.open && { live: true as const }),
+    ...(entry.socket?.closeCode !== undefined && {
+      closed: `closed ${entry.socket.closeCode}`,
+    }),
     ...(entry.messages && { count: count(entry.messages.length, "msg") }),
   }
 }
