@@ -113,4 +113,82 @@ describe("probe", () => {
       })
     })
   })
+
+  describe("EventSource", () => {
+    class FakeEventSource extends EventTarget {
+      static CLOSED = 2
+      readyState = 1
+      onmessage: ((e: MessageEvent) => void) | null = null
+      constructor(readonly url: string) {
+        super()
+        this.addEventListener("message", (e) =>
+          this.onmessage?.(e as MessageEvent),
+        )
+      }
+      close() {
+        this.readyState = 2
+      }
+    }
+
+    const setup = () => {
+      const win: Record<PropertyKey, unknown> = { EventSource: FakeEventSource }
+      const state = run(win)
+      const Wrapped = win.EventSource as typeof FakeEventSource
+      return { state, es: new Wrapped("/e"), Wrapped }
+    }
+
+    it("keeps the page's view of EventSource", () => {
+      const { es, Wrapped } = setup()
+      expect(es).toBeInstanceOf(FakeEventSource)
+      expect(es).toBeInstanceOf(Wrapped)
+      expect(Wrapped.CLOSED).toBe(2)
+    })
+
+    it("records open and messages", () => {
+      const { state, es } = setup()
+      const seen: string[] = []
+      es.onmessage = (e) => seen.push(e.data)
+      es.dispatchEvent(
+        new MessageEvent("message", { data: "a", lastEventId: "1" }),
+      )
+      expect(seen).toEqual(["a"])
+      expect(state.drain().events).toMatchObject([
+        {
+          type: "open",
+          kind: "eventsource",
+          method: "GET",
+          url: "/e",
+          mimeType: "text/event-stream",
+        },
+        { type: "event", text: "a", lastId: "1" },
+      ])
+    })
+
+    it("records named events once the page listens for them", () => {
+      const { state, es } = setup()
+      state.drain()
+      es.dispatchEvent(new MessageEvent("ping", { data: "1" }))
+      expect(state.drain().events).toEqual([])
+
+      es.addEventListener("ping", () => {})
+      es.addEventListener("ping", () => {})
+      es.dispatchEvent(new MessageEvent("ping", { data: "2" }))
+      expect(state.drain().events).toMatchObject([
+        { type: "event", event: "ping", text: "2" },
+      ])
+    })
+
+    it("records close, by the page or by a fatal error", () => {
+      const first = setup()
+      first.state.drain()
+      first.es.close()
+      expect(first.state.drain().events).toMatchObject([{ type: "close" }])
+
+      const second = setup()
+      second.state.drain()
+      second.es.readyState = 2
+      second.es.dispatchEvent(new Event("error"))
+      expect(second.state.drain().events).toMatchObject([{ type: "close" }])
+    })
+  })
 })
