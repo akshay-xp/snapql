@@ -13,7 +13,14 @@ import {
 import type { Drained, ProbeEvent } from "./probe-source"
 import type { Store } from "./store"
 
-type Stream = { entryId: number; parser?: StreamParser; raw: string }
+type Stream = {
+  entryId: number
+  method: string
+  url: string
+  parser?: StreamParser
+  raw: string
+  claimed?: boolean
+}
 
 // Turns probe records into entries that grow while their stream is open.
 export function createLive(
@@ -26,6 +33,8 @@ export function createLive(
   function open(key: string, ev: ProbeEvent & { type: "open" }) {
     const stream: Stream = {
       entryId: nextId(),
+      method: ev.method,
+      url: ev.url,
       parser: streamParser(ev.mimeType),
       raw: "",
     }
@@ -61,6 +70,22 @@ export function createLive(
     store.update(stream.entryId, (e) => appendMessages(e, msgs))
 
   return {
+    // The earliest unclaimed live entry for this request, which the finished
+    // request then fills in instead of adding a row.
+    claim(req: { method: string; url: string }): number | undefined {
+      for (const stream of streams.values()) {
+        if (stream.claimed || stream.method !== req.method) continue
+        if (stream.url !== req.url) continue
+        stream.claimed = true
+        return stream.entryId
+      }
+    },
+    // The page is gone, so its streams end without a close record.
+    reset() {
+      for (const { entryId } of streams.values())
+        store.update(entryId, (e) => (e.open ? { ...e, open: false } : e))
+      streams.clear()
+    },
     apply({ session, events }: Drained) {
       for (const ev of events) {
         const key = `${session}:${ev.id}`

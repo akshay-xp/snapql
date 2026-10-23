@@ -22,8 +22,19 @@ export function startCapture(
   preserveLog: () => boolean,
 ): () => void {
   let id = 1
-  const add = (req: FinishedRequest) =>
-    store.add(toEntry(req, id++, decodeRequest(req, decoders)))
+  const live = createLive(store, decoders, () => id++)
+  const add = (req: FinishedRequest) => {
+    const liveId = live.claim(req)
+    if (liveId === undefined)
+      return store.add(toEntry(req, id++, decodeRequest(req, decoders)))
+    // Keeps the live entry's id, decode result and messages.
+    store.update(liveId, (e) => ({
+      ...toEntry(req, e.id, e.decoded),
+      messages: e.messages,
+      droppedMessages: e.droppedMessages,
+      open: false,
+    }))
+  }
   // Live requests wait for the HAR read so backfilled ones keep their place.
   // Chrome also delivers already-finished requests live after the HAR read, so
   // a live request matching a HAR entry is dropped; a request finishes once,
@@ -45,9 +56,9 @@ export function startCapture(
       buffer?.forEach(addLive)
       buffer = undefined
     })
-  const live = createLive(store, decoders, () => id++)
   const offProbe = source.onProbe?.(live.apply)
   const offNavigated = source.onNavigated(() => {
+    live.reset()
     if (!preserveLog()) store.clear()
   })
   return () => {

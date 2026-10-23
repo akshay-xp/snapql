@@ -298,4 +298,60 @@ describe("live capture", () => {
     probe([open()], "b")
     expect(store.snapshot().map((e) => e.id)).toEqual([1, 2])
   })
+
+  it("merges the finished request into its live entry", async () => {
+    const { store, probe, emit } = live()
+    probe([
+      open({
+        kind: "eventsource",
+        method: "GET",
+        url: "https://api.test/e",
+        body: undefined,
+      }),
+      { type: "event", id: 1, time: 1001, text: "a" },
+      { type: "event", id: 1, time: 1002, text: "b" },
+    ])
+    await new Promise((r) => setTimeout(r)) // HAR read settles
+    const finished = {
+      ...request("https://api.test/e"),
+      status: 204,
+      time: 42,
+      exchange: { ...emptyExchange, statusText: "Done" },
+    }
+
+    emit(finished)
+
+    expect(store.snapshot()).toHaveLength(1)
+    const [entry] = store.snapshot()
+    expect(entry).toMatchObject({ id: 1, status: 204, time: 42 })
+    expect(entry.exchange.statusText).toBe("Done")
+    expect(entry.messages).toHaveLength(2)
+    await entry.getBody()
+    expect(finished.fetchBody).toHaveBeenCalledOnce()
+
+    emit(request("https://api.test/e"))
+    expect(store.snapshot()).toHaveLength(2)
+  })
+
+  it("forgets live streams on navigation", async () => {
+    const { store, probe, emit, navigate } = live()
+    await new Promise((r) => setTimeout(r)) // HAR read settles
+    probe([
+      open({ kind: "eventsource", method: "GET", url: "https://api.test/e" }),
+    ])
+    navigate()
+
+    emit(request("https://api.test/e"))
+
+    expect(urls(store)).toEqual([[2, "https://api.test/e"]])
+  })
+
+  it("closes preserved live entries when their page goes away", () => {
+    const store = createStore()
+    const fake = fakeSource()
+    startCapture(fake.source, store, decoders, () => true)
+    fake.probe([open()])
+    fake.navigate()
+    expect(store.snapshot()[0].open).toBe(false)
+  })
 })
