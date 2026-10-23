@@ -568,7 +568,13 @@ function FontPreview(props: { text: string; id: number }) {
 
 // Tab-level actions live in the panel: the tab bar can't know a lazily loaded body.
 function Toolbar(props: { children: JSX.Element }) {
-  return <div class="flex justify-end gap-1">{props.children}</div>
+  // Sticky, so Copy and match stepping stay in reach in long bodies; -top-3
+  // cancels the tabpanel padding, so nothing shows through above it.
+  return (
+    <div class="sticky -top-3 z-10 -mx-3 flex justify-end gap-1 bg-bg px-3 py-1">
+      {props.children}
+    </div>
+  )
 }
 
 // Both bodies load only once the tab is shown, like every other body.

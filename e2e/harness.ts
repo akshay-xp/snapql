@@ -390,6 +390,8 @@ export type Panel = {
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
   count(selector: string): Promise<number>
+  // Whether the element lies inside the tabpanel's visible area.
+  inView(selector: string): Promise<boolean>
   text(selector: string): Promise<string | null>
   attr(selector: string, name: string): Promise<string | null>
   checked(selector: string): Promise<boolean | null>
@@ -512,6 +514,12 @@ export async function openPanel(
       panelFrame.evaluate<string>(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)})
         return el ? getComputedStyle(el).getPropertyValue(${JSON.stringify(property)}) : ""
+      })()`),
+    inView: (selector: string) =>
+      panelFrame.evaluate<boolean>(`(() => {
+        const box = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect()
+        const pane = document.querySelector('[role="tabpanel"]').getBoundingClientRect()
+        return box.top >= pane.top && box.bottom <= pane.bottom
       })()`),
     count: (selector: string) =>
       panelFrame.evaluate<number>(
