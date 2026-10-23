@@ -42,4 +42,11 @@ describe("rowLabel", () => {
     expect(rowLabel(entry({ status: 399 }))).not.toHaveProperty("failure")
     expect(rowLabel(entry({ status: 0 })).failure).toBe("failed")
   })
+
+  it("counts messages when the entry has them", () => {
+    const msg = { dir: "in" as const, time: 0, text: "" }
+    expect(rowLabel(entry({ messages: [msg, msg, msg] })).count).toBe("3 msgs")
+    expect(rowLabel(entry({ messages: [msg] })).count).toBe("1 msg")
+    expect(rowLabel(entry())).not.toHaveProperty("count")
+  })
 })

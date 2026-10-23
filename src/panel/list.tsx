@@ -41,6 +41,11 @@ export function List(props: {
                 {label.failure}
               </span>
             </Show>
+            <Show when={label.count}>
+              <span class="shrink-0" classList={{ "text-muted": !selected() }}>
+                {label.count}
+              </span>
+            </Show>
             {/* Present but empty when undecoded, so tags align in a column. */}
             <span
               class="w-[11ch] shrink-0 rounded border text-center"

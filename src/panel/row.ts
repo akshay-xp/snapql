@@ -1,14 +1,16 @@
 import type { Entry } from "../capture/entry"
+import { count } from "../decoders/text"
 
 export type RowLabel = {
   title: string
   detail?: string
   kind?: string
   failure?: string
+  count?: string
 }
 
 export function rowLabel(
-  entry: Pick<Entry, "method" | "url" | "status" | "decoded">,
+  entry: Pick<Entry, "method" | "url" | "status" | "decoded" | "messages">,
 ): RowLabel {
   const { decoded, status } = entry
   const failure =
@@ -24,5 +26,6 @@ export function rowLabel(
         }
       : { detail: entry.method }),
     ...(failure && { failure }),
+    ...(entry.messages && { count: count(entry.messages.length, "msg") }),
   }
 }
