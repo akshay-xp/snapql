@@ -125,7 +125,13 @@ export function Detail(props: {
                   </LoadedBody>
                 }
               >
-                {(messages) => <Messages messages={messages()} timed />}
+                {(messages) => (
+                  <Messages
+                    messages={messages()}
+                    timed
+                    directions={!!props.entry.socket}
+                  />
+                )}
               </Show>
             </Show>
           </Match>

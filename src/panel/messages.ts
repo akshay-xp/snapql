@@ -12,3 +12,8 @@ export const messageBytes = (m: Pick<Message, "text" | "bytes">) =>
 export const offsetLabel = (ms: number) => `+${(ms / 1000).toFixed(3)}s`
 
 export const preview = (text: string) => text.replace(/\s+/g, " ").trim()
+
+export const messageText = (m: Pick<Message, "text" | "bytes">) =>
+  m.bytes === undefined ? preview(m.text) : `binary ${byteLabel(m.bytes)}`
+
+export const arrow = (dir: Message["dir"]) => (dir === "out" ? "↑" : "↓")
