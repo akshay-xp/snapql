@@ -1,5 +1,6 @@
 import { type JSX, Show } from "solid-js"
 import type { Entry } from "../capture/entry"
+import type { BodyHit } from "./filter"
 import { rowLabel } from "./row"
 import { Marked } from "./search"
 import { VirtualListbox } from "./virtual-listbox"
@@ -7,7 +8,7 @@ import { VirtualListbox } from "./virtual-listbox"
 export function List(props: {
   entries: readonly Entry[]
   query: string
-  bodyExcerpt: (entry: Entry) => string | undefined
+  bodyHit: (entry: Entry) => BodyHit | undefined
   selectedId: number | undefined
   onSelect: (id: number | undefined) => void
 }) {
@@ -28,7 +29,7 @@ export function List(props: {
               <Marked text={label.title} query={props.query} />
             </span>
             <Show
-              when={props.bodyExcerpt(entry)}
+              when={props.bodyHit(entry)}
               fallback={
                 <Show when={label.detail}>
                   {(detail) => (
@@ -39,12 +40,13 @@ export function List(props: {
                 </Show>
               }
             >
-              {(text) => (
+              {(hit) => (
                 <span
                   class="min-w-0 truncate"
                   classList={{ "text-muted": !selected() }}
                 >
-                  body: <Marked text={text()} query={props.query} />
+                  {hit().side} ({hit().count}):{" "}
+                  <Marked text={hit().excerpt} query={props.query} />
                 </span>
               )}
             </Show>

@@ -1329,7 +1329,8 @@ test("search bodies matches request and response body text", async () => {
     const toggle = bodiesToggle
     const input = "input[type=search]"
     const users = "/api/users/1 GET json"
-    const geo = '/api/users/1 body: …ofile":{"address":{"geo":{"lat":1}}}} json'
+    const geo =
+      '/api/users/1 response (1): …ofile":{"address":{"geo":{"lat":1}}}} json'
     expect(await panel.text(toggle)).toBe("Include bodies")
     expect(await panel.attr(toggle, "title")).toBe(
       "Also match text inside request and response bodies. Matches show an excerpt in the list.",
@@ -1357,14 +1358,14 @@ test("search bodies matches request and response body text", async () => {
       .poll(panel.rows)
       .toEqual([
         users,
-        '/filters body: …{ b }") fetch("/api/users/1") fetch("/api/missing") </script>',
+        '/filters response (1): …{ b }") fetch("/api/users/1") fetch("/api/missing") </script>',
       ])
 
     // Quoted as JSON, so the /filters document's own script doesn't match.
     await panel.search('"query":"query B')
     await expect
       .poll(panel.rows)
-      .toEqual(['B body: {"query":"query B { b }"} {"data":null} 400 graphql'])
+      .toEqual(['B request (1): {"query":"query B { b }"} 400 graphql'])
 
     await panel.search("geo")
     await panel.page.evaluate(() => fetch("/api/users/1"))
@@ -1406,12 +1407,21 @@ test("Body tab highlights text bodies and scrolls to clipped matches", async () 
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/search`)
-    await expect.poll(async () => (await panel.rows()).length).toBe(3)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
     await panel.click(bodiesToggle)
 
+    await panel.search("apple")
+    await expect
+      .poll(panel.rows)
+      .toEqual(["/api/fruit response (3): apple, apple pie, apple tart"])
+    await panel.search("plum")
+    await expect.poll(panel.rows).toEqual(["/api/order request (1): plum"])
+
     await panel.search("pearl")
-    await expect.poll(panel.rows).toEqual(["/api/note body: a hidden pearl"])
-    await panel.select("/api/note body: a hidden pearl")
+    await expect
+      .poll(panel.rows)
+      .toEqual(["/api/note response (1): a hidden pearl"])
+    await panel.select("/api/note response (1): a hidden pearl")
     await panel.openTab("Body")
     await expect.poll(panel.marks).toEqual(["pearl"])
 
