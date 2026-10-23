@@ -15,6 +15,7 @@ import { pollProbe } from "../capture/probe-source"
 import { createStore } from "../capture/store"
 import { decoders } from "../decoders"
 import { App } from "./app"
+import { createSchemas } from "./schemas"
 import { defaultTheme, type Theme, themeVars } from "./themes"
 import "./index.css"
 
@@ -54,6 +55,14 @@ startCapture(
   preserveLog,
 )
 
+let storage: Storage | undefined
+try {
+  storage = localStorage
+} catch {}
+const schemas = createSchemas(storage, (files) =>
+  import("../decoders/proto-schema").then((m) => m.parseProto(files)),
+)
+
 render(
   () => (
     <App
@@ -61,6 +70,7 @@ render(
       preserveLog={preserveLog}
       setPreserveLog={setPreserveLog}
       onReloadCapture={async () => reloadWithScript(await script)}
+      schemas={schemas}
     />
   ),
   document.getElementById("root") as HTMLElement,

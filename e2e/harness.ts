@@ -169,7 +169,10 @@ const grpcFrame = (flag: number, data: Buffer | number[]) => {
 
 const grpcReplies: Record<string, Buffer> = {
   "/example.UserService/GetUser": Buffer.concat([
-    grpcFrame(0, [0x08, 0x01, 0x12, 0x03, 0x61, 0x62, 0x63]),
+    grpcFrame(
+      0,
+      [0x08, 0x01, 0x12, 0x03, 0x61, 0x62, 0x63, 0x1a, 0x02, 0x05, 0x07],
+    ),
     grpcFrame(0x80, Buffer.from("grpc-status:0\r\n")),
   ]),
   "/example.UserService/ListUsers": Buffer.concat([
@@ -280,6 +283,8 @@ export type Panel = {
   // Clicks the first request row whose text starts with prefix (for rows that change).
   selectStarting(prefix: string): Promise<void>
   probed(): Promise<boolean>
+  // Opens the Schemas popover if needed and picks one .proto file.
+  addSchema(name: string, text: string): Promise<void>
   // HAR postData.text of the first request whose URL ends with url.
   postData(url: string): Promise<string | undefined>
   // Scrolls a listbox (by aria-label) to its top or bottom; scrollState reads it.
@@ -511,6 +516,17 @@ export async function openPanel(
         return { top: list.scrollTop, gap: list.scrollHeight - list.scrollTop - list.clientHeight }
       })()`),
     probed: () => page.evaluate(() => Symbol.for("snapql.probe") in window),
+    addSchema: (name, text) =>
+      panelFrame.evaluate<void>(`(async () => {
+        const button = document.querySelector('button[aria-label="Schemas"]')
+        if (button.getAttribute("aria-pressed") !== "true") button.click()
+        await new Promise((r) => setTimeout(r))
+        const input = document.querySelector('input[type="file"]')
+        const files = new DataTransfer()
+        files.items.add(new File([${JSON.stringify(text)}], ${JSON.stringify(name)}))
+        input.files = files.files
+        input.dispatchEvent(new Event("change", { bubbles: true }))
+      })()`),
     postData: (url) =>
       panelFrame.evaluate<string | undefined>(`new Promise((done) =>
         chrome.devtools.network.getHAR((har) =>
