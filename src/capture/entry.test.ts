@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   appendMessages,
   type FinishedRequest,
+  FRAME_LIMIT,
   MESSAGE_CAP,
   type Message,
   toEntry,
@@ -110,5 +111,19 @@ describe("appendMessages", () => {
 
     entry = appendMessages(entry, texts(2002, 2003))
     expect(entry.droppedMessages).toBe(3)
+  })
+
+  it("cuts frames over 1 MB and flags them", () => {
+    expect(FRAME_LIMIT).toBe(1024 * 1024)
+    const [long, exact] =
+      appendMessages(toEntry(request(), 1), [
+        { dir: "in", time: 1, text: "x".repeat(FRAME_LIMIT + 5) },
+        { dir: "in", time: 2, text: "y".repeat(FRAME_LIMIT) },
+      ]).messages ?? []
+
+    expect(long.text.length).toBe(FRAME_LIMIT)
+    expect(long.truncated).toBe(true)
+    expect(exact.text.length).toBe(FRAME_LIMIT)
+    expect(exact).not.toHaveProperty("truncated")
   })
 })
