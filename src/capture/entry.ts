@@ -1,9 +1,14 @@
 import type { StreamEvent } from "../decoders/stream"
-import type { DecodeResult, RequestView } from "../decoders/types"
+import type {
+  BodyView,
+  DecodeResult,
+  NameValue,
+  RequestView,
+} from "../decoders/types"
 
-export type Body = { content: string; encoding: string }
+export type Body = BodyView
 
-export type NameValue = { name: string; value: string }
+export type { NameValue }
 
 // HAR phases in ms; -1 means the phase did not apply or was not reported.
 export type Timings = {
