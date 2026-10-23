@@ -109,13 +109,19 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - Leaves: key `data-json="key"` `text-syntax-key`; strings `data-json="string"` `text-syntax-string` (quoted via `JSON.stringify`; clipped ones end `…` plus a `show more` button that reveals the rest); numbers/booleans `data-json="number"` `text-syntax-number`; `null` `data-json="null"` and empty objects/arrays `data-json="empty"`, both muted.
 - Body tab (`BodyView`): a right-aligned `Toolbar` with `Expand all` (only when the pretty text parses as an object or array; sets `openDepth` to `Infinity`) and `Copy`, above the tree or `<pre>` text. Truncated/base64 bodies don't parse, so they stay text. Expand all sits in the panel, not the tab bar: the tab bar can't know whether the lazily loaded body is JSON. Raw always text.
 
-## Copy (`src/panel/copy.ts`, `src/panel/copy-button.tsx`)
+## Copy (`src/panel/copy.ts`, `src/panel/copy-button.tsx`, `src/panel/curl.ts`)
 
 - `valueText(value)`: strings as-is, everything else `JSON.stringify(value, null, 2)`. `pairsText(pairs)`: `name = value` lines.
 - Summary: every `Section` with `copy` shows a `CopyButton` (`aria-label` `Copy <title>`) right of its heading. Decoded sections copy `valueText` of their text or JSON; `Pairs` copy `pairsText` (Headers and Params/Cookies too); Tokens copy `valueText({ header, payload })`.
 - Body and Raw: captioned `Copy` in the panel's `Toolbar` row (not the tab bar: it can't know the lazily loaded body). Body copies the displayed (pretty) text; Raw copies `rawRequest` + blank line + `rawResponse`, so `RawPanel` renders entirely inside `LoadedBody`.
 - `copyToClipboard(text)`: `navigator.clipboard.writeText`, falling back (on rejection or a missing API: DevTools panel frames can block it) to a hidden fixed `textarea`, `select()`, `document.execCommand("copy")`, remove.
 - `CopyButton(label, value, captioned?)`: an `IconButton` (copy icon; check icon while copied) whose `aria-label`/`title` (and caption, when `captioned`) read `Copied` for `COPIED_MS` (1500), then revert; timer cleared on cleanup. `IconButton` gained an optional visible `caption`.
+- `createCopied()`: `[copied, copy(text)]`, the `COPIED_MS` timer shared by `CopyButton` and Copy as.
+- Copy as (`CopyAs` in `detail.tsx`): text button at the right of the Summary title row (`aria-haspopup="menu"`, `aria-expanded`), reads `Copied` for `COPIED_MS` after a copy. Opens a `role="menu"` popover (Schemas popover style) with `menuitem`s `cURL`, `fetch`; picking one copies and closes. Not rendered for sockets. Not redacted (your own replay).
+  - Kept headers (`keptHeaders`): request headers minus `:`-prefixed pseudo-headers and `content-length`, `accept-encoding`, `connection`, `host` (case-insensitive; set by the transport).
+  - `toCurl(entry)`: Chrome's Copy as cURL (bash) layout, parts joined by ` \` + newline + 2 spaces: `curl '<url>'`, `-X '<METHOD>'` unless implied (GET without body, POST with body), `-H '<name>: <value>'` per kept header, `--data-raw '<body>'`. `'` escaped as `'\''`.
+  - `toFetch(entry)`: `await fetch(<JSON url>, <JSON options, 2-space>)`, options `{ method, headers, body? }`; headers an object (later duplicate wins); body omitted when absent. JSON keeps escaping valid.
+  - Binary request bodies are written as their text (as in Raw); no `--data-binary`.
 
 ## Values (`src/panel/values.ts`)
 
