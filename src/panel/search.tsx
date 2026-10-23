@@ -59,7 +59,7 @@ export function Marked(props: { text: string; query: string }) {
     <For each={highlight(props.text, props.query)}>
       {(segment) =>
         segment.hit ? (
-          <mark class="rounded-sm bg-accent/30 text-inherit">
+          <mark class="rounded-sm bg-accent/30 text-inherit data-current:bg-accent data-current:text-bg">
             {segment.text}
           </mark>
         ) : (
