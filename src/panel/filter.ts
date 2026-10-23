@@ -34,8 +34,7 @@ export type Filters = { kinds: string[]; statuses: string[] }
 
 type Filterable = Pick<Entry, "status" | "decoded">
 
-export const kindOf = (entry: Pick<Entry, "decoded">) =>
-  entry.decoded?.kind ?? "other"
+export const kindOf = (entry: Filterable) => entry.decoded?.kind ?? "other"
 
 export const statusGroup = (status: number) =>
   status === 0 ? "failed" : `${Math.floor(status / 100)}xx`

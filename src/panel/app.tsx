@@ -10,11 +10,18 @@ import {
 } from "solid-js"
 import type { Store } from "../capture/store"
 import { Detail } from "./detail"
-import { matchesQuery } from "./filter"
+import {
+  chipsFor,
+  type Filters,
+  matchesFilters,
+  matchesQuery,
+  prune,
+  toggle,
+} from "./filter"
 import { Footer } from "./footer"
 import { List } from "./list"
 import type { Schemas } from "./schemas"
-import { SearchBox } from "./search"
+import { FilterChips, SearchBox } from "./search"
 import { clampSize, isStacked } from "./splitter"
 
 export function App(props: {
@@ -30,8 +37,21 @@ export function App(props: {
   const [selectedId, setSelectedId] = createSignal<number>()
   const [newestFirst, setNewestFirst] = createSignal(true)
   const [query, setQuery] = createSignal("")
+  const noFilters: Filters = { kinds: [], statuses: [] }
+  const [filters, setFilters] = createSignal(noFilters)
+  const chips = createMemo(() => chipsFor(entries()))
+  // Pruned on read: a chip whose entries are gone stops filtering with it.
+  const active = createMemo(() => prune(filters(), chips()))
+  const filtered = () =>
+    !!query() || !!active().kinds.length || !!active().statuses.length
+  const clearFilters = () => {
+    setQuery("")
+    setFilters(noFilters)
+  }
   const visible = createMemo(() => {
-    const shown = entries().filter((e) => matchesQuery(e, query()))
+    const shown = entries().filter(
+      (e) => matchesQuery(e, query()) && matchesFilters(e, active()),
+    )
     return newestFirst() ? shown.reverse() : shown
   })
   // Undefined until the first drag: the pane takes half the panel. Not persisted.
@@ -62,15 +82,22 @@ export function App(props: {
       >
         <section class="flex min-h-0 min-w-0 flex-1 flex-col">
           <SearchBox query={query()} onQuery={setQuery} />
+          <Show when={entries().length}>
+            <FilterChips
+              chips={chips()}
+              active={active()}
+              onToggle={(group, value) =>
+                setFilters(toggle(active(), group, value))
+              }
+            />
+          </Show>
           <Show
             when={entries().length}
             fallback={<Waiting onReloadCapture={props.onReloadCapture} />}
           >
             <Show
               when={visible().length}
-              fallback={
-                <NoMatches query={query()} onClear={() => setQuery("")} />
-              }
+              fallback={<NoMatches query={query()} onClear={clearFilters} />}
             >
               <List
                 entries={visible()}
@@ -82,7 +109,7 @@ export function App(props: {
           </Show>
           <Footer
             count={visible().length}
-            total={query() ? entries().length : undefined}
+            total={filtered() ? entries().length : undefined}
             onClear={() => props.store.clear()}
             newestFirst={newestFirst()}
             onSort={() => setNewestFirst(!newestFirst())}
@@ -154,7 +181,11 @@ function Waiting(props: { onReloadCapture: () => void }) {
 function NoMatches(props: { query: string; onClear: () => void }) {
   return (
     <Message>
-      <p class="text-[13px] font-semibold">No requests match "{props.query}"</p>
+      <p class="text-[13px] font-semibold">
+        {props.query
+          ? `No requests match "${props.query}"`
+          : "No requests match the filters"}
+      </p>
       <button
         type="button"
         class="text-accent underline"
