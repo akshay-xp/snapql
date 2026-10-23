@@ -31,6 +31,7 @@ export type Reassembled = {
 
 type Folder = { fold(payload: Body): void; result(): Reassembled }
 
+const obj = (v: unknown): Body => (isObject(v) ? v : {})
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const str = (v: unknown): string | undefined =>
   typeof v === "string" ? v : undefined
@@ -50,6 +51,11 @@ export function reassemble(events: StreamEvent[]): Reassembled | undefined {
 function folderFor(payload: Body): Folder | undefined {
   if (Array.isArray(payload.choices)) return chatCompletions()
   if (str(payload.type)?.startsWith("response.")) return responses()
+  if (
+    payload.type === "message_start" ||
+    str(payload.type)?.startsWith("content_block_")
+  )
+    return anthropic()
 }
 
 // Tool calls arrive as fragments keyed by index: id and name once, arguments in pieces.
@@ -93,11 +99,11 @@ function chatCompletions(): Folder {
     fold(payload) {
       const choice = list(payload.choices)[0]
       if (isObject(choice)) {
-        const delta = isObject(choice.delta) ? choice.delta : {}
+        const delta = obj(choice.delta)
         d.text += str(delta.content) ?? ""
         for (const call of list(delta.tool_calls)) {
           if (!isObject(call)) continue
-          const fn = isObject(call.function) ? call.function : {}
+          const fn = obj(call.function)
           d.calls.add(typeof call.index === "number" ? call.index : 0, {
             id: str(call.id),
             name: str(fn.name),
@@ -123,7 +129,7 @@ function responses(): Folder {
           d.text += str(payload.delta) ?? ""
           break
         case "response.output_item.added": {
-          const item = isObject(payload.item) ? payload.item : {}
+          const item = obj(payload.item)
           if (item.type === "function_call")
             d.calls.add(index, {
               id: str(item.call_id),
@@ -138,9 +144,49 @@ function responses(): Folder {
           break
         case "response.completed":
         case "response.incomplete": {
-          const response = isObject(payload.response) ? payload.response : {}
+          const response = obj(payload.response)
           d.stopReason = str(response.status)
           if (isObject(response.usage)) d.usage = response.usage
+        }
+      }
+    },
+    result: () => finish(d),
+  }
+}
+
+function anthropic(): Folder {
+  const d = draft()
+  return {
+    fold(payload) {
+      const index = typeof payload.index === "number" ? payload.index : 0
+      switch (payload.type) {
+        case "message_start": {
+          const message = obj(payload.message)
+          if (isObject(message.usage)) d.usage = { ...message.usage }
+          break
+        }
+        case "content_block_start": {
+          const block = isObject(payload.content_block)
+            ? payload.content_block
+            : {}
+          if (block.type === "tool_use")
+            d.calls.add(index, { id: str(block.id), name: str(block.name) })
+          break
+        }
+        case "content_block_delta": {
+          const delta = obj(payload.delta)
+          if (delta.type === "text_delta") d.text += str(delta.text) ?? ""
+          else if (delta.type === "thinking_delta")
+            d.thinking += str(delta.thinking) ?? ""
+          else if (delta.type === "input_json_delta")
+            d.calls.add(index, { arguments: str(delta.partial_json) })
+          break
+        }
+        case "message_delta": {
+          const delta = obj(payload.delta)
+          d.stopReason = str(delta.stop_reason) ?? d.stopReason
+          if (isObject(payload.usage))
+            d.usage = { ...d.usage, ...payload.usage }
         }
       }
     },
