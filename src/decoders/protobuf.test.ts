@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { protobufData, readMessage } from "./protobuf"
+import { decoders } from "./index"
+import { protobuf, protobufData, readMessage } from "./protobuf"
+import { decodeRequest } from "./registry"
+import type { RequestView } from "./types"
 
 const read = (...data: number[]) => readMessage(new Uint8Array(data))
 
@@ -94,5 +97,53 @@ describe("protobufData", () => {
 
   it("reports the first candidate when none parses", () => {
     expect(data([0x0b], [0x08])).toEqual(error(0, "0b"))
+  })
+})
+
+describe("protobuf", () => {
+  const req = (over: Partial<RequestView> = {}): RequestView => ({
+    method: "POST",
+    url: "http://x/api/proto",
+    status: 200,
+    mimeType: "",
+    requestBody: { mimeType: "application/x-protobuf", text: "\n\x02hi" },
+    ...over,
+  })
+
+  it("decodes protobuf request bodies", () => {
+    expect(protobuf.decode(req())).toEqual({
+      title: "/api/proto",
+      detail: "POST",
+      data: { message: { "1": "hi" } },
+    })
+    expect(decodeRequest(req(), decoders)?.kind).toBe("protobuf")
+  })
+
+  it("matches protobuf responses", () => {
+    const get = (mimeType: string) =>
+      protobuf.decode(req({ method: "GET", requestBody: undefined, mimeType }))
+    expect(get("application/protobuf")).toEqual({
+      title: "/api/proto",
+      detail: "GET",
+      data: undefined,
+    })
+    expect(get("application/vnd.google.protobuf; proto=x")).toBeDefined()
+  })
+
+  it("ignores other bodies", () => {
+    expect(
+      protobuf.decode(
+        req({ requestBody: { mimeType: "application/json", text: "{}" } }),
+      ),
+    ).toBeUndefined()
+  })
+
+  it("decodes response bodies", () => {
+    expect(
+      protobuf.decodeResponse?.(
+        { content: btoa("\x08\x01"), encoding: "base64" },
+        { kind: "protobuf", title: "/api/proto", data: undefined },
+      ),
+    ).toEqual({ summary: "2 bytes", data: { message: { "1": 1 } } })
   })
 })

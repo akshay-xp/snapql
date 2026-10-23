@@ -1,4 +1,30 @@
-import { hex } from "./bytes"
+import { bytes, hex, requestBytes } from "./bytes"
+import { baseMime } from "./text"
+import type { Decoder } from "./types"
+
+const MIMES = [
+  "application/x-protobuf",
+  "application/protobuf",
+  "application/vnd.google.protobuf",
+]
+const isProtobuf = (mime = "") => MIMES.includes(baseMime(mime))
+
+export const protobuf: Decoder = {
+  kind: "protobuf",
+  decode(req) {
+    const body = req.requestBody
+    if (!isProtobuf(body?.mimeType) && !isProtobuf(req.mimeType)) return
+    return {
+      title: new URL(req.url).pathname,
+      detail: req.method,
+      data: body && protobufData(requestBytes(body.text)),
+    }
+  },
+  decodeResponse(body) {
+    const data = bytes(body)
+    return { summary: `${data.length} bytes`, data: protobufData([data]) }
+  },
+}
 
 export type ProtoMessage = { [field: string]: unknown }
 
