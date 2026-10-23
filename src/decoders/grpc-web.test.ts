@@ -118,3 +118,71 @@ describe("grpcWeb requests", () => {
     )
   })
 })
+
+describe("grpcWeb responses", () => {
+  const decoded = { kind: "grpc-web", title: "GetUser", data: undefined }
+  const toBase64 = (data: number[]) => btoa(String.fromCharCode(...data))
+  const respond = (
+    data: number[],
+    headers: { name: string; value: string }[] = [],
+  ) =>
+    grpcWeb.decodeResponse?.(
+      { content: toBase64(data), encoding: "base64" },
+      decoded,
+      headers,
+    )
+  const ok = frame(0x80, ascii("grpc-status:0\r\n"))
+
+  it("gives the message, status and trailers", () => {
+    expect(respond([...frame(0, [8, 1]), ...ok])).toEqual({
+      summary: "OK",
+      data: {
+        message: { "1": 1 },
+        status: "OK",
+        trailers: [{ name: "grpc-status", value: "0" }],
+      },
+    })
+  })
+
+  it("numbers server-streamed messages", () => {
+    const data = respond([...frame(0, [8, 1]), ...frame(0, [8, 2]), ...ok])
+      ?.data as Record<string, unknown>
+    expect(data["message 1"]).toEqual({ "1": 1 })
+    expect(data["message 2"]).toEqual({ "1": 2 })
+  })
+
+  it("decodes grpc-web-text responses made of padded chunks", () => {
+    const content = toBase64(frame(0, [8, 1])) + toBase64(ok)
+    expect(content.slice(0, -4)).toContain("=")
+    expect(
+      grpcWeb.decodeResponse?.({ content, encoding: "" }, decoded, [
+        { name: "content-type", value: "application/grpc-web-text" },
+      ]),
+    ).toMatchObject({ summary: "OK", data: { message: { "1": 1 } } })
+  })
+
+  it("reads trailers-only status from the headers", () => {
+    expect(
+      respond(
+        [],
+        [
+          { name: "Grpc-Status", value: "5" },
+          { name: "grpc-message", value: "gone" },
+        ],
+      ),
+    ).toEqual({ summary: "NOT_FOUND", data: { status: "NOT_FOUND: gone" } })
+  })
+
+  it("says when there is no status", () => {
+    expect(respond(frame(0, [8, 1]))).toEqual({
+      summary: "no status",
+      data: { message: { "1": 1 } },
+    })
+  })
+
+  it("shows compressed frames as hex", () => {
+    expect(respond([...frame(1, [0xff]), ...ok])?.data).toMatchObject({
+      message: { compressed: "ff" },
+    })
+  })
+})

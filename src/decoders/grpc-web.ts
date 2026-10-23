@@ -1,4 +1,4 @@
-import { hex, requestBytes } from "./bytes"
+import { bytes, hex, requestBytes, text } from "./bytes"
 import { protobufData } from "./protobuf"
 import { baseMime } from "./text"
 import type { Decoder, NameValue } from "./types"
@@ -19,6 +19,32 @@ export const grpcWeb: Decoder = {
       title: rpc ? rpc[2] : path,
       ...(rpc && { detail: rpc[1] }),
       data: body && requestData(body.mimeType, body.text),
+    }
+  },
+  decodeResponse(body, _decoded, headers) {
+    const textual = headers.some(
+      (h) => h.name.toLowerCase() === "content-type" && isText(h.value),
+    )
+    let frames: Frame[]
+    try {
+      frames = readFrames(textual ? fromBase64Text(text(body)) : bytes(body))
+    } catch {
+      return { summary: "invalid framing", data: { hex: hex(bytes(body)) } }
+    }
+    const trailers = frames
+      .filter((f) => f.trailers)
+      .flatMap((f) => parseTrailers(f.data))
+    // Trailers-only responses carry the status in the headers.
+    const status = statusOf(
+      trailers.length ? trailers : headers.map((h) => trailer(h.name, h.value)),
+    )
+    return {
+      summary: status?.name ?? "no status",
+      data: {
+        ...messages(frames),
+        ...(status && { status: status.text }),
+        ...(trailers.length && { trailers }),
+      },
     }
   },
 }
@@ -44,7 +70,7 @@ function messages(frames: Frame[]): Record<string, unknown> {
   return Object.fromEntries(
     data.map((f, i) => [
       data.length === 1 ? "message" : `message ${i + 1}`,
-      frameMessage(f.data),
+      f.compressed ? { compressed: hex(f.data) } : frameMessage(f.data),
     ]),
   )
 }
