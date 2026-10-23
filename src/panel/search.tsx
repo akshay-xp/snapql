@@ -7,6 +7,7 @@ export function SearchBox(props: {
   onQuery: (query: string) => void
   searchBodies: boolean
   onSearchBodies: (on: boolean) => void
+  onStep: (by: 1 | -1) => void
 }) {
   return (
     <search class="flex h-10 shrink-0 items-center border-b border-border px-2">
@@ -35,6 +36,11 @@ export function SearchBox(props: {
           class="min-w-0 flex-1 bg-transparent text-fg outline-none [&::-webkit-search-cancel-button]:hidden"
           value={props.query}
           onInput={(e) => props.onQuery(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return
+            e.preventDefault()
+            props.onStep(e.shiftKey ? -1 : 1)
+          }}
         />
         <Pill
           title="Also match text inside request and response bodies. Matches show an excerpt in the list."

@@ -397,6 +397,7 @@ export type Panel = {
   toggleSort(): Promise<void>
   search(query: string): Promise<void>
   clearSearch(): Promise<void>
+  pressSearch(key: string, options?: { shift?: boolean }): Promise<void>
   clickButton(text: string): Promise<void>
   chips(): Promise<string[]>
   toggleChip(name: string): Promise<void>
@@ -670,6 +671,11 @@ export async function openPanel(
         const input = document.querySelector('input[aria-label="Filter requests"]')
         input.value = ${JSON.stringify(query)}
         input.dispatchEvent(new Event("input", { bubbles: true }))
+      })()`),
+    pressSearch: (key, options = {}) =>
+      panelFrame.evaluate<void>(`(() => {
+        const input = document.querySelector('input[aria-label="Filter requests"]')
+        input.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, shiftKey: ${!!options.shift}, bubbles: true }))
       })()`),
     clearSearch: () =>
       panelFrame.evaluate<void>(

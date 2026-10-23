@@ -26,6 +26,7 @@ import {
 import { Footer } from "./footer"
 import { harFileName, toHar } from "./har"
 import { List } from "./list"
+import type { Step } from "./matches"
 import { redactHar } from "./redact"
 import type { Schemas } from "./schemas"
 import { FilterChips, SearchBox } from "./search"
@@ -82,6 +83,7 @@ export function App(props: {
       ? bodyHit(texts, query())
       : undefined
   }
+  const [stepMatch, setStepMatch] = createSignal<Step>()
   // A fresh object per selection, so picking the same tab again still applies.
   const [openTab, setOpenTab] = createSignal<{ tab: Tab }>()
   const select = (id: number | undefined) => {
@@ -140,6 +142,7 @@ export function App(props: {
             onQuery={setQuery}
             searchBodies={searchBodies()}
             onSearchBodies={setSearchBodies}
+            onStep={(by) => setStepMatch({ by })}
           />
           <Show when={entries().length}>
             <FilterChips
@@ -189,6 +192,7 @@ export function App(props: {
               base={base()}
               bodyQuery={bodyQuery()}
               openTab={openTab()}
+              stepMatch={stepMatch()}
               onCompare={setBaseId}
               stacked={stacked()}
               size={stacked() ? detailHeight() : detailWidth()}
