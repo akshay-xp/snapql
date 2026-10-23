@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { readFrames } from "./grpc-web"
+import { parseTrailers, readFrames, statusOf } from "./grpc-web"
 
 const frame = (flag: number, data: number[]) => [
   flag,
@@ -34,5 +34,36 @@ describe("readFrames", () => {
   it("throws when a frame runs past the end", () => {
     expect(() => frames(0, 0, 0, 0, 5, 8)).toThrow()
     expect(() => frames(0, 0, 0)).toThrow()
+  })
+})
+
+describe("trailers", () => {
+  const rows = (s: string) => parseTrailers(new TextEncoder().encode(s))
+
+  it("parses trailer lines into lowercased, decoded rows", () => {
+    expect(
+      rows("grpc-status: 5\r\ngrpc-message: user%209%20missing\r\nX-Id: 1\r\n"),
+    ).toEqual([
+      { name: "grpc-status", value: "5" },
+      { name: "grpc-message", value: "user 9 missing" },
+      { name: "x-id", value: "1" },
+    ])
+  })
+
+  it("names the status", () => {
+    expect(
+      statusOf([
+        { name: "grpc-status", value: "5" },
+        { name: "grpc-message", value: "user 9 missing" },
+      ]),
+    ).toEqual({ name: "NOT_FOUND", text: "NOT_FOUND: user 9 missing" })
+    expect(statusOf([{ name: "grpc-status", value: "0" }])).toEqual({
+      name: "OK",
+      text: "OK",
+    })
+    expect(statusOf([{ name: "grpc-status", value: "42" }])?.name).toBe(
+      "CODE 42",
+    )
+    expect(statusOf([{ name: "x-id", value: "1" }])).toBeUndefined()
   })
 })

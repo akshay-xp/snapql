@@ -9,6 +9,8 @@ export type RequestView = {
   protocols?: string[]
 }
 
+export type NameValue = { name: string; value: string }
+
 // A body as the browser reports it; encoding is "" or "base64".
 export type BodyView = { content: string; encoding: string }
 
