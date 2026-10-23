@@ -18,7 +18,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `json` (catch-all, last).
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `sse`, `ndjson`, `json` (catch-all, last).
 
 ## Adding a decoder
 
@@ -26,6 +26,15 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 2. Add it to the `decoders` array in `src/decoders/index.ts`.
 
 No capture, store, or UI change.
+
+## Streams (`src/decoders/stream.ts`, `src/decoders/sse.ts`)
+
+- `streamParser(mimeType)`: `{ push(chunk), end() }`, each returning `StreamEvent[]` (`{ text, event?, id? }`), or `undefined` when the base mime isn't a stream mime. Incremental, so live chunks and finished bodies give the same events however the text is split (tested at every split index). `parseStream(mimeType, text)`: one-shot, `undefined` without a parser. Callers add `dir`/`time` to make a `Message`.
+- Lines split on CRLF, LF or CR; a chunk-final CR is held back in case its LF starts the next chunk.
+- `text/event-stream`: WHATWG rules. `data:` lines joined with `\n`; `event:`, `id:` per event (not carried to later events); `:` comments and `retry:` ignored; one leading space after `:` stripped; a block without `data` not dispatched. Deviation: a trailing event without a blank line is kept, since a finished body may be cut off mid-event.
+- `application/x-ndjson`, `application/jsonl`: one event per non-empty line.
+- `multipart/mixed` (GraphQL `@defer`/`@stream`): one event per part body, part headers dropped. Boundary from the mime's `boundary` param, else the first line starting `--` is the delimiter; `--<b>--` ends the stream (later text ignored).
+- Decoders `sse` (`text/event-stream`) and `ndjson` (`application/x-ndjson`, `application/jsonl`) match on response mime only: title = path, detail = method, no `data`. Placed just before `json`, so a stream whose request another decoder claims (GraphQL over SSE, LLM) keeps that kind, and a JSON POST to an SSE endpoint is `sse`, not `json`. `multipart/mixed` gets no kind of its own.
 
 ## JSON-RPC (`src/decoders/jsonrpc.ts`)
 
@@ -84,12 +93,12 @@ No capture, store, or UI change.
 - Batch: non-empty array body where every item is an operation or APQ (one bad item means no match). Title = op titles joined `, `; detail `<n> ops` (`1 op`). `data`: `{ operations: NameValue[] }`, name = `<detail> <title>` (`query A`, `persisted GetUser`), value = query text (APQ: the hash); plus `variables: NameValue[]` for ops that have variables (value = JSON), omitted when none do.
 - Uploads (GraphQL multipart request spec): a `multipart/form-data` body with a non-file `operations` field is decoded from that JSON (single or batch, as above); `data` gains `files: NameValue[]` from the file parts. Without a GraphQL `operations` field it doesn't match, so `multipart` takes it.
 - `decodeResponse`: JSON object with `data` or `errors` (else `undefined`). `summary` `<n> errors` / `1 error` / `no errors`. `data`: `errors: NameValue[]` (name = `path` joined with `.`, or `(root)`; value = message) when non-empty, plus `data` when present.
-- Incremental responses (`@defer`/`@stream`, multipart/mixed): text starting with `--`. Delimiter = first line starting `--`; each part's JSON is its first `{` to last `}`. Merge: clone of the first part's `data`; each `incremental[]` item's `data` assigned onto the object at its `path`, `items` appended to the list at `path` minus its last segment. Errors collected from every part and item. Same output shape plus `parts: <n>`. Only the `incremental[]` format; the older top-level `path`/`data` and newer `pending`/`id` formats are not handled.
+- Incremental responses (`@defer`/`@stream`, multipart/mixed): text starting with `--`, split with `parseStream("multipart/mixed", text)` (boundary from the body); each part's text parsed as JSON. Merge: clone of the first part's `data`; each `incremental[]` item's `data` assigned onto the object at its `path`, `items` appended to the list at `path` minus its last segment. Errors collected from every part and item. Same output shape plus `parts: <n>`. Only the `incremental[]` format; the older top-level `path`/`data` and newer `pending`/`id` formats are not handled.
 
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
