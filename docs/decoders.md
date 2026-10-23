@@ -8,7 +8,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - `Decoder`: `{ kind, decode(req): Decoded | undefined }`. One call covers detect, decode, summarize, so the body is parsed once.
 - `Decoded`: `{ title, detail?, data }`. `title` names the request (operation, method, path, element); `detail` qualifies it (operation type, method, counts). Kept apart so the panel never parses text. `data` is the parsed request (decoder-specific).
 - `BodyView`: `{ content, encoding }` (`encoding` `""` or `"base64"`), the shape of capture's `Body`, so decoders don't import capture.
-- `decodeResponse?(body, decoded)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response `BodyView` and the stored `DecodeResult`. Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand. Bodies over `BODY_LIMIT` (1 MB of content) are not decoded; a failed body fetch shows no Response group.
+- `decodeResponse?(body, decoded, headers)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response `BodyView`, the stored `DecodeResult` and the response headers (`NameValue[]`: `{ name, value }`, defined here; capture re-exports it). Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand. Bodies over `BODY_LIMIT` (1 MB of content) are not decoded; a failed body fetch shows no Response group.
 - `decodeMessage?(frame, frames)`: optional; titles one socket frame (`FrameView`: `{ dir, text, bytes? }`, which `Message` satisfies) as a `Decoded`, or `undefined` to fall back to the preview. `frames` is the entry's whole list, for protocols whose frames refer to earlier ones. Never run at capture: the panel calls it per rendered Messages row (and for the selected frame).
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
 - `RequestView.protocols?`: WebSockets only, the protocols requested at creation (from the probe), so socket decoders run at capture like the rest.
@@ -27,7 +27,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - Runs once per entry, in `startCapture`; the UI only reads `entry.decoded`.
 - `DECODE_LIMIT` (1024 * 1024 chars): a request body over it is not decoded at all; the row stays raw so one huge upload can't stall capture.
 - `decoderFor(kind, decoders)`: finds a stored entry's decoder by `kind` (for lazy response decoding).
-- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `socketio`, `graphql-ws`, `websocket`, `protobuf`, `sse`, `ndjson`, `json` (catch-all, last).
+- Order lives in `src/decoders/index.ts` (`decoders`), most specific first: `llm`, `graphql`, `jsonrpc`, `trpc`, `soap`, `xml`, `multipart`, `form`, `socketio`, `graphql-ws`, `websocket`, `grpc-web`, `protobuf`, `sse`, `ndjson`, `json` (catch-all, last).
 
 ## Adding a decoder
 
@@ -68,6 +68,15 @@ No capture, store, or UI change.
 - `readMessage(bytes)`, schema-less: keys are field numbers (strings); repeated numbers become arrays in wire order. Varint: number (decimal string above `MAX_SAFE_INTEGER`; 64-bit values with the top bit set read as signed, as negative int32/int64 are encoded). Fixed32: `{ fixed32, float }` (float to 7 significant digits); fixed64: `{ fixed64, double }`. Length-delimited: `""` when empty, else a string when valid UTF-8 without control chars other than `\t\n\r`, else a nested message when it parses fully, else `hex`. Strings first: printable bytes like `hi` also parse as a message (`{ "13": 105 }`), real nested messages nearly always start with a control byte.
 - No sint/bool hints: every varint is ambiguous, so hints would double every number.
 - Invalid: field 0, wire types 3/4 (groups), 6, 7, or a value running past the end throw `ProtoError` (`offset`: the tag's start for a bad tag, the value's start for a bad value). Nested failures fall back to hex. `protobufData(candidates)`: `{ message }` from the first candidate that parses, else `{ error: "invalid protobuf at byte <n>", hex }` for the first candidate.
+
+## gRPC-web (`src/decoders/grpc-web.ts`)
+
+- Kind `grpc-web`: request body mime or response mime (base) is `application/grpc-web`, `application/grpc-web-text`, either with `+proto`. Path `/pkg.Service/Method`: title `Method`, detail `pkg.Service`; other paths: title = path, no detail. Before `protobuf`.
+- `readFrames(bytes)`: frames of 1 flag byte (`0x80` trailers, `0x01` compressed) + 4-byte big-endian length; throws when a length runs past the end. That exact check picks the request candidate: the first `requestBytes` candidate whose frames parse; none gives `{ error: "invalid gRPC-web framing", hex }`.
+- `-text`: base64 decoded in 4-char groups, since streamed responses join separately padded chunks. Request: by request mime. Response: by `content-type` header, then `text(body)`.
+- Data (request and response): message frames as `message` (one) or `message 1`, `message 2`, ... (several), each the protobuf tree (or its error shape); compressed frames `{ compressed: hex }` (no decompression). Response adds `status` (text `OK` or `<NAME>: <message>`) and `trailers` (rows, when a trailers frame exists).
+- `parseTrailers`: `name:value` lines, names lowercased, values trimmed, `grpc-message` percent-decoded (bad escapes kept raw). `statusOf(rows)`: code 0-16 named (`OK` ... `UNAUTHENTICATED`), else `CODE <n>`. Trailers-only responses: status from the response headers (normalized the same way).
+- Response summary: status name; `no status` when none (cut-off stream); `invalid framing` with `{ hex }` when the body doesn't frame.
 
 ## LLM (`src/decoders/llm.ts`)
 
@@ -141,7 +150,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts`, `src/decoders/protobuf.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/bytes.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts`, `src/decoders/protobuf.ts`, `src/decoders/grpc-web.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/bytes.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related

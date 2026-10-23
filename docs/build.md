@@ -14,6 +14,7 @@
 - Two HTML entries: `devtools.html` (devtools page, registers the panel) and `panel.html` (Solid UI).
 - `public/` (icon) is copied verbatim into each target dir, so no build-only files go there.
 - Module preload polyfill disabled: both browsers support it natively.
+- Panel bundle budget: 28672 bytes, `gzip -9c dist/chrome/assets/panel-*.js | wc -c`. Not enforced by a script; checked in each spec's last task. Raised from 24576 for M5's binary decoders.
 
 ## Manifests
 
