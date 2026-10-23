@@ -13,6 +13,11 @@ import { grpcRequestData, grpcResponse } from "../decoders/grpc-web"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
 import type { DecodedResponse } from "../decoders/types"
+import {
+  type BinaryFormat,
+  binaryFormat,
+  decodeBinaryFrame,
+} from "./binary-frames"
 import { BODY_LIMIT, loadBody } from "./body"
 import { valueText } from "./copy"
 import { CopyButton } from "./copy-button"
@@ -30,13 +35,23 @@ import { shownTab, type Tab, tabsFor } from "./tabs"
 import { timingRows } from "./timing"
 import { findTokens } from "./values"
 
-// The entry's own decoder, if it titles frames; it sees the whole frame list.
-function frameDecoder(entry: Entry) {
+// Binary frames decode by format; text frames by the entry's own decoder,
+// which sees the whole frame list.
+function frameDecoder(entry: Entry, format: BinaryFormat) {
   const kind = entry.decoded?.kind
-  const decode = kind && decoderFor(kind, decoders)?.decodeMessage
-  if (!decode) return
-  return (m: Message) => decode(m, entry.messages ?? [])
+  const decode = kind ? decoderFor(kind, decoders)?.decodeMessage : undefined
+  return (m: Message) =>
+    m.base64 !== undefined
+      ? decodeBinaryFrame({ ...m, base64: m.base64 }, format)
+      : decode?.(m, entry.messages ?? [])
 }
+
+const FORMATS: [BinaryFormat, string][] = [
+  ["hex", "Hex"],
+  ["msgpack", "msgpack"],
+  ["cbor", "CBOR"],
+  ["protobuf", "protobuf"],
+]
 
 export function Detail(props: {
   entry: Entry
@@ -48,6 +63,15 @@ export function Detail(props: {
 }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
+  // Decode as choices by entry id, while the panel is open.
+  const [formats, setFormats] = createSignal<Record<number, BinaryFormat>>({})
+  const format = () => {
+    const socket = props.entry.socket
+    return (
+      formats()[props.entry.id] ??
+      binaryFormat([socket?.protocol ?? "", ...(socket?.protocols ?? [])])
+    )
+  }
   const tabs = () => tabsFor(props.entry)
   const shown = () => shownTab(active(), tabs())
   const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
@@ -136,12 +160,37 @@ export function Detail(props: {
                 }
               >
                 {(messages) => (
-                  <Messages
-                    messages={messages()}
-                    timed
-                    directions={!!props.entry.socket}
-                    decode={frameDecoder(props.entry)}
-                  />
+                  <>
+                    <Show when={messages().some((m) => m.base64 !== undefined)}>
+                      <label class="flex items-center gap-1.5 text-muted">
+                        Decode as
+                        <select
+                          aria-label="Decode as"
+                          class="rounded border border-border bg-bg px-1 py-0.5 text-fg"
+                          value={format()}
+                          onChange={(e) =>
+                            setFormats({
+                              ...formats(),
+                              [props.entry.id]: e.currentTarget
+                                .value as BinaryFormat,
+                            })
+                          }
+                        >
+                          <For each={FORMATS}>
+                            {([value, label]) => (
+                              <option value={value}>{label}</option>
+                            )}
+                          </For>
+                        </select>
+                      </label>
+                    </Show>
+                    <Messages
+                      messages={messages()}
+                      timed
+                      directions={!!props.entry.socket}
+                      decode={frameDecoder(props.entry, format())}
+                    />
+                  </>
                 )}
               </Show>
             </Show>
