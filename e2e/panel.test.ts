@@ -1284,8 +1284,11 @@ test("filter chips narrow by protocol and status", async () => {
     const b = "B query 400 graphql"
     const users = "/api/users/1 GET json"
 
+    const chip = 'fieldset[aria-label="Filters"] button'
+    const offBackground = await panel.style(chip, "background-color")
     await panel.toggleChip("graphql")
     await expect.poll(async () => (await panel.rows()).sort()).toEqual([a, b])
+    expect(await panel.style(chip, "background-color")).not.toBe(offBackground)
     expect(await panel.text("footer")).toBe("2 of 5")
 
     await panel.toggleChip("json")
@@ -1329,8 +1332,10 @@ test("search bodies matches request and response body text", async () => {
     await panel.search("geo")
     await expect.poll(panel.rows).toEqual([])
 
+    const offColor = await panel.style(toggle, "color")
     await panel.click(toggle)
     expect(await panel.attr(toggle, "aria-pressed")).toBe("true")
+    expect(await panel.style(toggle, "color")).not.toBe(offColor)
     await expect.poll(panel.rows).toEqual([users])
     expect(await panel.text("footer")).toBe("1 of 5")
 
@@ -1405,8 +1410,10 @@ test("Compare diffs a request against the marked base", async () => {
     const section = (name: string) => panel.text(`[data-diff="${name}"]`)
 
     await panel.select(one)
+    const offColor = await panel.style(compare, "color")
     await panel.clickButton("Compare")
     expect(await panel.attr(compare, "aria-pressed")).toBe("true")
+    expect(await panel.style(compare, "color")).not.toBe(offColor)
     expect(await tabs()).not.toContain("Diff")
 
     await panel.select(two)

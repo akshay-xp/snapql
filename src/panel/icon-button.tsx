@@ -13,8 +13,9 @@ export function IconButton(props: {
       aria-label={props.label}
       title={props.label}
       aria-pressed={props.pressed}
-      class="flex h-6 min-w-6 items-center justify-center gap-1 rounded px-1 text-muted hover:bg-selected hover:text-fg"
-      classList={{ "text-accent": props.pressed }}
+      class="flex h-6 min-w-6 items-center justify-center gap-1 rounded px-1 hover:bg-selected hover:text-fg"
+      // One color class per state: with both, CSS order decides, and muted wins.
+      classList={{ "text-accent": props.pressed, "text-muted": !props.pressed }}
       onClick={props.onClick}
     >
       <svg
