@@ -1,3 +1,4 @@
+import { text as bodyText } from "./bytes"
 import { parseJson } from "./json"
 import { fileRows, multipartParts, type Part } from "./multipart"
 import { parseStream } from "./stream"
@@ -24,7 +25,8 @@ export const graphql: Decoder = {
         : fromParams(new URL(req.url).searchParams),
     )
   },
-  decodeResponse(text) {
+  decodeResponse(body) {
+    const text = bodyText(body)
     if (text.trimStart().startsWith("--")) {
       const parts = incrementalParts(text)
       if (!parts.length) return

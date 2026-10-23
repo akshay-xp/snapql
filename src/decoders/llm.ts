@@ -1,3 +1,4 @@
+import { text as bodyText } from "./bytes"
 import { parseJson } from "./json"
 import { parseStream, type StreamEvent } from "./stream"
 import type { Decoder } from "./types"
@@ -17,8 +18,10 @@ export const llm: Decoder = {
     if (!Array.isArray(body.messages) && !("input" in body)) return
     return { title: body.model, detail: "stream", data: body }
   },
-  decodeResponse(text) {
-    const reply = reassemble(parseStream("text/event-stream", text) ?? [])
+  decodeResponse(body) {
+    const reply = reassemble(
+      parseStream("text/event-stream", bodyText(body)) ?? [],
+    )
     return (
       reply && {
         summary: reply.stopReason ?? "incomplete",

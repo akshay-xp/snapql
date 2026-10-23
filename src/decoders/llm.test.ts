@@ -224,7 +224,8 @@ describe("llm.decodeResponse", () => {
   const sseBody = (stream: StreamEvent[]) =>
     stream.map((e) => `data: ${e.text}\n\n`).join("")
   const decoded = { kind: "llm", title: "m", data: {} }
-  const decode = (text: string) => llm.decodeResponse?.(text, decoded)
+  const decode = (text: string) =>
+    llm.decodeResponse?.({ content: text, encoding: "" }, decoded)
 
   it("turns a reassembled reply into Summary sections", () => {
     const res = decode(sseBody(chatStream))

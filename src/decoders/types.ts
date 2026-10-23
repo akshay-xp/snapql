@@ -22,9 +22,9 @@ export type FrameView = { dir: "in" | "out"; text: string; bytes?: number }
 export type Decoder = {
   kind: string
   decode(req: RequestView): Decoded | undefined
-  // Run lazily by the panel on the raw response text.
+  // Run lazily by the panel on the raw response body.
   decodeResponse?(
-    text: string,
+    body: BodyView,
     decoded: DecodeResult,
   ): DecodedResponse | undefined
   // Run lazily by the panel for each visible frame; frames is the whole list,
