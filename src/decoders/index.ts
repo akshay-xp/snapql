@@ -7,6 +7,7 @@ import { multipart } from "./multipart"
 import { ndjson, sse } from "./sse"
 import { trpc } from "./trpc"
 import type { Decoder } from "./types"
+import { websocket } from "./websocket"
 import { soap, xml } from "./xml"
 
 // Most specific first; json is the catch-all and stays last.
@@ -19,6 +20,7 @@ export const decoders: Decoder[] = [
   xml,
   multipart,
   form,
+  websocket,
   sse,
   ndjson,
   json,

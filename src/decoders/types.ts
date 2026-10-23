@@ -5,6 +5,8 @@ export type RequestView = {
   // Response content type: metadata known at capture, not the response body.
   mimeType: string
   requestBody?: { mimeType: string; text: string }
+  // WebSockets only: the protocols requested when the socket was created.
+  protocols?: string[]
 }
 
 export type Decoded = { title: string; detail?: string; data: unknown }
