@@ -78,7 +78,43 @@ class FileParser {
         this.expect(";")
       } else if (word === "message") this.message(this.pkg)
       else if (word === "enum") this.enumBody(this.pkg)
+      else if (word === "service") this.service()
     }
+  }
+
+  private service() {
+    const service = join(this.pkg, this.next())
+    this.expect("{")
+    while (this.peek() !== "}") {
+      if (this.next() !== "rpc") {
+        this.skipStatement()
+        continue
+      }
+      const name = this.next()
+      const input = this.rpcType()
+      this.expect("returns")
+      const method = { input, output: this.rpcType() }
+      this.schema.methods[`/${service}/${name}`] = method
+      const scope = this.pkg
+      this.pending.push({ type: input, scope, set: (t) => (method.input = t) })
+      this.pending.push({
+        type: method.output,
+        scope,
+        set: (t) => (method.output = t),
+      })
+      if (this.peek() === "{") this.skipBracketed()
+      else this.expect(";")
+    }
+    this.next()
+  }
+
+  // ( [stream] Type )
+  private rpcType() {
+    this.expect("(")
+    let type = this.next()
+    if (type === "stream") type = this.next()
+    this.expect(")")
+    return type
   }
 
   private message(scope: string) {
