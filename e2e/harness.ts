@@ -203,6 +203,8 @@ const socketPage = `<!doctype html>
 <button id="close">close</button>
 <button id="sio">sio</button>
 <button id="gql">gql</button>
+<button id="mp">mp</button>
+<button id="bin">bin</button>
 <script>
   const socket = (path, protocols, frames) => {
     const s = new WebSocket(location.origin.replace("http", "ws") + path, protocols)
@@ -220,6 +222,10 @@ const socketPage = `<!doctype html>
       '{"type":"subscribe","id":"1","payload":{"query":"subscription OnMsg { msg }"}}',
       '{"type":"next","id":"1","payload":{"data":{"msg":"hi"}}}',
     ])
+  document.getElementById("mp").onclick = () =>
+    socket("/mp", ["msgpack"], [new Uint8Array([0x81, 0xa1, 0x61, 0x01])])
+  document.getElementById("bin").onclick = () =>
+    socket("/bin", [], [new Uint8Array([0xa1, 0x61, 0x61, 0x01])])
   let ws
   document.getElementById("open").onclick = () => {
     ws = new WebSocket(location.origin.replace("http", "ws") + "/sock", ["chat"])
@@ -283,6 +289,8 @@ export type Panel = {
   // Clicks the first request row whose text starts with prefix (for rows that change).
   selectStarting(prefix: string): Promise<void>
   probed(): Promise<boolean>
+  // Sets a <select> and dispatches change.
+  selectOption(selector: string, value: string): Promise<void>
   // Opens the Schemas popover if needed and picks one .proto file.
   addSchema(name: string, text: string): Promise<void>
   // HAR postData.text of the first request whose URL ends with url.
@@ -516,6 +524,12 @@ export async function openPanel(
         return { top: list.scrollTop, gap: list.scrollHeight - list.scrollTop - list.clientHeight }
       })()`),
     probed: () => page.evaluate(() => Symbol.for("snapql.probe") in window),
+    selectOption: (selector, value) =>
+      panelFrame.evaluate<void>(`(() => {
+        const select = document.querySelector(${JSON.stringify(selector)})
+        select.value = ${JSON.stringify(value)}
+        select.dispatchEvent(new Event("change", { bubbles: true }))
+      })()`),
     addSchema: (name, text) =>
       panelFrame.evaluate<void>(`(async () => {
         const button = document.querySelector('button[aria-label="Schemas"]')

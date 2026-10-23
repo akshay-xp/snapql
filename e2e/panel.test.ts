@@ -1186,3 +1186,46 @@ test(".proto schemas name gRPC-web fields", async () => {
     await panel.close()
   }
 })
+
+test("binary socket frames decode by protocol or Decode as", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/socket`)
+    await expect.poll(panel.probed).toBe(true)
+    const titles = async () =>
+      (await panel.messages()).map((r) => r.replace(/^\+\S+ /, ""))
+
+    await panel.page.click("#mp")
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([expect.stringMatching(/^\/mp msgpack/)]))
+    await panel.selectStarting("/mp ")
+    await panel.openTab("Messages")
+    await expect
+      .poll(titles)
+      .toEqual(['↑ {"a":1} msgpack 4 B', '↓ {"a":1} msgpack 4 B'])
+    await panel.press("Home", "Messages")
+    await expect.poll(panel.detail).toContain("Message 1")
+    expect(await panel.detail()).toMatch(/\ba\b/)
+
+    await panel.page.click("#bin")
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining([expect.stringMatching(/^\/bin live/)]))
+    await panel.selectStarting("/bin ")
+    await panel.openTab("Messages")
+    await expect.poll(titles).toEqual(["↑ binary 4 B 4 B", "↓ binary 4 B 4 B"])
+    await panel.press("Home", "Messages")
+    await expect.poll(panel.detail).toContain("00000000  a1 61 61 01")
+    await panel.stubClipboard()
+    await panel.click('[aria-label="Copy Message 1"]')
+    expect(await panel.copied()).toBe("oWFhAQ==")
+
+    await panel.selectOption('select[aria-label="Decode as"]', "cbor")
+    await expect
+      .poll(titles)
+      .toEqual(['↑ {"a":1} cbor 4 B', '↓ {"a":1} cbor 4 B'])
+  } finally {
+    await panel.close()
+  }
+})

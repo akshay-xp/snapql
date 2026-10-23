@@ -30,6 +30,11 @@ export function Messages(props: {
     const data = props.decode?.(m)?.data
     return typeof data === "object" && data !== null ? data : undefined
   }
+  // Binary frames without a tree show the decoder's text (a hex dump, an error).
+  const decodedText = (m: Message) => {
+    const data = props.decode?.(m)?.data
+    return typeof data === "string" ? data : undefined
+  }
   const message = () => {
     const i = selected()
     return i === undefined ? undefined : props.messages[i]
@@ -48,7 +53,7 @@ export function Messages(props: {
         >
           {(i, selected) => {
             const m = props.messages[i]
-            const label = frameLabel(m, props.decode?.(m))
+            const label = () => frameLabel(m, props.decode?.(m))
             // Muted and syntax colors fall under 4.5:1 on the selected row.
             const muted = () => ({ "text-muted": !selected() })
             return (
@@ -72,9 +77,9 @@ export function Messages(props: {
                   </span>
                 </Show>
                 <span class="min-w-0 flex-1 truncate">
-                  {label.text}
-                  <Show when={label.detail}>
-                    <span classList={muted()}> {label.detail}</span>
+                  {label().text}
+                  <Show when={label().detail}>
+                    <span classList={muted()}> {label().detail}</span>
                   </Show>
                 </span>
                 <span class="shrink-0" classList={muted()}>
@@ -91,12 +96,15 @@ export function Messages(props: {
           <div class="max-h-1/2 shrink-0 overflow-auto">
             <Section
               title={`Message ${(selected() ?? 0) + 1}`}
-              copy={() => m.text}
+              copy={() => m.base64 ?? m.text}
             >
               <Show
                 when={decodedTree(m) ?? treeValue(m.text)}
                 fallback={
-                  <Text>{m.bytes === undefined ? m.text : messageText(m)}</Text>
+                  <Text>
+                    {decodedText(m) ??
+                      (m.bytes === undefined ? m.text : messageText(m))}
+                  </Text>
                 }
               >
                 {(value) => <JsonTree value={value()} />}
