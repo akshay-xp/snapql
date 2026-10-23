@@ -27,3 +27,13 @@ export function toCurl(req: Request): string {
     ...(body === undefined ? [] : [`--data-raw ${quote(body)}`]),
   ].join(" \\\n  ")
 }
+
+export function toFetch(req: Request): string {
+  const body = req.requestBody?.text
+  const options = {
+    method: req.method,
+    headers: Object.fromEntries(keptHeaders(req).map((h) => [h.name, h.value])),
+    ...(body !== undefined && { body }),
+  }
+  return `await fetch(${JSON.stringify(req.url)}, ${JSON.stringify(options, null, 2)})`
+}
