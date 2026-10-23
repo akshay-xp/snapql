@@ -71,7 +71,7 @@ No capture, store, or UI change.
 - Kind `protobuf`: `binaryDecoder` with `application/x-protobuf`, `application/protobuf`, `application/vnd.google.protobuf`, `readMessage`, key `message`.
 - `readMessage(bytes)`, schema-less: keys are field numbers (strings); repeated numbers become arrays in wire order. Varint: number (decimal string above `MAX_SAFE_INTEGER`; 64-bit values with the top bit set read as signed, as negative int32/int64 are encoded). Fixed32: `{ fixed32, float }` (float to 7 significant digits); fixed64: `{ fixed64, double }`. Length-delimited: `""` when empty, else a string when valid UTF-8 without control chars other than `\t\n\r`, else a nested message when it parses fully, else `hex`. Strings first: printable bytes like `hi` also parse as a message (`{ "13": 105 }`), real nested messages nearly always start with a control byte.
 - No sint/bool hints: every varint is ambiguous, so hints would double every number.
-- Invalid: field 0, wire types 3/4 (groups), 6, 7, or a value running past the end throw `InvalidBytes("protobuf", offset)` (`offset`: the tag's start for a bad tag, the value's start for a bad value). Nested failures fall back to hex. `protobufData(candidates)` (used by gRPC-web): `{ message }` from the first candidate that parses, else `{ error: "invalid protobuf at byte <n>", hex }` for the first candidate.
+- Invalid: field 0, wire types 3/4 (groups), 6, 7, or a value running past the end throw `InvalidBytes("protobuf", offset)` (`offset`: the tag's start for a bad tag, the value's start for a bad value). Nested failures fall back to hex. Exports `Reader`, `eachField` (tag validation and offset blame) and `schemaLess` for the typed reader.
 
 ## gRPC-web (`src/decoders/grpc-web.ts`)
 
@@ -91,6 +91,16 @@ No capture, store, or UI change.
 
 - Kind `cbor`: `binaryDecoder` with `application/cbor`, `readCbor`.
 - `readCbor(bytes)`: major types 0/1 (negative as `-1 - n`, unsafe as decimal strings), 2 bytes as hex, 3 text, 4 arrays, 5 maps (`keyText` keys); indefinite lengths for 2-5 (byte chunks joined with a space, text chunks concatenated). Tags: 0 keeps the string, 1 epoch seconds as ISO, others `{ tag, value }`. Major 7: 20/21/22 false/true/null, 23 `undefined` (tree shows `undefined`), other simple values `{ simple: n }`, half floats (decoded by hand), float32/64. Additional info 28-30 and a break outside an indefinite item are invalid.
+
+## Proto schemas (`src/decoders/proto-schema.ts`, `src/decoders/proto-types.ts`)
+
+- Lazy chunk: imported dynamically by the panel only (picker, typed Summary), never by capture. Decoding at capture stays schema-less: decoders are pure and run once, while schemas are panel state that can change after capture.
+- `Schema` (JSON, stored): `messages` (full name to `{ fields: Record<number, Field> }`), `enums` (full name to number-to-name), `methods` (`/pkg.Service/Method` to `{ input, output }`). `Field`: `{ name, type, repeated?, map?: { key, value } }`; `type` is a scalar name, a full name, or `map`. Full names have no leading dot.
+- `parseProto(files)`: hand-written tokenizer (identifiers, numbers, strings, symbols; `//` and `/* */` comments) and recursive descent. proto3: `syntax`, `package`, `import` (`public`/`weak`), `message` (nested), `enum`, fields (`repeated`, `optional`, `map<K, V>`, `oneof` flattened), `service`/`rpc` (`stream` accepted, rpc bodies skipped). Skipped: `option`, `reserved`, `extensions`, field options `[...]` incl. aggregate `{}` values. Not handled: proto2 `required`, groups, extensions' fields.
+- Names resolve after every file is parsed: innermost scope first out to the root, a leading `.` is absolute. `google.protobuf.*` resolve by name without a file and decode schema-less. Imports must match a loaded file by name or path suffix (`protos/a.proto` matches `a.proto`), `google/protobuf/*` excepted; visibility across files isn't enforced.
+- Errors: `ProtoSchemaError` `<file>:<line>: <reason>` (`expected ";"`, `expected a name`, `unexpected "x"`, `unknown type X`, `import "x" not loaded`, `unexpected end of file`).
+- `messageReader(schema, type)`: field names as keys; int32/int64 signed (`asIntN(64)`), uint32/uint64 unsigned, sint zigzag, bool, enum names (number when unknown), fixed/sfixed/float/double, string, bytes as hex, nested messages, maps as objects (`keyText` keys), repeated always arrays (proto3 packed numeric/enum or unpacked). A wire type that doesn't fit the declared type, or an unknown field number, reads schema-less under the number; a type without a `messages` entry reads with `readMessage`. Built on `protobuf.ts`'s exported `Reader`, `eachField` and `schemaLess`.
+- gRPC-web seam: `grpcRequestData(mime, text, read?)` and `grpcResponse(body, headers, read?)` (default `readMessage`); message frames go through `parseFirst([frame], read)`.
 
 ## LLM (`src/decoders/llm.ts`)
 
@@ -164,7 +174,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts`, `src/decoders/protobuf.ts`, `src/decoders/grpc-web.ts`, `src/decoders/msgpack.ts`, `src/decoders/cbor.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/bytes.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts`, `src/decoders/protobuf.ts`, `src/decoders/grpc-web.ts`, `src/decoders/msgpack.ts`, `src/decoders/cbor.ts`, `src/decoders/proto-schema.ts` (+ `.test.ts`), `src/decoders/proto-types.ts`, `src/decoders/text.ts`, `src/decoders/bytes.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
