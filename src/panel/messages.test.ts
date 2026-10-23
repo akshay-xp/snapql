@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  bodyMessages,
-  byteLabel,
-  messageBytes,
-  offsetLabel,
-  preview,
-} from "./messages"
+import { byteLabel, messageBytes, offsetLabel, preview } from "./messages"
 
 describe("message labels", () => {
   it("formats byte sizes in base 1000", () => {
@@ -27,11 +21,5 @@ describe("message labels", () => {
 
   it("previews on one line", () => {
     expect(preview('  {\n  "a": 1 }')).toBe('{ "a": 1 }')
-  })
-
-  it("turns parsed body events into incoming messages", () => {
-    expect(bodyMessages([{ text: "a", event: "ping" }], 5)).toEqual([
-      { dir: "in", time: 5, text: "a", event: "ping" },
-    ])
   })
 })

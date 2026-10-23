@@ -1,5 +1,4 @@
 import type { Message } from "../capture/entry"
-import type { StreamEvent } from "../decoders/stream"
 
 export function byteLabel(n: number): string {
   if (n < 1000) return `${n} B`
@@ -13,9 +12,3 @@ export const messageBytes = (m: Pick<Message, "text" | "bytes">) =>
 export const offsetLabel = (ms: number) => `+${(ms / 1000).toFixed(3)}s`
 
 export const preview = (text: string) => text.replace(/\s+/g, " ").trim()
-
-// Body-parsed messages have no arrival times; they all carry the start time.
-export const bodyMessages = (
-  events: StreamEvent[],
-  startedAt: number,
-): Message[] => events.map((e) => ({ dir: "in", time: startedAt, ...e }))
