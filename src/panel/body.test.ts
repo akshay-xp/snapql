@@ -29,6 +29,7 @@ describe("formatBody", () => {
     expect(formatBody(base64("aGVsbG8="))).toEqual({
       text: "aGVsbG8=",
       notes: ["base64-encoded, 5 bytes"],
+      view: "hex",
     })
     expect(formatBody(base64("aGk=")).notes).toEqual([
       "base64-encoded, 2 bytes",
@@ -79,8 +80,46 @@ describe("formatBody", () => {
   it("keeps other base64 bodies raw with a note", () => {
     const body = { content: "aGk=", encoding: "base64" }
     const raw = { text: "aGk=", notes: ["base64-encoded, 2 bytes"] }
-    expect(formatBody(body, { mimeType: "image/png" })).toEqual(raw)
-    expect(formatBody(body)).toEqual(raw)
+    expect(formatBody(body, { mimeType: "image/png" })).toEqual({
+      ...raw,
+      view: "image",
+    })
+    expect(formatBody(body)).toEqual({ ...raw, view: "hex" })
+  })
+
+  it("says how binary bodies are shown", () => {
+    const base64 = (content: string) => ({ content, encoding: "base64" })
+    const view = (body: { content: string; encoding: string }, mimeType = "") =>
+      formatBody(body, { mimeType }).view
+    expect(view(base64("aGk="), "image/png")).toBe("image")
+    expect(view(base64("aGk="), "image/jpeg; q=1")).toBe("image")
+    expect(view(base64("aGk="), "font/woff2")).toBe("font")
+    expect(view(base64("aGk="), "application/font-woff")).toBe("font")
+    expect(view(base64("aGk="), "application/octet-stream")).toBe("hex")
+    expect(view(text("{}"), "application/json")).toBeUndefined()
+    expect(view(text("hi"), "text/plain")).toBeUndefined()
+  })
+
+  it("shows SVG as an image with its source as text", () => {
+    const svg = "<svg/>"
+    expect(formatBody(text(svg), { mimeType: "image/svg+xml" })).toMatchObject({
+      text: svg,
+      view: "image",
+    })
+    expect(
+      formatBody(
+        { content: btoa(svg), encoding: "base64" },
+        { mimeType: "image/svg+xml" },
+      ),
+    ).toMatchObject({ text: svg, view: "image" })
+  })
+
+  it("never truncates images", () => {
+    const content = "A".repeat(BODY_LIMIT + 4)
+    expect(
+      formatBody({ content, encoding: "base64" }, { mimeType: "image/png" })
+        .text,
+    ).toBe(content)
   })
 
   it("truncates bodies over the limit without pretty-printing", () => {

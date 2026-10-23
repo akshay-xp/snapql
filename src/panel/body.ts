@@ -3,7 +3,14 @@ import { baseMime } from "../decoders/text"
 import { prettyXml } from "../decoders/xml"
 import { decodeBase64 } from "./values"
 
-export type FormattedBody = { text: string; notes: string[] }
+// How the Body tab shows a body; absent means text (pretty-printed if it can be).
+export type BodyViewKind = "image" | "font" | "hex"
+
+export type FormattedBody = {
+  text: string
+  notes: string[]
+  view?: BodyViewKind
+}
 
 export type FormatOptions = { pretty?: boolean; mimeType?: string }
 
@@ -33,15 +40,43 @@ export function formatBody(
   if (body.encoding === "base64" && isTextMime(mimeType))
     body = { content: decodeBase64(body.content), encoding: "" }
   const base64 = body.encoding === "base64"
+  const view = bodyView(base64, mimeType)
+  const result = (text: string, notes: string[]): FormattedBody =>
+    view ? { text, notes, view } : { text, notes }
   const notes = base64
     ? [`base64-encoded, ${base64Bytes(body.content)} bytes`]
     : []
-  if (body.content.length > BODY_LIMIT) {
+  // Images and fonts render rather than parse, so they are never cut.
+  if (view !== "image" && view !== "font" && body.content.length > BODY_LIMIT) {
     notes.push(`Truncated: showing 1 MB of ${body.content.length} characters`)
-    return { text: body.content.slice(0, BODY_LIMIT), notes }
+    return result(body.content.slice(0, BODY_LIMIT), notes)
   }
-  if (base64 || !pretty) return { text: body.content, notes }
-  return { text: prettyJson(body.content) ?? prettyXml(body.content), notes }
+  if (base64 || !pretty) return result(body.content, notes)
+  return result(prettyJson(body.content) ?? prettyXml(body.content), notes)
+}
+
+const IMAGE_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "image/x-icon",
+  "image/vnd.microsoft.icon",
+])
+const FONT_MIMES = new Set([
+  "font/woff2",
+  "font/woff",
+  "font/ttf",
+  "font/otf",
+  "application/font-woff",
+])
+
+function bodyView(base64: boolean, mimeType: string): BodyViewKind | undefined {
+  const mime = baseMime(mimeType)
+  if (mime === "image/svg+xml" || (base64 && IMAGE_MIMES.has(mime)))
+    return "image"
+  if (base64) return FONT_MIMES.has(mime) ? "font" : "hex"
 }
 
 function base64Bytes(content: string): number {
