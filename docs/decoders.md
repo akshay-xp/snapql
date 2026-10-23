@@ -7,11 +7,16 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - `RequestView`: `method`, `url`, `status`, `mimeType`, `requestBody?: { mimeType, text }`. `mimeType` is the response content type: metadata known at capture, so decoders may use it; response bodies are never read while decoding.
 - `Decoder`: `{ kind, decode(req): Decoded | undefined }`. One call covers detect, decode, summarize, so the body is parsed once.
 - `Decoded`: `{ title, detail?, data }`. `title` names the request (operation, method, path, element); `detail` qualifies it (operation type, method, counts). Kept apart so the panel never parses text. `data` is the parsed request (decoder-specific).
-- `decodeResponse?(text, decoded)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response text and the stored `DecodeResult`. Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand.
+- `BodyView`: `{ content, encoding }` (`encoding` `""` or `"base64"`), the shape of capture's `Body`, so decoders don't import capture.
+- `decodeResponse?(body, decoded)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response `BodyView` and the stored `DecodeResult`. Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand. Bodies over `BODY_LIMIT` (1 MB of content) are not decoded; a failed body fetch shows no Response group.
 - `decodeMessage?(frame, frames)`: optional; titles one socket frame (`FrameView`: `{ dir, text, bytes? }`, which `Message` satisfies) as a `Decoded`, or `undefined` to fall back to the preview. `frames` is the entry's whole list, for protocols whose frames refer to earlier ones. Never run at capture: the panel calls it per rendered Messages row (and for the selected frame).
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
 - `RequestView.protocols?`: WebSockets only, the protocols requested at creation (from the probe), so socket decoders run at capture like the rest.
 - No headers or query params in `RequestView`: GET params come from `url`. Add when a decoder needs them.
+
+## Bytes (`src/decoders/bytes.ts`)
+
+- `bytes(body)`: exact `Uint8Array` (base64 decoded; text UTF-8 encoded). `text(body)`: base64 read as UTF-8 (invalid sequences U+FFFD), text as is. Text decoders call `text(body)` first.
 
 ## Registry (`src/decoders/registry.ts`)
 
@@ -127,7 +132,7 @@ No capture, store, or UI change.
 ## Key files
 
 - `src/decoders/types.ts`, `src/decoders/registry.ts`, `src/decoders/index.ts`
-- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/registry.test.ts`
+- `src/decoders/graphql.ts`, `src/decoders/jsonrpc.ts`, `src/decoders/trpc.ts`, `src/decoders/xml.ts`, `src/decoders/multipart.ts`, `src/decoders/form.ts`, `src/decoders/json.ts`, `src/decoders/stream.ts`, `src/decoders/sse.ts`, `src/decoders/llm.ts`, `src/decoders/websocket.ts`, `src/decoders/socketio.ts`, `src/decoders/graphql-ws.ts` (+ `.test.ts`), `src/decoders/text.ts`, `src/decoders/bytes.ts`, `src/decoders/registry.test.ts`
 - E2E: `/decoders` page in `e2e/harness.ts`, one request per M3 decoder, asserted in `e2e/panel.test.ts`.
 
 ## Related
