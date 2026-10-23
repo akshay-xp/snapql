@@ -31,6 +31,8 @@
 
   // Must match the stream mimes the panel parses (src/decoders/stream.ts).
   const STREAM = /event-stream|ndjson|jsonl|multipart\/mixed/i
+  // FRAME_LIMIT * 3 / 4 in src/capture/entry.ts, so the base64 fits; synced by hand.
+  const BINARY_LIMIT = 786432
   let nextId = 1
 
   async function readStream(id, res) {
@@ -185,18 +187,40 @@
         return super.send(data)
       }
 
-      // Binary frames are recorded by size only.
+      // A Blob reads asynchronously; frames after it wait so order is kept.
+      #pending
       #frame(dir, data) {
-        const text = typeof data === "string"
-        state.record({
-          type: "frame",
-          id: this.#id,
-          time: Date.now(),
-          dir,
-          text: text ? data : "",
-          bytes: text ? undefined : (data.byteLength ?? data.size),
-        })
+        const time = Date.now()
+        const record = (fields) =>
+          state.record({ type: "frame", id: this.#id, time, dir, ...fields })
+        if (!this.#pending && !(data instanceof Blob))
+          return record(frameFields(data))
+        const pending = (this.#pending ?? Promise.resolve())
+          .then(() => (data instanceof Blob ? data.arrayBuffer() : data))
+          .then((read) => {
+            record(frameFields(read))
+            if (this.#pending === pending) this.#pending = undefined
+          })
+        this.#pending = pending
       }
+    }
+  }
+
+  // Strings as text; binary as base64, cut at BINARY_LIMIT, with its full size.
+  function frameFields(data) {
+    if (typeof data === "string") return { text: data }
+    const all = ArrayBuffer.isView(data)
+      ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      : new Uint8Array(data)
+    const kept = all.subarray(0, BINARY_LIMIT)
+    let binary = ""
+    for (let i = 0; i < kept.length; i += 0x8000)
+      binary += String.fromCharCode(...kept.subarray(i, i + 0x8000))
+    return {
+      text: "",
+      bytes: all.length,
+      base64: btoa(binary),
+      ...(kept.length < all.length && { truncated: true }),
     }
   }
 })(window)

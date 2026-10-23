@@ -265,6 +265,7 @@ describe("probe", () => {
       ws.dispatchEvent(
         new MessageEvent("message", { data: new ArrayBuffer(8) }),
       )
+      await new Promise((r) => setTimeout(r, 10))
       expect(state.drain().events).toMatchObject([
         { type: "frame", dir: "out", text: "hi" },
         { type: "frame", dir: "out", text: "", bytes: 4 },
@@ -272,6 +273,42 @@ describe("probe", () => {
         { type: "frame", dir: "in", text: "yo" },
         { type: "frame", dir: "in", text: "", bytes: 8 },
       ])
+    })
+
+    it("records binary frames as base64", () => {
+      const { state, ws } = setup()
+      state.drain()
+      ws.send(new Uint8Array([1, 2, 3, 4]))
+      ws.dispatchEvent(
+        new MessageEvent("message", { data: new Uint8Array([5, 6]).buffer }),
+      )
+      expect(state.drain().events).toMatchObject([
+        { type: "frame", dir: "out", bytes: 4, base64: "AQIDBA==" },
+        { type: "frame", dir: "in", bytes: 2, base64: "BQY=" },
+      ])
+    })
+
+    it("keeps frames in order behind a Blob being read", async () => {
+      const { state, ws } = setup()
+      state.drain()
+      ws.send(new Blob(["abcd"]))
+      ws.send("after")
+      await new Promise((r) => setTimeout(r, 10))
+      expect(state.drain().events).toMatchObject([
+        { type: "frame", bytes: 4, base64: "YWJjZA==" },
+        { type: "frame", text: "after" },
+      ])
+    })
+
+    it("cuts large binary frames and flags them", () => {
+      const { state, ws } = setup()
+      state.drain()
+      ws.send(new Uint8Array(786432 + 3))
+      const [frame] = state.drain().events
+      expect(frame).toMatchObject({ bytes: 786435, truncated: true })
+      expect((frame as { base64: string }).base64).toHaveLength(
+        (786432 / 3) * 4,
+      )
     })
 
     it("records close once with its code and reason", () => {
