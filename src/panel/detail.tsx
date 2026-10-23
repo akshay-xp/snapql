@@ -38,7 +38,7 @@ import { hexDump } from "./hex-dump"
 import { OPEN_DEPTH, treeValue } from "./json"
 import { JsonTree } from "./json-tree"
 import { nextTab } from "./keys"
-import { createMatches, MatchNav } from "./matches"
+import { createMatches, MatchNav, type Step } from "./matches"
 import { byteLabel } from "./messages"
 import { Messages } from "./messages.tsx"
 import { rawRequest, rawResponse } from "./raw"
@@ -122,6 +122,8 @@ export function Detail(props: {
   bodyQuery: string
   // Set when a body-only match is selected: the tab that shows it.
   openTab?: { tab: Tab }
+  // Enter in the search box: a fresh object per press.
+  stepMatch?: Step
 }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
@@ -217,6 +219,7 @@ export function Detail(props: {
                   view={body.view}
                   entry={props.entry}
                   query={props.bodyQuery}
+                  step={props.stepMatch}
                 />
               )}
             </LoadedBody>
@@ -310,7 +313,11 @@ export function Detail(props: {
             <TimingPanel entry={props.entry} />
           </Match>
           <Match when={shown() === "Raw"}>
-            <RawPanel entry={props.entry} query={props.bodyQuery} />
+            <RawPanel
+              entry={props.entry}
+              query={props.bodyQuery}
+              step={props.stepMatch}
+            />
           </Match>
           <Match when={shown() === "Diff" && comparing()}>
             {(base) => <DiffView base={base()} entry={props.entry} />}
@@ -322,7 +329,7 @@ export function Detail(props: {
 }
 
 // The whole tab waits for the body, so Copy can take request and response together.
-function RawPanel(props: { entry: Entry; query: string }) {
+function RawPanel(props: { entry: Entry; query: string; step?: Step }) {
   return (
     <LoadedBody entry={props.entry} pretty={false}>
       {(text) => (
@@ -330,17 +337,24 @@ function RawPanel(props: { entry: Entry; query: string }) {
           request={rawRequest(props.entry)}
           response={rawResponse(props.entry, text)}
           query={props.query}
+          step={props.step}
         />
       )}
     </LoadedBody>
   )
 }
 
-function RawView(props: { request: string; response: string; query: string }) {
+function RawView(props: {
+  request: string
+  response: string
+  query: string
+  step?: Step
+}) {
   let view!: HTMLDivElement
   const matches = createMatches(
     () => view,
     () => [props.query, props.request, props.response],
+    () => props.step,
   )
   return (
     <div ref={view} class="contents">
@@ -424,6 +438,7 @@ function BodyView(props: {
   view?: BodyViewKind
   entry: Entry
   query: string
+  step?: Step
 }) {
   const json = () => treeValue(props.text)
   const [allOpen, setAllOpen] = createSignal(false)
@@ -431,6 +446,7 @@ function BodyView(props: {
   const matches = createMatches(
     () => view,
     () => [props.query, props.text],
+    () => props.step,
   )
   return (
     <div ref={view} class="contents">

@@ -1494,6 +1494,14 @@ test("steps through body matches", async () => {
     expect(await panel.text(nav)).toBe("3 of 3")
     expect(await panel.count("mark[data-current]")).toBe(1)
 
+    await panel.pressSearch("Enter")
+    expect(await panel.text(nav)).toBe("1 of 3")
+    await panel.pressSearch("Enter")
+    expect(await panel.text(nav)).toBe("2 of 3")
+    await panel.pressSearch("Enter", { shift: true })
+    await panel.pressSearch("Enter", { shift: true })
+    expect(await panel.text(nav)).toBe("3 of 3")
+
     await panel.search("zzz")
     await expect.poll(() => panel.count(nav)).toBe(0)
   } finally {

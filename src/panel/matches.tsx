@@ -1,9 +1,12 @@
 import { createEffect, createSignal, on, Show } from "solid-js"
 import { IconButton } from "./icon-button"
 
+export type Step = { by: 1 | -1 }
+
 export function createMatches(
   root: () => HTMLElement | undefined,
   deps: () => unknown,
+  step: () => Step | undefined,
 ) {
   const [marks, setMarks] = createSignal<Element[]>([])
   const [index, setIndex] = createSignal(0)
@@ -27,6 +30,7 @@ export function createMatches(
       }),
     ),
   )
+  createEffect(on(step, (s) => s && move(s.by), { defer: true }))
   return { index, count: () => marks().length, move }
 }
 
