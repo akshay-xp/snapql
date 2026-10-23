@@ -90,6 +90,8 @@ export type Entry = {
   messages?: readonly Message[]
   open?: boolean
   droppedMessages?: number
+  // WebSockets only.
+  socket?: { protocol: string; closeCode?: number; closeReason?: string }
 }
 
 export function toEntry(

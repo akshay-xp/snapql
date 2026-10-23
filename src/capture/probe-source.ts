@@ -3,12 +3,13 @@ export type ProbeEvent =
   | {
       type: "open"
       id: number
-      kind: "fetch" | "eventsource"
+      kind: "fetch" | "eventsource" | "websocket"
       method: string
       url: string
       status?: number
       mimeType: string
       body?: string
+      protocols?: string[]
       time: number
     }
   | { type: "chunk"; id: number; time: number; text: string }
@@ -20,7 +21,16 @@ export type ProbeEvent =
       event?: string
       lastId?: string
     }
-  | { type: "close"; id: number; time: number }
+  | { type: "ready"; id: number; time: number; protocol: string }
+  | {
+      type: "frame"
+      id: number
+      time: number
+      dir: "in" | "out"
+      text: string
+      bytes?: number
+    }
+  | { type: "close"; id: number; time: number; code?: number; reason?: string }
 
 export type Drained = { session: string; events: ProbeEvent[]; dropped: number }
 
