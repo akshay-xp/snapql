@@ -1,4 +1,5 @@
 import { expect, test } from "vitest"
+import { requestBytes } from "../src/decoders/bytes"
 import { defaultTheme } from "../src/panel/themes"
 import { openPanel } from "./harness"
 
@@ -1059,6 +1060,14 @@ test("binary request bodies reach the HAR as UTF-8 or Latin-1 text", async () =>
       [...((await panel.postData(url)) ?? "")].map((c) => c.charCodeAt(0))
     expect(await codes("/api/binary")).toEqual([0, 0xff, 0x80, 1, 0xc3, 0xa9])
     expect(await codes("/api/binary-utf8")).toEqual([0xe9, 1])
+    const candidates = async (url: string) =>
+      requestBytes((await panel.postData(url)) ?? "").map((b) => [...b])
+    expect(await candidates("/api/binary")).toContainEqual([
+      0, 0xff, 0x80, 1, 0xc3, 0xa9,
+    ])
+    expect(await candidates("/api/binary-utf8")).toContainEqual([
+      0xc3, 0xa9, 0x01,
+    ])
   } finally {
     await panel.close()
   }
