@@ -34,6 +34,19 @@ export type FinishedRequest = RequestView & {
   fetchBody: () => Promise<Body>
 }
 
+// bytes is set for binary frames, whose text is "".
+export type Message = {
+  dir: "in" | "out"
+  time: number
+  text: string
+  bytes?: number
+  event?: string
+  id?: string
+  truncated?: true
+}
+
+export const MESSAGE_CAP = 2000
+
 export type Entry = {
   id: number
   method: string
@@ -46,6 +59,9 @@ export type Entry = {
   exchange: Exchange
   decoded?: DecodeResult
   getBody: () => Promise<Body>
+  messages?: readonly Message[]
+  open?: boolean
+  droppedMessages?: number
 }
 
 export function toEntry(
@@ -69,5 +85,16 @@ export function toEntry(
       body ??= req.fetchBody()
       return body
     },
+  }
+}
+
+export function appendMessages(entry: Entry, msgs: readonly Message[]): Entry {
+  const all = [...(entry.messages ?? []), ...msgs]
+  const dropped = all.length - MESSAGE_CAP
+  if (dropped <= 0) return { ...entry, messages: all }
+  return {
+    ...entry,
+    messages: all.slice(dropped),
+    droppedMessages: (entry.droppedMessages ?? 0) + dropped,
   }
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
-import { type FinishedRequest, toEntry } from "./entry"
+import {
+  appendMessages,
+  type FinishedRequest,
+  MESSAGE_CAP,
+  type Message,
+  toEntry,
+} from "./entry"
 import { emptyExchange } from "./test-helpers"
 
 function request(overrides: Partial<FinishedRequest> = {}): FinishedRequest {
@@ -61,5 +67,48 @@ describe("toEntry", () => {
   it("carries the request body", () => {
     const requestBody = { mimeType: "application/json", text: "{}" }
     expect(toEntry(request({ requestBody }), 1).requestBody).toBe(requestBody)
+  })
+})
+
+describe("appendMessages", () => {
+  const texts = (from: number, to: number): Message[] =>
+    Array.from({ length: to - from }, (_, i) => ({
+      dir: "in",
+      time: from + i,
+      text: String(from + i),
+    }))
+
+  it("appends to a copy and keeps the body loader", async () => {
+    const entry = toEntry(
+      request({
+        fetchBody: () => Promise.resolve({ content: "x", encoding: "" }),
+      }),
+      1,
+    )
+    const msgs: Message[] = [
+      { dir: "in", time: 1, text: "a" },
+      { dir: "out", time: 2, text: "b" },
+    ]
+
+    const next = appendMessages(entry, msgs)
+
+    expect(next.messages).toEqual(msgs)
+    expect(entry.messages).toBeUndefined()
+    expect(await next.getBody()).toEqual({ content: "x", encoding: "" })
+  })
+
+  it("keeps the newest 2000 and counts what it drops", () => {
+    expect(MESSAGE_CAP).toBe(2000)
+    let entry = appendMessages(toEntry(request(), 1), texts(0, 1999))
+    expect(entry.droppedMessages).toBeUndefined()
+
+    entry = appendMessages(entry, texts(1999, 2002))
+    expect(entry.messages).toHaveLength(2000)
+    expect(entry.messages?.[0].text).toBe("2")
+    expect(entry.messages?.at(-1)?.text).toBe("2001")
+    expect(entry.droppedMessages).toBe(2)
+
+    entry = appendMessages(entry, texts(2002, 2003))
+    expect(entry.droppedMessages).toBe(3)
   })
 })
