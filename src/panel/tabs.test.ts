@@ -27,12 +27,4 @@ describe("tabsFor", () => {
       tabsFor({ mimeType: "", messages: [], socket: { protocol: "" } }),
     ).toEqual(["Summary", "Messages", "Headers"])
   })
-
-  it("adds Diff only while comparing", () => {
-    expect(tabsFor({ mimeType: "application/json" }, true).at(-1)).toBe("Diff")
-    expect(tabsFor({ mimeType: "application/json" })).not.toContain("Diff")
-    expect(
-      tabsFor({ mimeType: "", messages: [], socket: { protocol: "" } }, true),
-    ).toEqual(["Summary", "Messages", "Headers", "Diff"])
-  })
 })

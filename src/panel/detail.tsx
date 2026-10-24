@@ -32,7 +32,6 @@ import {
 import { valueText } from "./copy"
 import { CopyButton, createCopied } from "./copy-button"
 import { toCurl, toFetch } from "./curl"
-import { collapse, diffSections } from "./diff"
 import { summaryHeading } from "./heading"
 import { hexDump } from "./hex-dump"
 import { OPEN_DEPTH, treeValue } from "./json"
@@ -69,7 +68,7 @@ function CopyAs(props: { entry: Entry }) {
     </button>
   )
   return (
-    <div class="relative">
+    <div class="relative ml-auto shrink-0 self-center font-sans">
       <button
         type="button"
         aria-haspopup="menu"
@@ -115,9 +114,6 @@ export function Detail(props: {
   // Width side by side, height stacked; undefined means half the panel.
   size: number | undefined
   onResize: (clientX: number, clientY: number) => void
-  // The entry marked with Compare, if any.
-  base: Entry | undefined
-  onCompare: (id: number | undefined) => void
   // Highlighted in the Body tab; empty unless body search is on.
   bodyQuery: string
   // Set when a body-only match is selected: the tab that shows it.
@@ -142,9 +138,7 @@ export function Detail(props: {
       binaryFormat([socket?.protocol ?? "", ...(socket?.protocols ?? [])])
     )
   }
-  const comparing = () =>
-    props.base && props.base.id !== props.entry.id ? props.base : undefined
-  const tabs = () => tabsFor(props.entry, !!comparing())
+  const tabs = () => tabsFor(props.entry)
   const shown = () => shownTab(active(), tabs())
   const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
   const onTabKey = (e: KeyboardEvent) => {
@@ -204,12 +198,7 @@ export function Detail(props: {
       >
         <Switch>
           <Match when={shown() === "Summary"}>
-            <Summary
-              entry={props.entry}
-              schemas={props.schemas}
-              isBase={props.base?.id === props.entry.id}
-              onCompare={props.onCompare}
-            />
+            <Summary entry={props.entry} schemas={props.schemas} />
           </Match>
           <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
@@ -318,9 +307,6 @@ export function Detail(props: {
               query={props.bodyQuery}
               step={props.stepMatch}
             />
-          </Match>
-          <Match when={shown() === "Diff" && comparing()}>
-            {(base) => <DiffView base={base()} entry={props.entry} />}
           </Match>
         </Switch>
       </div>
@@ -577,74 +563,7 @@ function Toolbar(props: { children: JSX.Element }) {
   )
 }
 
-// Both bodies load only once the tab is shown, like every other body.
-function DiffView(props: { base: Entry; entry: Entry }) {
-  const [bodies] = createResource(
-    () => [props.base, props.entry] as const,
-    ([base, entry]) =>
-      Promise.all([
-        loadBody(base, { pretty: false }),
-        loadBody(entry, { pretty: false }),
-      ]),
-  )
-  const heading = () => summaryHeading(props.base)
-  return (
-    <>
-      <p class="text-muted">
-        Base: <span class="font-mono">{heading().title}</span> ·{" "}
-        <span class="font-mono">
-          {heading().method} {heading().path}
-        </span>
-      </p>
-      <Show when={bodies()}>
-        {(loaded) => (
-          <For
-            each={diffSections(
-              props.base,
-              props.entry,
-              loaded()[0].text,
-              loaded()[1].text,
-            )}
-          >
-            {(section) => (
-              <section data-diff={section.name} class="flex flex-col gap-1.5">
-                <div class="flex items-baseline gap-1.5">
-                  <h2 class="font-semibold text-muted">{section.name}</h2>
-                  <Show when={!section.changed}>
-                    <span class="text-muted">unchanged</span>
-                  </Show>
-                </div>
-                <Show when={section.changed}>
-                  <pre class="overflow-x-auto rounded-md bg-surface p-2 font-mono">
-                    <For each={collapse(section.lines)}>
-                      {(line) => (
-                        <div
-                          classList={{
-                            "text-success": line.op === "+",
-                            "text-error": line.op === "-",
-                          }}
-                        >
-                          {`${line.op} ${line.text}`}
-                        </div>
-                      )}
-                    </For>
-                  </pre>
-                </Show>
-              </section>
-            )}
-          </For>
-        )}
-      </Show>
-    </>
-  )
-}
-
-function Summary(props: {
-  entry: Entry
-  schemas: Schemas
-  isBase: boolean
-  onCompare: (id: number | undefined) => void
-}) {
+function Summary(props: { entry: Entry; schemas: Schemas }) {
   const readers = useSchemaReaders(props)
   const requestData = () => {
     const r = readers()
@@ -676,26 +595,9 @@ function Summary(props: {
               {heading().tag}
             </span>
           </Show>
-          <div class="ml-auto flex shrink-0 items-center gap-1 self-center font-sans">
-            <button
-              type="button"
-              data-compare
-              aria-pressed={props.isBase}
-              class="rounded px-1.5 py-0.5 hover:bg-selected hover:text-fg"
-              classList={{
-                "text-accent": props.isBase,
-                "text-muted": !props.isBase,
-              }}
-              onClick={() =>
-                props.onCompare(props.isBase ? undefined : props.entry.id)
-              }
-            >
-              Compare
-            </button>
-            <Show when={!props.entry.socket}>
-              <CopyAs entry={props.entry} />
-            </Show>
-          </div>
+          <Show when={!props.entry.socket}>
+            <CopyAs entry={props.entry} />
+          </Show>
         </div>
         <div class="flex flex-wrap gap-x-1.5 text-muted">
           <span data-path title={props.entry.url}>

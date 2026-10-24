@@ -285,7 +285,7 @@ test("Summary shows the request and its decoded data", async () => {
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
     expect(await panel.text('[role="tabpanel"] header')).toMatch(
-      /^GetUser graphql query Compare Copy as POST \/graphql · 200 OK · \d+ ms · \d\d:\d\d:\d\d$/,
+      /^GetUser graphql query Copy as POST \/graphql · 200 OK · \d+ ms · \d\d:\d\d:\d\d$/,
     )
     expect(
       await panel.attr('[role="tabpanel"] header [data-path]', "title"),
@@ -1556,61 +1556,6 @@ test("Copy as copies cURL and fetch, not for sockets", async () => {
       .toEqual(expect.arrayContaining([expect.stringMatching(/^\/sock /)]))
     await panel.selectStarting("/sock ")
     expect(await panel.text('header button[aria-haspopup="menu"]')).toBeNull()
-  } finally {
-    await panel.close()
-  }
-})
-
-test("Compare diffs a request against the marked base", async () => {
-  const panel = await openPanel()
-  try {
-    await panel.page.goto(`${panel.origin}/diff`)
-    const one = "/api/diff/1 POST json"
-    const two = "/api/diff/2 POST json"
-    await expect.poll(panel.rows).toEqual(expect.arrayContaining([one, two]))
-    const compare = "button[aria-pressed][data-compare]"
-    const tabs = () => panel.text('[role="tablist"]')
-    const section = (name: string) => panel.text(`[data-diff="${name}"]`)
-
-    await panel.select(one)
-    const offColor = await panel.style(compare, "color")
-    await panel.clickButton("Compare")
-    expect(await panel.attr(compare, "aria-pressed")).toBe("true")
-    expect(await panel.style(compare, "color")).not.toBe(offColor)
-    expect(await tabs()).not.toContain("Diff")
-
-    await panel.select(two)
-    await expect.poll(tabs).toMatch(/Diff$/)
-    expect(await panel.attr(compare, "aria-pressed")).toBe("false")
-    await panel.openTab("Diff")
-    await expect
-      .poll(() => section("Response body"))
-      .toBe("Response body unchanged")
-    expect(await section("Request line")).toContain(
-      `- POST ${panel.origin}/api/diff/1?v=1`,
-    )
-    expect(await section("Request line")).toContain(
-      `+ POST ${panel.origin}/api/diff/2?v=2`,
-    )
-    expect(await section("Request headers")).toContain("- x-v: 1")
-    expect(await section("Request headers")).toContain("+ x-v: 2")
-    expect(await section("Query")).toContain("- v=1")
-    expect(await section("Query")).toContain("+ v=2")
-    expect(await section("Request body")).toContain('+ "a": 3,')
-    expect((await panel.detail())?.startsWith("Base: /api/diff/1")).toBe(true)
-
-    await panel.select(one)
-    await panel.clickButton("Compare")
-    await panel.select(two)
-    expect(await tabs()).not.toContain("Diff")
-
-    await panel.select(one)
-    await panel.clickButton("Compare")
-    await panel.clear()
-    await panel.page.goto(`${panel.origin}/diff`)
-    await expect.poll(panel.rows).toEqual(expect.arrayContaining([one, two]))
-    await panel.select(two)
-    expect(await tabs()).not.toContain("Diff")
   } finally {
     await panel.close()
   }

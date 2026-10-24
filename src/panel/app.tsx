@@ -117,12 +117,6 @@ export function App(props: {
     )
   }
   const selected = () => visible().find((e) => e.id === selectedId())
-  const [baseId, setBaseId] = createSignal<number>()
-  // Unfiltered: a base hidden by the filter can still be compared against.
-  const base = () => entries().find((e) => e.id === baseId())
-  createEffect(() => {
-    if (baseId() !== undefined && !base()) setBaseId(undefined)
-  })
   // Clear, eviction, navigation or the filter can remove the selected entry;
   // close with it.
   createEffect(() => {
@@ -189,11 +183,9 @@ export function App(props: {
             <Detail
               entry={entry()}
               schemas={props.schemas}
-              base={base()}
               bodyQuery={bodyQuery()}
               openTab={openTab()}
               stepMatch={stepMatch()}
-              onCompare={setBaseId}
               stacked={stacked()}
               size={stacked() ? detailHeight() : detailWidth()}
               onResize={(clientX, clientY) => {
