@@ -272,6 +272,7 @@ const socketPage = `<!doctype html>
 <button id="gql">gql</button>
 <button id="mp">mp</button>
 <button id="bin">bin</button>
+<button id="long">long</button>
 <script>
   const socket = (path, protocols, frames) => {
     const s = new WebSocket(location.origin.replace("http", "ws") + path, protocols)
@@ -291,6 +292,9 @@ const socketPage = `<!doctype html>
     ])
   document.getElementById("mp").onclick = () =>
     socket("/mp", ["msgpack"], [new Uint8Array([0x81, 0xa1, 0x61, 0x01])])
+  // A URL-encoded token as the subprotocol, as some apps send.
+  document.getElementById("long").onclick = () =>
+    socket("/long?user_id=" + "f8c90d90d557".repeat(12), ["%7B%22token%22%3A%22" + "4eb5445d0138".repeat(10) + "%22%7D"], ["hi"])
   document.getElementById("bin").onclick = () =>
     socket("/bin", [], [new Uint8Array([0xa1, 0x61, 0x61, 0x01])])
   let ws
@@ -378,6 +382,8 @@ export type Panel = {
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
   count(selector: string): Promise<number>
+  // Uncaught errors in the panel since it opened.
+  errors(): Promise<string[]>
   // Whether the element lies inside the tabpanel's visible area.
   inView(selector: string): Promise<boolean>
   text(selector: string): Promise<string | null>
@@ -470,6 +476,9 @@ export async function openPanel(
       .evaluate<boolean>(`!!document.querySelector("main")`)
       .then((ok) => ok || undefined),
   )
+  await panelFrame.evaluate<void>(
+    `window.__errors = []; window.addEventListener("error", (e) => window.__errors.push(e.message))`,
+  )
 
   return {
     dock: (side: "right" | "bottom") =>
@@ -509,6 +518,7 @@ export async function openPanel(
         const pane = document.querySelector('[role="tabpanel"]').getBoundingClientRect()
         return box.top >= pane.top && box.bottom <= pane.bottom
       })()`),
+    errors: () => panelFrame.evaluate<string[]>("window.__errors"),
     count: (selector: string) =>
       panelFrame.evaluate<number>(
         `document.querySelectorAll(${JSON.stringify(selector)}).length`,

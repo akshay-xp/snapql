@@ -21,13 +21,15 @@ export function Footer(props: {
   const [exporting, setExporting] = createSignal(false)
   const [redact, setRedact] = createSignal(true)
   return (
-    <footer class="relative flex h-8 shrink-0 items-center gap-0.5 border-t border-border px-1.5">
-      <IconButton label="Clear" onClick={props.onClear}>
+    // Captions drop below 32rem (a narrow side-by-side list); tooltips stay.
+    <footer class="@container relative flex h-8 shrink-0 items-center gap-0.5 border-t border-border px-1.5 [&_[data-caption]]:hidden @[32rem]:[&_[data-caption]]:inline">
+      <IconButton label="Clear" caption="Clear" onClick={props.onClear}>
         <circle cx="12" cy="12" r="9" />
         <path d="m5.6 5.6 12.8 12.8" />
       </IconButton>
       <IconButton
         label={props.newestFirst ? "Newest first" : "Oldest first"}
+        caption={props.newestFirst ? "Newest" : "Oldest"}
         onClick={props.onSort}
       >
         <path
@@ -40,16 +42,22 @@ export function Footer(props: {
       </IconButton>
       <IconButton
         label="Preserve log"
+        caption="Preserve"
         pressed={props.preserveLog}
         onClick={() => props.onPreserveLog(!props.preserveLog)}
       >
         <path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4z" />
       </IconButton>
-      <IconButton label="Reload and capture" onClick={props.onReloadCapture}>
+      <IconButton
+        label="Reload and capture"
+        caption="Reload"
+        onClick={props.onReloadCapture}
+      >
         <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
       </IconButton>
       <IconButton
         label="Schemas"
+        caption="Schemas"
         pressed={picking()}
         onClick={() => setPicking(!picking())}
       >
@@ -57,6 +65,7 @@ export function Footer(props: {
       </IconButton>
       <IconButton
         label="Export HAR"
+        caption="Export"
         pressed={exporting()}
         onClick={() => setExporting(!exporting())}
       >
@@ -95,7 +104,7 @@ export function Footer(props: {
           </button>
         </div>
       </Show>
-      <span class="ml-auto pr-1 text-muted">
+      <span data-count class="ml-auto min-w-0 truncate pr-1 text-muted">
         {props.total === undefined
           ? count(props.count, "request")
           : `${props.count} of ${props.total}`}
