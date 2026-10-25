@@ -366,10 +366,14 @@ function RawView(props: {
   )
 }
 
-const stage: Record<Stage, { label: string; color: string }> = {
-  setup: { label: "Setup", color: "bg-muted" },
-  server: { label: "Server", color: "bg-accent" },
-  download: { label: "Download", color: "bg-success" },
+const stage: Record<Stage, { label: string; color: string; border: string }> = {
+  setup: { label: "Setup", color: "bg-muted", border: "border-muted" },
+  server: { label: "Server", color: "bg-accent", border: "border-accent" },
+  download: {
+    label: "Download",
+    color: "bg-success",
+    border: "border-success",
+  },
 }
 
 function TimingPanel(props: { entry: Entry }) {
@@ -378,53 +382,70 @@ function TimingPanel(props: { entry: Entry }) {
   const view = () => timingView(props.entry.exchange.timings)
   return (
     <>
-      <p>
-        Total <span class="font-mono">{ms(props.entry.time)}</span>
-        <Show when={view().summary}>{(s) => <> · {s()}</>}</Show>
+      <p class="flex items-baseline gap-2">
+        <span class="text-muted">Total</span>
+        <span data-total class="font-mono text-xl font-semibold">
+          {ms(props.entry.time)}
+        </span>
       </p>
-      <p data-legend class="flex flex-wrap gap-x-4">
+      <div data-stages class="flex flex-wrap gap-2">
         <For each={view().stages}>
           {(s) => (
-            <span class="flex items-center gap-1.5">
-              <span class={`size-2 rounded-sm ${stage[s.stage].color}`} />
-              {stage[s.stage].label}
-              <span class="font-mono">{ms(s.ms)}</span>
-            </span>
-          )}
-        </For>
-      </p>
-      <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-0.5">
-        <For each={view().rows}>
-          {(row) => (
-            <>
-              <span data-phase>
-                {row.label}
-                <Show when={row.phase === "connect" && view().tls}>
-                  {(tls) => (
-                    <span class="text-muted"> incl. TLS {ms(tls())}</span>
-                  )}
-                </Show>
+            <div
+              data-stage
+              data-top={s.stage === view().top ? "" : undefined}
+              class={`flex min-w-28 flex-1 flex-col gap-0.5 rounded-md border bg-surface px-3 py-2 ${
+                s.stage === view().top
+                  ? stage[s.stage].border
+                  : "border-transparent"
+              }`}
+            >
+              <span class="flex items-center gap-1.5 text-muted">
+                <span class={`size-2 rounded-full ${stage[s.stage].color}`} />
+                {stage[s.stage].label}
               </span>
-              <span data-ms class="text-right font-mono">
-                {ms(row.ms)}
+              <span class="font-mono">
+                {ms(s.ms)}{" "}
+                <span class="text-muted">{Math.round(s.fraction * 100)}%</span>
               </span>
-              <div class="h-2 overflow-hidden">
-                <div
-                  data-bar
-                  class={`h-full min-w-px ${stage[row.stage].color}`}
-                  style={{
-                    "margin-left": percent(row.offset),
-                    width: percent(row.fraction),
-                  }}
-                />
-              </div>
-            </>
+            </div>
           )}
         </For>
       </div>
-      <Show when={view().reused}>
-        <p class="text-muted">Reused connection: no DNS or connect</p>
-      </Show>
+      <Section title="Phases">
+        <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-1">
+          <For each={view().rows}>
+            {(row) => (
+              <>
+                <span data-phase>
+                  {row.label}
+                  <Show when={row.phase === "connect" && view().tls}>
+                    {(tls) => (
+                      <span class="text-muted"> incl. TLS {ms(tls())}</span>
+                    )}
+                  </Show>
+                </span>
+                <span data-ms class="text-right font-mono text-muted">
+                  {ms(row.ms)}
+                </span>
+                <div class="h-2 overflow-hidden">
+                  <div
+                    data-bar
+                    class={`h-full min-w-px ${stage[row.stage].color}`}
+                    style={{
+                      "margin-left": percent(row.offset),
+                      width: percent(row.fraction),
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </For>
+        </div>
+        <Show when={view().reused}>
+          <p class="mt-2 text-muted">Reused connection: no DNS or connect</p>
+        </Show>
+      </Section>
     </>
   )
 }

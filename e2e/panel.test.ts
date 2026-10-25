@@ -497,7 +497,7 @@ test("Headers and Params/Cookies tabs list name/value pairs", async () => {
   }
 })
 
-test("Timing tab shows a labelled waterfall with a summary", async () => {
+test("Timing tab shows stage tiles over a labelled waterfall", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
@@ -508,12 +508,14 @@ test("Timing tab shows a labelled waterfall with a summary", async () => {
     await panel.openTab("Timing")
 
     const detail = await panel.detail()
-    expect(detail).toMatch(/Total [\d.]+ ms · mostly .+ \(\d+%\)/)
+    expect(await panel.text("[data-total]")).toMatch(/^[\d.]+ ms$/)
+    expect(await panel.text("[data-stages]")).toMatch(
+      /Server [\d.]+ ms \d+% .*Download [\d.]+ ms \d+%/,
+    )
+    expect(await panel.count("[data-stage][data-top]")).toBe(1)
+    expect(await panel.text("section h2")).toBe("Phases")
     expect(detail).toMatch(/Waiting \(TTFB\)\s+[\d.]+ ms/)
     expect(detail).not.toMatch(/\b(wait|ssl)\b/)
-    expect(await panel.text("[data-legend]")).toMatch(
-      /Server [\d.]+ ms .*Download [\d.]+ ms/,
-    )
     const lefts = await panel.lefts("[data-bar]")
     expect(lefts.length).toBeGreaterThan(1)
     expect(lefts).toEqual([...lefts].sort((a, b) => a - b))
@@ -522,7 +524,7 @@ test("Timing tab shows a labelled waterfall with a summary", async () => {
   }
 })
 
-test("Timing summary follows the selected request", async () => {
+test("Timing stages follow the selected request", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
@@ -533,10 +535,10 @@ test("Timing summary follows the selected request", async () => {
     await panel.openTab("Timing")
     for (const row of rows.slice(1)) {
       await panel.select(row)
-      const kept = await panel.text('[role="tabpanel"] p')
+      const kept = await panel.text("[data-stages]")
       await panel.openTab("Summary")
       await panel.openTab("Timing")
-      expect(kept).toBe(await panel.text('[role="tabpanel"] p'))
+      expect(kept).toBe(await panel.text("[data-stages]"))
     }
   } finally {
     await panel.close()
