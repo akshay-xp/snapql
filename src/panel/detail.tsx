@@ -366,10 +366,10 @@ function RawView(props: {
   )
 }
 
-const stageColor: Record<Stage, string> = {
-  setup: "bg-muted",
-  server: "bg-accent",
-  download: "bg-success",
+const stage: Record<Stage, { label: string; color: string }> = {
+  setup: { label: "Setup", color: "bg-muted" },
+  server: { label: "Server", color: "bg-accent" },
+  download: { label: "Download", color: "bg-success" },
 }
 
 function TimingPanel(props: { entry: Entry }) {
@@ -382,16 +382,17 @@ function TimingPanel(props: { entry: Entry }) {
         Total <span class="font-mono">{ms(props.entry.time)}</span>
         <Show when={view().summary}>{(s) => <> · {s()}</>}</Show>
       </p>
-      <div data-stack class="flex h-2 overflow-hidden rounded-sm">
+      <p data-legend class="flex flex-wrap gap-x-4">
         <For each={view().stages}>
           {(s) => (
-            <div
-              class={stageColor[s.stage]}
-              style={{ width: percent(s.fraction) }}
-            />
+            <span class="flex items-center gap-1.5">
+              <span class={`size-2 rounded-sm ${stage[s.stage].color}`} />
+              {stage[s.stage].label}
+              <span class="font-mono">{ms(s.ms)}</span>
+            </span>
           )}
         </For>
-      </div>
+      </p>
       <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-0.5">
         <For each={view().rows}>
           {(row) => (
@@ -410,7 +411,7 @@ function TimingPanel(props: { entry: Entry }) {
               <div class="h-2 overflow-hidden">
                 <div
                   data-bar
-                  class={`h-full min-w-px ${stageColor[row.stage]}`}
+                  class={`h-full min-w-px ${stage[row.stage].color}`}
                   style={{
                     "margin-left": percent(row.offset),
                     width: percent(row.fraction),

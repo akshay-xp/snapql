@@ -511,7 +511,9 @@ test("Timing tab shows a labelled waterfall with a summary", async () => {
     expect(detail).toMatch(/Total [\d.]+ ms · mostly .+ \(\d+%\)/)
     expect(detail).toMatch(/Waiting \(TTFB\)\s+[\d.]+ ms/)
     expect(detail).not.toMatch(/\b(wait|ssl)\b/)
-    expect(await panel.count("[data-stack] > *")).toBeGreaterThan(0)
+    expect(await panel.text("[data-legend]")).toMatch(
+      /Server [\d.]+ ms .*Download [\d.]+ ms/,
+    )
     const lefts = await panel.lefts("[data-bar]")
     expect(lefts.length).toBeGreaterThan(1)
     expect(lefts).toEqual([...lefts].sort((a, b) => a - b))
