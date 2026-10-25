@@ -73,7 +73,7 @@ describe("timingView", () => {
     ])
   })
 
-  it("sums stages and names the biggest one", () => {
+  it("sums stages and picks the biggest one", () => {
     const view = timingView(reused)
     expect(
       view.stages.map(({ stage, ms, fraction }) => ({
@@ -86,13 +86,9 @@ describe("timingView", () => {
       { stage: "server", ms: 7, fraction: 0.7 },
       { stage: "download", ms: 2, fraction: 0.2 },
     ])
-    expect(view.summary).toBe("mostly waiting for the server (70%)")
-    expect(timingView({ ...reused, connect: 30 }).summary).toBe(
-      "mostly connection setup (78%)",
-    )
-    expect(timingView({ ...reused, receive: 30 }).summary).toBe(
-      "mostly downloading (79%)",
-    )
+    expect(view.top).toBe("server")
+    expect(timingView({ ...reused, connect: 30 }).top).toBe("setup")
+    expect(timingView({ ...reused, receive: 30 }).top).toBe("download")
   })
 
   it("leaves out stages that took no time", () => {
@@ -106,7 +102,7 @@ describe("timingView", () => {
       rows: [],
       reused: true,
       stages: [],
-      summary: undefined,
+      top: undefined,
     })
   })
 })
