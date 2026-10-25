@@ -380,7 +380,7 @@ function TimingPanel(props: { entry: Entry }) {
     <>
       <p>
         Total <span class="font-mono">{ms(props.entry.time)}</span>
-        <Show when={view().summary}>{(s) => ` · ${s()}`}</Show>
+        <Show when={view().summary}>{(s) => <> · {s()}</>}</Show>
       </p>
       <div data-stack class="flex h-2 overflow-hidden rounded-sm">
         <For each={view().stages}>

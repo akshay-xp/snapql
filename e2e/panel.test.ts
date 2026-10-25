@@ -520,6 +520,27 @@ test("Timing tab shows a labelled waterfall with a summary", async () => {
   }
 })
 
+test("Timing summary follows the selected request", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(panel.origin)
+    const rows = ["GetUser query graphql", "/api/one GET", "/ GET"]
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining(rows))
+
+    await panel.select(rows[0])
+    await panel.openTab("Timing")
+    for (const row of rows.slice(1)) {
+      await panel.select(row)
+      const kept = await panel.text('[role="tabpanel"] p')
+      await panel.openTab("Summary")
+      await panel.openTab("Timing")
+      expect(kept).toBe(await panel.text('[role="tabpanel"] p'))
+    }
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Raw tab shows the request and response as sent", async () => {
   const panel = await openPanel()
   try {
