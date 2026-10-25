@@ -29,8 +29,9 @@ export function VirtualListbox<T>(props: {
   const [scrollTop, setScrollTop] = createSignal(0)
   const [viewportHeight, setViewportHeight] = createSignal(0)
   onMount(() => {
+    // Next frame, as in App: rendering rows can add a scrollbar mid-callback.
     const observer = new ResizeObserver(() =>
-      setViewportHeight(el.clientHeight),
+      requestAnimationFrame(() => setViewportHeight(el.clientHeight)),
     )
     observer.observe(el)
     onCleanup(() => observer.disconnect())

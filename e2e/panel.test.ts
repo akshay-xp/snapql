@@ -25,7 +25,7 @@ test("clear empties the panel and later requests still appear", async () => {
     expect(await panel.text("header")).toBeNull()
     await panel.clear()
     await expect.poll(panel.rows).toEqual([])
-    expect(await panel.text("footer")).toBe("0 requests")
+    expect(await panel.text("footer [data-count]")).toBe("0 requests")
     const empty = [
       "Waiting for requests",
       "Reload the page to capture its traffic.",
@@ -35,7 +35,7 @@ test("clear empties the panel and later requests still appear", async () => {
     await expect.poll(panel.rows).toEqual(["/api/one GET"])
     for (const line of empty)
       expect(await panel.text("main")).not.toContain(line)
-    expect(await panel.text("footer")).toBe("1 request")
+    expect(await panel.text("footer [data-count]")).toBe("1 request")
   } finally {
     await panel.close()
   }
@@ -90,7 +90,7 @@ test("the search box filters rows and highlights matches", async () => {
     await expect
       .poll(panel.rows)
       .toEqual(["GetUser persisted graphql", "GetUser query graphql"])
-    expect(await panel.text("footer")).toMatch(/^2 of \d+$/)
+    expect(await panel.text("footer [data-count]")).toMatch(/^2 of \d+$/)
     expect(await panel.text('[role="option"] mark')).toBe("GetUser")
 
     // Only what a row shows is searched: decoded rows don't show their method.
@@ -107,7 +107,7 @@ test("the search box filters rows and highlights matches", async () => {
     await expect
       .poll(panel.rows)
       .toEqual(expect.arrayContaining(["/api/one GET"]))
-    expect(await panel.text("footer")).toMatch(/^\d+ requests$/)
+    expect(await panel.text("footer [data-count]")).toMatch(/^\d+ requests$/)
 
     await panel.search("zzz")
     await expect.poll(panel.rows).toEqual([])
@@ -172,6 +172,31 @@ test("requests made before the panel opened are backfilled", async () => {
   }
 })
 
+test("footer buttons are labeled and toggles fill when pressed", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    const button = (label: string) => `footer button[aria-label="${label}"]`
+    expect(await panel.text(button("Clear"))).toBe("Clear")
+    expect(await panel.text(button("Newest first"))).toBe("Newest")
+    expect(await panel.text(button("Reload and capture"))).toBe("Reload")
+    for (const [label, caption] of [
+      ["Preserve log", "Preserve"],
+      ["Schemas", "Schemas"],
+      ["Export HAR", "Export"],
+    ]) {
+      expect(await panel.text(button(label))).toBe(caption)
+      const off = await panel.style(button(label), "background-color")
+      await panel.click(button(label))
+      expect(await panel.style(button(label), "background-color")).not.toBe(off)
+      await panel.click(button(label))
+    }
+  } finally {
+    await panel.close()
+  }
+})
+
 test("navigating clears old rows unless Preserve log is on", async () => {
   const panel = await openPanel()
   try {
@@ -205,6 +230,8 @@ for (const kind of ["light", "dark"] as const) {
     try {
       expect(await panel.devtoolsTheme()).toBe(kind)
       await expect.poll(panel.themeKind).toBe(kind)
+      // Native scrollbars and form controls follow it.
+      expect(await panel.style("html", "color-scheme")).toBe(kind)
       expect(await panel.cssVar("--theme-bg")).toBe(
         defaultTheme(kind).colors.bg,
       )
@@ -645,10 +672,16 @@ test("dragging the divider resizes the detail pane", async () => {
     const grown = (await panel.paneWidths()).detail - detail
     expect(Math.abs(grown - 50)).toBeLessThanOrEqual(1)
 
+    const clear = 'footer button[aria-label="Clear"]'
     await panel.dragDivider(10_000)
     expect((await panel.paneWidths()).detail).toBe(200)
+    expect(await panel.text(clear)).toBe("Clear")
     await panel.dragDivider(-10_000)
     expect((await panel.paneWidths()).list).toBe(200)
+    // Too narrow for captions: icons and tooltips only, nothing cut off.
+    expect(await panel.text(clear)).toBe("")
+    expect(await panel.overflowing("footer")).toEqual([])
+    expect(await panel.errors()).toEqual([])
   } finally {
     await panel.close()
   }
@@ -1289,7 +1322,7 @@ test("filter chips narrow by protocol and status", async () => {
     await panel.toggleChip("graphql")
     await expect.poll(async () => (await panel.rows()).sort()).toEqual([a, b])
     expect(await panel.style(chip, "background-color")).not.toBe(offBackground)
-    expect(await panel.text("footer")).toBe("2 of 5")
+    expect(await panel.text("footer [data-count]")).toBe("2 of 5")
 
     await panel.toggleChip("json")
     await expect
@@ -1350,7 +1383,7 @@ test("search bodies matches request and response body text", async () => {
     )
     await expect.poll(panel.rows).toEqual([geo])
     expect(await panel.text('[aria-label="Requests"] mark')).toBe("geo")
-    expect(await panel.text("footer")).toBe("1 of 5")
+    expect(await panel.text("footer [data-count]")).toBe("1 of 5")
 
     // The URL match keeps its detail; the page's own script is a body match.
     await panel.search("users")
@@ -1370,7 +1403,7 @@ test("search bodies matches request and response body text", async () => {
     await panel.search("geo")
     await panel.page.evaluate(() => fetch("/api/users/1"))
     await expect.poll(panel.rows).toEqual([geo, geo])
-    expect(await panel.text("footer")).toBe("2 of 6")
+    expect(await panel.text("footer [data-count]")).toBe("2 of 6")
 
     await panel.click(toggle)
     await expect.poll(panel.rows).toEqual([])
@@ -1513,6 +1546,34 @@ test("steps through body matches", async () => {
 
     await panel.search("zzz")
     await expect.poll(() => panel.count(nav)).toBe(0)
+  } finally {
+    await panel.close()
+  }
+})
+
+test("a long socket subprotocol never scrolls the panes sideways", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/socket`)
+    await expect.poll(panel.probed).toBe(true)
+    await panel.page.click("#long")
+    await expect
+      .poll(async () => (await panel.rows()).some((r) => r.startsWith("/long")))
+      .toBe(true)
+    await panel.selectStarting("/long")
+    await expect.poll(panel.activeTab).toBe("Summary")
+    expect(
+      await panel.overflowing('[aria-label="Requests"], [role="tabpanel"]'),
+    ).toEqual([])
+    // The title keeps its room: not truncated in the row, one line in the heading.
+    expect(
+      await panel.overflowing('[aria-label="Requests"] [role="option"] > span'),
+    ).not.toContain("/long")
+    const titleHeight = await panel.style(
+      '[role="tabpanel"] header > div > span',
+      "height",
+    )
+    expect(Number.parseFloat(titleHeight)).toBeLessThan(30)
   } finally {
     await panel.close()
   }

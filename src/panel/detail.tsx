@@ -591,7 +591,10 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
             {heading().title}
           </span>
           <Show when={heading().tag}>
-            <span class="shrink-0 rounded border border-border px-1.5 text-[11px] text-muted">
+            <span
+              class="min-w-0 max-w-1/2 truncate rounded border border-border px-1.5 text-[11px] text-muted"
+              title={heading().tag}
+            >
               {heading().tag}
             </span>
           </Show>
@@ -600,7 +603,11 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
           </Show>
         </div>
         <div class="flex flex-wrap gap-x-1.5 text-muted">
-          <span data-path title={props.entry.url}>
+          <span
+            data-path
+            class="min-w-0 [overflow-wrap:anywhere]"
+            title={props.entry.url}
+          >
             {heading().method} {heading().path}
           </span>
           <span>·</span>

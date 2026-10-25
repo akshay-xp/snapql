@@ -33,9 +33,15 @@ export function List(props: {
               fallback={
                 <Show when={label.detail}>
                   {(detail) => (
-                    <Muted selected={selected()}>
+                    // Shrinks to half, unlike the other tags: socket subprotocols
+                    // can be long tokens, and the title keeps priority.
+                    <span
+                      class="min-w-0 max-w-1/2 truncate"
+                      classList={{ "text-muted": !selected() }}
+                      title={detail()}
+                    >
                       <Marked text={detail()} query={props.query} />
-                    </Muted>
+                    </span>
                   )}
                 </Show>
               }

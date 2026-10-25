@@ -26,6 +26,8 @@ function applyTheme(theme: Theme) {
   }
   root.dataset.theme = theme.id
   root.dataset.themeKind = theme.kind
+  // Native scrollbars and form controls otherwise stay light.
+  root.style.colorScheme = theme.kind
 }
 
 applyTheme(defaultTheme(getTheme()))

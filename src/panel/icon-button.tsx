@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js"
+import { type JSX, Show } from "solid-js"
 
 export function IconButton(props: {
   label: string
@@ -15,7 +15,10 @@ export function IconButton(props: {
       aria-pressed={props.pressed}
       class="flex h-6 min-w-6 items-center justify-center gap-1 rounded px-1 hover:bg-selected hover:text-fg"
       // One color class per state: with both, CSS order decides, and muted wins.
-      classList={{ "text-accent": props.pressed, "text-muted": !props.pressed }}
+      classList={{
+        "bg-accent/20 text-accent": props.pressed,
+        "text-muted": !props.pressed,
+      }}
       onClick={props.onClick}
     >
       <svg
@@ -31,7 +34,9 @@ export function IconButton(props: {
       >
         {props.children}
       </svg>
-      {props.caption}
+      <Show when={props.caption}>
+        <span data-caption>{props.caption}</span>
+      </Show>
     </button>
   )
 }

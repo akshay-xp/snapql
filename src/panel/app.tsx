@@ -98,8 +98,12 @@ export function App(props: {
   const [stacked, setStacked] = createSignal(false)
   let row!: HTMLDivElement
   onMount(() => {
+    // Next frame: relaying out inside the callback raises "ResizeObserver
+    // loop completed with undelivered notifications".
     const observer = new ResizeObserver(() =>
-      setStacked(isStacked(row.clientWidth, row.clientHeight)),
+      requestAnimationFrame(() =>
+        setStacked(isStacked(row.clientWidth, row.clientHeight)),
+      ),
     )
     observer.observe(row)
     onCleanup(() => observer.disconnect())
