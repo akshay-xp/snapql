@@ -497,7 +497,7 @@ test("Headers and Params/Cookies tabs list name/value pairs", async () => {
   }
 })
 
-test("Timing tab lists HAR phases", async () => {
+test("Timing tab shows a labelled waterfall with a summary", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
@@ -507,7 +507,14 @@ test("Timing tab lists HAR phases", async () => {
     await panel.select(post)
     await panel.openTab("Timing")
 
-    expect(await panel.detail()).toMatch(/wait\s+[\d.]+ ms/)
+    const detail = await panel.detail()
+    expect(detail).toMatch(/Total [\d.]+ ms · mostly .+ \(\d+%\)/)
+    expect(detail).toMatch(/Waiting \(TTFB\)\s+[\d.]+ ms/)
+    expect(detail).not.toMatch(/\b(wait|ssl)\b/)
+    expect(await panel.count("[data-stack] > *")).toBeGreaterThan(0)
+    const lefts = await panel.lefts("[data-bar]")
+    expect(lefts.length).toBeGreaterThan(1)
+    expect(lefts).toEqual([...lefts].sort((a, b) => a - b))
   } finally {
     await panel.close()
   }
