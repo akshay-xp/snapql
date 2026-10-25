@@ -46,7 +46,7 @@ import { Pairs, Section, Sections, Text } from "./section"
 import { socketRows } from "./socket"
 import { Splitter } from "./splitter.tsx"
 import { shownTab, type Tab, tabsFor } from "./tabs"
-import { timingView } from "./timing"
+import { type Stage, timingView } from "./timing"
 import { findTokens } from "./values"
 
 // Binary frames decode by format; text frames by the entry's own decoder,
@@ -366,31 +366,64 @@ function RawView(props: {
   )
 }
 
+const stageColor: Record<Stage, string> = {
+  setup: "bg-muted",
+  server: "bg-accent",
+  download: "bg-success",
+}
+
 function TimingPanel(props: { entry: Entry }) {
   const ms = (n: number) => `${Math.round(n * 10) / 10} ms`
+  const percent = (n: number) => `${n * 100}%`
+  const view = () => timingView(props.entry.exchange.timings)
   return (
     <>
       <p>
         Total <span class="font-mono">{ms(props.entry.time)}</span>
+        <Show when={view().summary}>{(s) => ` · ${s()}`}</Show>
       </p>
+      <div data-stack class="flex h-2 overflow-hidden rounded-sm">
+        <For each={view().stages}>
+          {(s) => (
+            <div
+              class={stageColor[s.stage]}
+              style={{ width: percent(s.fraction) }}
+            />
+          )}
+        </For>
+      </div>
       <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-0.5">
-        <For each={timingView(props.entry.exchange.timings).rows}>
+        <For each={view().rows}>
           {(row) => (
             <>
-              <span data-phase class="text-muted">
-                {row.phase}
+              <span data-phase>
+                {row.label}
+                <Show when={row.phase === "connect" && view().tls}>
+                  {(tls) => (
+                    <span class="text-muted"> incl. TLS {ms(tls())}</span>
+                  )}
+                </Show>
               </span>
               <span data-ms class="text-right font-mono">
-                {row.ms === undefined ? "-" : ms(row.ms)}
+                {ms(row.ms)}
               </span>
-              <div
-                class="h-2 bg-selected"
-                style={{ width: `${row.fraction * 100}%` }}
-              />
+              <div class="h-2 overflow-hidden">
+                <div
+                  data-bar
+                  class={`h-full min-w-px ${stageColor[row.stage]}`}
+                  style={{
+                    "margin-left": percent(row.offset),
+                    width: percent(row.fraction),
+                  }}
+                />
+              </div>
             </>
           )}
         </For>
       </div>
+      <Show when={view().reused}>
+        <p class="text-muted">Reused connection: no DNS or connect</p>
+      </Show>
     </>
   )
 }

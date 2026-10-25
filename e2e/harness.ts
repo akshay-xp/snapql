@@ -382,6 +382,8 @@ export type Panel = {
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
   count(selector: string): Promise<number>
+  // Left edge of each match, in document order.
+  lefts(selector: string): Promise<number[]>
   // Uncaught errors in the panel since it opened.
   errors(): Promise<string[]>
   // Whether the element lies inside the tabpanel's visible area.
@@ -522,6 +524,10 @@ export async function openPanel(
     count: (selector: string) =>
       panelFrame.evaluate<number>(
         `document.querySelectorAll(${JSON.stringify(selector)}).length`,
+      ),
+    lefts: (selector: string) =>
+      panelFrame.evaluate<number[]>(
+        `[...document.querySelectorAll(${JSON.stringify(selector)})].map((el) => el.getBoundingClientRect().left)`,
       ),
     scrollTop: (selector: string) =>
       panelFrame.evaluate<number>(
