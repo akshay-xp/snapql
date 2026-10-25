@@ -73,10 +73,39 @@ describe("timingView", () => {
     ])
   })
 
+  it("sums stages and names the biggest one", () => {
+    const view = timingView(reused)
+    expect(
+      view.stages.map(({ stage, fraction }) => ({
+        stage,
+        fraction: Math.round(fraction * 10) / 10,
+      })),
+    ).toEqual([
+      { stage: "setup", fraction: 0.1 },
+      { stage: "server", fraction: 0.7 },
+      { stage: "download", fraction: 0.2 },
+    ])
+    expect(view.summary).toBe("mostly waiting for the server (70%)")
+    expect(timingView({ ...reused, connect: 30 }).summary).toBe(
+      "mostly connection setup (78%)",
+    )
+    expect(timingView({ ...reused, receive: 30 }).summary).toBe(
+      "mostly downloading (79%)",
+    )
+  })
+
+  it("leaves out stages that took no time", () => {
+    expect(
+      timingView({ ...reused, blocked: -1 }).stages.map((s) => s.stage),
+    ).toEqual(["server", "download"])
+  })
+
   it("has no rows when nothing was measured", () => {
     expect(timingView(emptyExchange.timings)).toMatchObject({
       rows: [],
       reused: true,
+      stages: [],
+      summary: undefined,
     })
   })
 })
