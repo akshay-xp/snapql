@@ -545,6 +545,26 @@ test("Timing stages follow the selected request", async () => {
   }
 })
 
+test("a response without a body opens cleanly in Body and Raw", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/empty`)
+    const row = "/api/empty OPTIONS"
+    await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
+
+    await panel.select(row)
+    for (const tab of ["Body", "Raw"]) {
+      await panel.openTab(tab)
+      await expect
+        .poll(panel.detail)
+        .toMatch(tab === "Raw" ? /Response/ : /^No response body$/)
+      expect(await panel.detail(), tab).not.toContain("unavailable")
+    }
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Raw tab shows the request and response as sent", async () => {
   const panel = await openPanel()
   try {

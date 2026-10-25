@@ -44,9 +44,12 @@ export function toFinishedRequest(
     startedDateTime: req.startedDateTime,
     time: req.time,
     // Callback form: the promise overload is not guaranteed in Firefox's chrome.* namespace.
+    // Content is null, despite the typings, for responses without a body (204, preflights).
     fetchBody: () =>
       new Promise<Body>((resolve) =>
-        req.getContent((content, encoding) => resolve({ content, encoding })),
+        req.getContent((content, encoding) =>
+          resolve({ content: content ?? "", encoding }),
+        ),
       ),
   }
 }

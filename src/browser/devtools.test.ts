@@ -45,6 +45,16 @@ describe("toFinishedRequest", () => {
     })
   })
 
+  it("reads a missing body as empty text", async () => {
+    const req = chromeRequest()
+    req.getContent.mockImplementation((cb) => cb(null, ""))
+
+    await expect(toFinishedRequest(req).fetchBody()).resolves.toEqual({
+      content: "",
+      encoding: "",
+    })
+  })
+
   it("passes the request body through", () => {
     const postData = { mimeType: "application/json", text: "{}" }
 
