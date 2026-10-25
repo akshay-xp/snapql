@@ -38,7 +38,7 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 
 ## Browser adapter (`src/browser/devtools.ts`)
 
-- `toFinishedRequest(req)`: Chrome devtools `Request` to `FinishedRequest`. `request.postData` becomes `requestBody` (`undefined` when absent or without `text`). `fetchBody` wraps the callback form of `getContent`, since the promise overload is not guaranteed in Firefox's `chrome.*` namespace.
+- `toFinishedRequest(req)`: Chrome devtools `Request` to `FinishedRequest`. `request.postData` becomes `requestBody` (`undefined` when absent or without `text`). `fetchBody` wraps the callback form of `getContent`, since the promise overload is not guaranteed in Firefox's `chrome.*` namespace. Chrome passes `null` content (despite the typings) for bodiless responses such as a 204 or a preflight; `fetchBody` maps it to `""`.
 - `onRequestFinished(cb)`: subscribes to `chrome.devtools.network.onRequestFinished`, delivers mapped requests, returns an unsubscribe that removes the same listener.
 - `getHAR()`: callback form of `chrome.devtools.network.getHAR`, entries mapped via `toFinishedRequest`. Chrome gives HAR entries the `Request` prototype, so `getContent` works on them (verified in e2e).
 - `evalInPage(expr)`: callback form of `inspectedWindow.eval`; resolves the result, or `undefined` on `isException`/`isError`. `reloadWithScript(script)`: `inspectedWindow.reload({ injectedScript })`. `probeScript()`: fetches the extension's `probe.js` (`runtime.getURL`).

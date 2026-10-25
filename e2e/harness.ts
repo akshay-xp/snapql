@@ -204,6 +204,11 @@ const mediaPage = `<!doctype html>
     fetch(url)
 </script>`
 
+// A bodiless 204, for which Chrome's getContent gives null content.
+const emptyPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>fetch("/api/empty", { method: "OPTIONS" })</script>`
+
 const filtersPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
@@ -889,6 +894,9 @@ async function startServer(): Promise<Server> {
             { note: `${"x".repeat(250)} needle` },
           ]),
         )
+    if (req.url === "/empty")
+      return res.writeHead(200, { "content-type": "text/html" }).end(emptyPage)
+    if (req.url === "/api/empty") return res.writeHead(204).end()
     if (req.url === "/filters")
       return res
         .writeHead(200, { "content-type": "text/html" })

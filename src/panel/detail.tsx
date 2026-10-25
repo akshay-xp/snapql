@@ -203,13 +203,18 @@ export function Detail(props: {
           <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
               {(text, body) => (
-                <BodyView
-                  text={text}
-                  view={body.view}
-                  entry={props.entry}
-                  query={props.bodyQuery}
-                  step={props.stepMatch}
-                />
+                <Show
+                  when={text || body.notes.length}
+                  fallback={<p class="text-muted">No response body</p>}
+                >
+                  <BodyView
+                    text={text}
+                    view={body.view}
+                    entry={props.entry}
+                    query={props.bodyQuery}
+                    step={props.stepMatch}
+                  />
+                </Show>
               )}
             </LoadedBody>
           </Match>
