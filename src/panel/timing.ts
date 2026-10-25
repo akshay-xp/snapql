@@ -24,6 +24,14 @@ export type TimingView = {
   rows: TimingRow[]
   tls: number | undefined
   reused: boolean
+  stages: { stage: Stage; fraction: number }[]
+  summary: string | undefined
+}
+
+const doing: Record<Stage, string> = {
+  setup: "connection setup",
+  server: "waiting for the server",
+  download: "downloading",
 }
 
 export function timingView(timings: Timings): TimingView {
@@ -37,8 +45,20 @@ export function timingView(timings: Timings): TimingView {
     offset += row.fraction
     return row
   })
+  const stages = (Object.keys(doing) as Stage[])
+    .map((stage) => ({
+      stage,
+      fraction: rows
+        .filter((r) => r.stage === stage)
+        .reduce((sum, r) => sum + r.fraction, 0),
+    }))
+    .filter((s) => s.fraction > 0)
+  const top = [...stages].sort((a, b) => b.fraction - a.fraction)[0]
   return {
     rows,
+    stages,
+    summary:
+      top && `mostly ${doing[top.stage]} (${Math.round(top.fraction * 100)}%)`,
     tls: has("ssl") ? timings.ssl : undefined,
     reused: !has("dns") && !has("connect"),
   }
