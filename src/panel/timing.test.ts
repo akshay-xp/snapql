@@ -56,6 +56,23 @@ describe("timingView", () => {
     expect(timingView({ ...reused, dns: 3 }).reused).toBe(false)
   })
 
+  it("labels each phase in plain words with its stage", () => {
+    expect(
+      timingView(t).rows.map(({ phase, label, stage }) => [
+        phase,
+        label,
+        stage,
+      ]),
+    ).toEqual([
+      ["blocked", "Queued", "setup"],
+      ["dns", "DNS lookup", "setup"],
+      ["connect", "Connect", "setup"],
+      ["send", "Request sent", "server"],
+      ["wait", "Waiting (TTFB)", "server"],
+      ["receive", "Download", "download"],
+    ])
+  })
+
   it("has no rows when nothing was measured", () => {
     expect(timingView(emptyExchange.timings)).toMatchObject({
       rows: [],
