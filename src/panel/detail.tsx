@@ -46,7 +46,7 @@ import { Pairs, Section, Sections, Text } from "./section"
 import { socketRows } from "./socket"
 import { Splitter } from "./splitter.tsx"
 import { shownTab, type Tab, tabsFor } from "./tabs"
-import { timingRows } from "./timing"
+import { timingView } from "./timing"
 import { findTokens } from "./values"
 
 // Binary frames decode by format; text frames by the entry's own decoder,
@@ -374,7 +374,7 @@ function TimingPanel(props: { entry: Entry }) {
         Total <span class="font-mono">{ms(props.entry.time)}</span>
       </p>
       <div class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-3 gap-y-0.5">
-        <For each={timingRows(props.entry.exchange.timings)}>
+        <For each={timingView(props.entry.exchange.timings).rows}>
           {(row) => (
             <>
               <span data-phase class="text-muted">
