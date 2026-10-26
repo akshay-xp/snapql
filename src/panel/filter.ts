@@ -59,6 +59,8 @@ export function bodyHit(texts: BodyTexts, query: string): BodyHit | undefined {
 
 export type Filters = { kinds: string[]; statuses: string[] }
 
+export const noFilters: Filters = { kinds: [], statuses: [] }
+
 type Filterable = Pick<Entry, "status" | "decoded">
 
 export const kindOf = (entry: Filterable) => entry.decoded?.kind ?? "other"
@@ -71,11 +73,15 @@ const sorted = (values: Iterable<string>, last: string) =>
     a === last ? 1 : b === last ? -1 : a.localeCompare(b),
   )
 
-export function chipsFor(entries: readonly Filterable[]): Filters {
+// Selected chips stay listed without traffic, so a saved filter is visible.
+export function chipsFor(
+  entries: readonly Filterable[],
+  selected = noFilters,
+): Filters {
   return {
-    kinds: sorted(entries.map(kindOf), "other"),
+    kinds: sorted([...entries.map(kindOf), ...selected.kinds], "other"),
     statuses: sorted(
-      entries.map((e) => statusGroup(e.status)),
+      [...entries.map((e) => statusGroup(e.status)), ...selected.statuses],
       "failed",
     ),
   }
@@ -101,11 +107,6 @@ export function toggle(
       : [...values, value],
   }
 }
-
-export const prune = (filters: Filters, chips: Filters): Filters => ({
-  kinds: filters.kinds.filter((k) => chips.kinds.includes(k)),
-  statuses: filters.statuses.filter((s) => chips.statuses.includes(s)),
-})
 
 export type Hide = { preflights: boolean; cached: boolean; assets: boolean }
 

@@ -18,11 +18,10 @@ import {
   bodyHit,
   chipsFor,
   defaultHide,
-  type Filters,
   isHidden,
   matchesFilters,
   matchesQuery,
-  prune,
+  noFilters,
   toggle,
 } from "./filter"
 import { Footer } from "./footer"
@@ -48,16 +47,13 @@ export function App(props: {
   const [selectedId, setSelectedId] = createSignal<number>()
   const [newestFirst, setNewestFirst] = createSignal(true)
   const [query, setQuery] = createSignal("")
-  const noFilters: Filters = { kinds: [], statuses: [] }
   const [filters, setFilters] = createSignal(noFilters)
   const [hide, setHide] = createSignal(defaultHide)
-  const chips = createMemo(() => chipsFor(entries()))
-  // Pruned on read: a chip whose entries are gone stops filtering with it.
-  const active = createMemo(() => prune(filters(), chips()))
+  const chips = createMemo(() => chipsFor(entries(), filters()))
   const filtered = () =>
     !!query() ||
-    !!active().kinds.length ||
-    !!active().statuses.length ||
+    !!filters().kinds.length ||
+    !!filters().statuses.length ||
     entries().some((e) => isHidden(e, hide()))
   const clearFilters = () => {
     setQuery("")
@@ -76,7 +72,7 @@ export function App(props: {
     const shown = entries().filter(
       (e) =>
         matchesQuery(e, query(), searchBodies() ? bodyText(e) : undefined) &&
-        matchesFilters(e, active()) &&
+        matchesFilters(e, filters()) &&
         !isHidden(e, hide()),
     )
     return newestFirst() ? shown.reverse() : shown
@@ -152,9 +148,9 @@ export function App(props: {
           <Show when={entries().length}>
             <FilterChips
               chips={chips()}
-              active={active()}
+              active={filters()}
               onToggle={(group, value) =>
-                setFilters(toggle(active(), group, value))
+                setFilters(toggle(filters(), group, value))
               }
               hide={hide()}
               onHide={setHide}
