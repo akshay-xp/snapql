@@ -72,3 +72,23 @@ export function createWorkspaces(storage: WorkspaceStorage) {
     setHide: (hide: Hide) => update({ hide }),
   }
 }
+
+const KEY = "snapql.workspaces"
+
+// Sync storage behind the async adapter, so chrome.storage can replace it.
+export function localWorkspaces(
+  kv: Pick<Storage, "getItem" | "setItem"> | undefined,
+): WorkspaceStorage {
+  return {
+    load: async () => {
+      try {
+        return kv?.getItem(KEY) ?? undefined
+      } catch {}
+    },
+    save: (text) => {
+      try {
+        kv?.setItem(KEY, text)
+      } catch {}
+    },
+  }
+}

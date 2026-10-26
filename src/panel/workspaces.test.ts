@@ -3,6 +3,7 @@ import { defaultHide } from "./filter"
 import {
   createWorkspaces,
   defaultWorkspaces,
+  localWorkspaces,
   parseWorkspaces,
   type Stored,
 } from "./workspaces"
@@ -88,5 +89,41 @@ describe("createWorkspaces", () => {
     await store.ready
     store.setFilters({ kinds: ["json"], statuses: [] })
     expect(store.filters().kinds).toEqual(["json"])
+  })
+})
+
+describe("localWorkspaces", () => {
+  const memory = () => {
+    const items = new Map<string, string>()
+    return {
+      getItem: (k: string) => items.get(k) ?? null,
+      setItem: (k: string, v: string) => void items.set(k, v),
+      items,
+    }
+  }
+
+  it("stores under snapql.workspaces", async () => {
+    const kv = memory()
+    const storage = localWorkspaces(kv)
+    expect(await storage.load()).toBeUndefined()
+    storage.save("x")
+    expect(kv.items.get("snapql.workspaces")).toBe("x")
+    expect(await storage.load()).toBe("x")
+  })
+
+  it("is harmless without storage or when it throws", async () => {
+    const none = localWorkspaces(undefined)
+    expect(await none.load()).toBeUndefined()
+    expect(() => none.save("x")).not.toThrow()
+    const broken = localWorkspaces({
+      getItem: () => {
+        throw new Error("denied")
+      },
+      setItem: () => {
+        throw new Error("denied")
+      },
+    })
+    expect(await broken.load()).toBeUndefined()
+    expect(() => broken.save("x")).not.toThrow()
   })
 })
