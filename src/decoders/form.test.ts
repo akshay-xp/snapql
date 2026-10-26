@@ -16,24 +16,14 @@ function post(
 }
 
 describe("form", () => {
-  it("counts and decodes fields", () => {
+  // No data: Payload shows the fields, so Summary would only repeat them.
+  it("counts fields, leaving the fields themselves to Payload", () => {
     expect(form.decode(post("a=1&b=x%20y"))).toEqual({
       title: "/login",
       detail: "2 fields",
-      data: {
-        fields: [
-          { name: "a", value: "1" },
-          { name: "b", value: "x y" },
-        ],
-      },
+      data: undefined,
     })
-  })
-
-  it("uses the singular and decodes plus as space", () => {
     expect(form.decode(post("c="))?.detail).toBe("1 field")
-    expect(form.decode(post("q=a+b"))?.data).toEqual({
-      fields: [{ name: "q", value: "a b" }],
-    })
   })
 
   it("ignores other bodies", () => {

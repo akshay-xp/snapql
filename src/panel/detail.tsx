@@ -212,6 +212,8 @@ export function Detail(props: {
                   fallback={<p class="text-muted">No response body</p>}
                 >
                   <BodyView
+                    title="Response body"
+                    notes={body.notes}
                     text={text}
                     view={body.view}
                     entry={props.entry}
@@ -230,14 +232,17 @@ export function Detail(props: {
                 when={props.entry.messages}
                 fallback={
                   <LoadedBody entry={props.entry} pretty={false}>
-                    {(text) => (
-                      <Messages
-                        messages={incoming(
-                          parseStream(props.entry.mimeType, text) ?? [],
-                          props.entry.startedAt,
-                        )}
-                        timed={false}
-                      />
+                    {(text, body) => (
+                      <>
+                        <Notes notes={body.notes} />
+                        <Messages
+                          messages={incoming(
+                            parseStream(props.entry.mimeType, text) ?? [],
+                            props.entry.startedAt,
+                          )}
+                          timed={false}
+                        />
+                      </>
                     )}
                   </LoadedBody>
                 }
@@ -288,16 +293,14 @@ export function Detail(props: {
                 "form" in p ? (
                   <Pairs title="Form data" pairs={p.form} decode />
                 ) : (
-                  <>
-                    <Notes notes={p.notes} />
-                    <BodyView
-                      title="Request body"
-                      text={p.text}
-                      entry={props.entry}
-                      query={props.bodyQuery}
-                      step={props.stepMatch}
-                    />
-                  </>
+                  <BodyView
+                    title="Request body"
+                    notes={p.notes}
+                    text={p.text}
+                    entry={props.entry}
+                    query={props.bodyQuery}
+                    step={props.stepMatch}
+                  />
                 )
               }
             </Show>
@@ -347,8 +350,9 @@ export function Detail(props: {
 function RawPanel(props: { entry: Entry; query: string; step?: Step }) {
   return (
     <LoadedBody entry={props.entry} pretty={false}>
-      {(text) => (
+      {(text, body) => (
         <RawView
+          notes={body.notes}
           request={rawRequest(props.entry)}
           response={rawResponse(props.entry, text)}
           query={props.query}
@@ -360,6 +364,7 @@ function RawPanel(props: { entry: Entry; query: string; step?: Step }) {
 }
 
 function RawView(props: {
+  notes: string[]
   request: string
   response: string
   query: string
@@ -373,7 +378,7 @@ function RawView(props: {
   )
   return (
     <div ref={view} class="contents">
-      <Toolbar>
+      <Toolbar notes={props.notes}>
         <MatchNav
           index={matches.index()}
           count={matches.count()}
@@ -479,13 +484,14 @@ function TimingPanel(props: { entry: Entry }) {
   )
 }
 
-// Mounted only while its tab is active, so the body loads on demand.
 function Notes(props: { notes: string[] }) {
   return (
     <For each={props.notes}>{(note) => <p class="text-muted">{note}</p>}</For>
   )
 }
 
+// Mounted only while its tab is active, so the body loads on demand. Notes are
+// the caller's: views show them in their toolbar.
 function LoadedBody(props: {
   entry: Entry
   pretty: boolean
@@ -495,22 +501,15 @@ function LoadedBody(props: {
     () => props.entry,
     (entry) => loadBody(entry, { pretty: props.pretty }),
   )
+  // A JSX child, so it re-runs when the body changes; Show calls this once.
   return (
-    <Show when={body()}>
-      {(b) => (
-        <>
-          <Notes notes={b().notes} />
-          {props.children(b().text, b())}
-        </>
-      )}
-    </Show>
+    <Show when={body()}>{(b) => <>{props.children(b().text, b())}</>}</Show>
   )
 }
 
 function BodyView(props: {
-  // Shown at the start of the sticky toolbar, where a Section heading would
-  // put a second bar above it.
   title?: string
+  notes: string[]
   text: string
   view?: BodyViewKind
   entry: Entry
@@ -518,7 +517,7 @@ function BodyView(props: {
   step?: Step
 }) {
   const json = () => treeValue(props.text)
-  const [allOpen, setAllOpen] = createSignal(false)
+  const [expanded, setExpanded] = createSignal(0)
   let view!: HTMLDivElement
   const matches = createMatches(
     () => view,
@@ -527,12 +526,7 @@ function BodyView(props: {
   )
   return (
     <div ref={view} class="contents">
-      <Toolbar>
-        <Show when={props.title}>
-          <h2 class="mr-auto self-center font-semibold text-muted">
-            {props.title}
-          </h2>
-        </Show>
+      <Toolbar title={props.title} notes={props.notes}>
         <MatchNav
           index={matches.index()}
           count={matches.count()}
@@ -542,7 +536,7 @@ function BodyView(props: {
           <button
             type="button"
             class="rounded px-1.5 text-muted hover:bg-selected hover:text-fg"
-            onClick={() => setAllOpen(true)}
+            onClick={() => setExpanded(expanded() + 1)}
           >
             Expand all
           </button>
@@ -558,7 +552,8 @@ function BodyView(props: {
             {(value) => (
               <JsonTree
                 value={value()}
-                openDepth={allOpen() ? Number.POSITIVE_INFINITY : OPEN_DEPTH}
+                openDepth={expanded() ? Number.POSITIVE_INFINITY : OPEN_DEPTH}
+                expanded={expanded()}
                 query={props.query}
               />
             )}
@@ -649,11 +644,33 @@ function FontPreview(props: { text: string; id: number }) {
 }
 
 // Tab-level actions live in the panel: the tab bar can't know a lazily loaded body.
-function Toolbar(props: { children: JSX.Element }) {
+// Title and notes go in the toolbar, not above it: anything above would push
+// it off the top, where it rests and sticks (a Section heading would also add
+// a second bar).
+function Toolbar(props: {
+  title?: string
+  notes?: string[]
+  children: JSX.Element
+}) {
+  const notes = () => props.notes?.join(" · ") ?? ""
   // Sticky, so Copy and match stepping stay in reach in long bodies; -top-3
-  // cancels the tabpanel padding, so nothing shows through above it.
+  // cancels the tabpanel padding, so nothing shows through above it. At the
+  // top of the tab it also rests there (-mt-3), so it doesn't jump on scroll.
   return (
-    <div class="sticky -top-3 z-10 -mx-3 flex justify-end gap-1 bg-bg px-3 py-1">
+    <div
+      data-toolbar
+      class="sticky -top-3 z-10 -mx-3 flex justify-end gap-1 bg-bg px-3 py-1 [[role=tabpanel]>.contents:first-child>&]:-mt-3"
+    >
+      <div class="mr-auto flex min-w-0 items-center gap-2">
+        <Show when={props.title}>
+          <h2 class="shrink-0 font-semibold text-muted">{props.title}</h2>
+        </Show>
+        <Show when={notes()}>
+          <span class="truncate text-muted" title={notes()}>
+            {notes()}
+          </span>
+        </Show>
+      </div>
       {props.children}
     </div>
   )

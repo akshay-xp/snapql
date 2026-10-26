@@ -13,6 +13,9 @@ import { Marked } from "./search"
 export function JsonTree(props: {
   value: unknown
   openDepth?: number
+  // Bumped by Expand all: reopens every node, even ones collapsed by hand,
+  // which a deeper openDepth alone leaves shut.
+  expanded?: number
   query?: string
 }) {
   return (
@@ -21,6 +24,7 @@ export function JsonTree(props: {
         value={props.value}
         depth={0}
         openDepth={props.openDepth ?? OPEN_DEPTH}
+        expanded={props.expanded ?? 0}
         query={props.query ?? ""}
       />
     </div>
@@ -32,6 +36,7 @@ function Node(props: {
   value: unknown
   depth: number
   openDepth: number
+  expanded: number
   query: string
 }) {
   const kids = children(props.value)
@@ -41,6 +46,13 @@ function Node(props: {
     hasMatch(props.value, props.query)
   const [open, setOpen] = createSignal(startOpen())
   createEffect(on(startOpen, setOpen, { defer: true }))
+  createEffect(
+    on(
+      () => props.expanded,
+      () => setOpen(true),
+      { defer: true },
+    ),
+  )
   const key = (
     <Show when={props.name !== undefined}>
       <span data-json="key" class="text-syntax-key">
@@ -86,6 +98,7 @@ function Node(props: {
                 value={value}
                 depth={props.depth + 1}
                 openDepth={props.openDepth}
+                expanded={props.expanded}
                 query={props.query}
               />
             )}

@@ -10,14 +10,11 @@ export const form: Decoder = {
       baseMime(body.mimeType) !== "application/x-www-form-urlencoded"
     )
       return
-    const fields = [...new URLSearchParams(body.text)].map(([name, value]) => ({
-      name,
-      value,
-    }))
+    // No data: the Payload tab shows the fields, so Summary would only repeat them.
     return {
       title: new URL(req.url).pathname,
-      detail: count(fields.length, "field"),
-      data: { fields },
+      detail: count([...new URLSearchParams(body.text)].length, "field"),
+      data: undefined,
     }
   },
 }

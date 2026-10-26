@@ -416,6 +416,9 @@ export type Panel = {
   cssVar(name: string): Promise<string>
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
+  scrollTo(selector: string, top: number): Promise<void>
+  // Viewport y of the element's top edge.
+  top(selector: string): Promise<number>
   count(selector: string): Promise<number>
   // Dispatches a bubbling keydown (with key) or pointerdown, or a blur, on the first match.
   dispatch(
@@ -616,6 +619,14 @@ export async function openPanel(
     lefts: (selector: string) =>
       panelFrame.evaluate<number[]>(
         `[...document.querySelectorAll(${JSON.stringify(selector)})].map((el) => el.getBoundingClientRect().left)`,
+      ),
+    scrollTo: (selector: string, top: number) =>
+      panelFrame.evaluate<void>(
+        `void (document.querySelector(${JSON.stringify(selector)}).scrollTop = ${top})`,
+      ),
+    top: (selector: string) =>
+      panelFrame.evaluate<number>(
+        `document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect().top`,
       ),
     scrollTop: (selector: string) =>
       panelFrame.evaluate<number>(

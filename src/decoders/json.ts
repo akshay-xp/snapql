@@ -6,9 +6,14 @@ const isJsonMime = (mimeType: string) => /(\/|\+)json$/.test(baseMime(mimeType))
 export const json: Decoder = {
   kind: "json",
   decode(req) {
-    const data = req.requestBody ? parseJson(req.requestBody.text) : undefined
-    if (data === undefined && !isJsonMime(req.mimeType)) return
-    return { title: new URL(req.url).pathname, detail: req.method, data }
+    const body = req.requestBody ? parseJson(req.requestBody.text) : undefined
+    if (body === undefined && !isJsonMime(req.mimeType)) return
+    // No data: the Payload tab shows the body, so Summary would only repeat it.
+    return {
+      title: new URL(req.url).pathname,
+      detail: req.method,
+      data: undefined,
+    }
   },
 }
 
