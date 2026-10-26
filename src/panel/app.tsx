@@ -51,12 +51,16 @@ export function App(props: {
   const [newestFirst, setNewestFirst] = createSignal(true)
   const [query, setQuery] = createSignal("")
   const { filters, setFilters, hide, setHide } = props.workspaces
-  const chips = createMemo(() => chipsFor(entries(), filters()))
+  // Session-only bypass of the workspace; the saved filters stay as they are.
+  const [showAll, setShowAll] = createSignal(false)
+  const shownFilters = () => (showAll() ? noFilters : filters())
+  const shownHide = () => (showAll() ? noHide : hide())
+  const chips = createMemo(() => chipsFor(entries(), shownFilters()))
   const filtered = () =>
     !!query() ||
-    !!filters().kinds.length ||
-    !!filters().statuses.length ||
-    entries().some((e) => isHidden(e, hide()))
+    !!shownFilters().kinds.length ||
+    !!shownFilters().statuses.length ||
+    entries().some((e) => isHidden(e, shownHide()))
   const clearFilters = () => {
     setQuery("")
     setFilters(noFilters)
@@ -74,8 +78,8 @@ export function App(props: {
     const shown = entries().filter(
       (e) =>
         matchesQuery(e, query(), searchBodies() ? bodyText(e) : undefined) &&
-        matchesFilters(e, filters()) &&
-        !isHidden(e, hide()),
+        matchesFilters(e, shownFilters()) &&
+        !isHidden(e, shownHide()),
     )
     return newestFirst() ? shown.reverse() : shown
   })
@@ -150,11 +154,13 @@ export function App(props: {
           <Show when={entries().length}>
             <FilterChips
               chips={chips()}
-              active={filters()}
+              active={shownFilters()}
               onToggle={(group, value) =>
                 setFilters(toggle(filters(), group, value))
               }
-              hide={hide()}
+              hide={shownHide()}
+              showingAll={showAll()}
+              onShowWorkspace={() => setShowAll(false)}
               onHide={setHide}
             />
           </Show>
@@ -174,7 +180,7 @@ export function App(props: {
                   <WorkspaceHiding
                     name={props.workspaces.name()}
                     total={entries().length}
-                    onShowAll={() => {}}
+                    onShowAll={() => setShowAll(true)}
                     onClear={() => {
                       setFilters(noFilters)
                       setHide(noHide)

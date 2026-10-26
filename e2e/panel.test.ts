@@ -1909,3 +1909,45 @@ test("filters persist across panel reloads and sites", async () => {
     await panel.close()
   }
 })
+
+test("Show all bypasses the workspace until reopened", async () => {
+  const panel = await openPanel()
+  try {
+    const active = async () => {
+      const stored = JSON.parse(
+        (await panel.storageItem("snapql.workspaces")) ?? "",
+      )
+      return stored.workspaces.find(
+        (w: { id: string }) => w.id === stored.active,
+      )
+    }
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(panel.chips).toContain("4xx")
+    await panel.toggleChip("4xx")
+    await panel.page.goto(`${panel.origin}/noise`)
+    await expect.poll(() => panel.text("main")).toMatch(/Default is hiding/)
+
+    await panel.clickButton("Show all")
+    await expect
+      .poll(panel.rows)
+      .toEqual(
+        expect.arrayContaining([
+          "/api/preflight OPTIONS",
+          "/static/dot.png GET",
+        ]),
+      )
+    expect(await panel.pressedChips()).toEqual([])
+    expect(await panel.text("[data-hide] > button")).toBe("Hide")
+    expect(await panel.text("[data-showing-all]")).toBe("Showing all")
+    expect((await active()).filters.statuses).toEqual(["4xx"])
+    expect(Object.values((await active()).hide)).toEqual([true, true, true])
+
+    await panel.reloadPanel()
+    await panel.page.goto(`${panel.origin}/noise`)
+    await expect.poll(panel.chips).toContain("other")
+    expect(await panel.count("[data-showing-all]")).toBe(0)
+    expect(await panel.pressedChips()).toEqual(["4xx"])
+  } finally {
+    await panel.close()
+  }
+})
