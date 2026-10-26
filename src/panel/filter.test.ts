@@ -214,4 +214,22 @@ describe("isHidden", () => {
     expect(isHidden(entry({ status: 304 }), hide)).toBe(true)
     expect(isHidden(entry({}), hide)).toBe(false)
   })
+
+  it("hides static assets by mime", () => {
+    const hide = { ...noHide, assets: true }
+    for (const mimeType of [
+      "image/png",
+      "font/woff2",
+      "video/mp4",
+      "audio/mpeg",
+      "text/css; charset=utf-8",
+      "text/javascript",
+      "application/javascript",
+      "application/x-javascript",
+      "application/wasm",
+    ])
+      expect(isHidden(entry({ mimeType }), hide), mimeType).toBe(true)
+    for (const mimeType of ["application/json", "text/html", ""])
+      expect(isHidden(entry({ mimeType }), hide), mimeType).toBe(false)
+  })
 })
