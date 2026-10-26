@@ -17,7 +17,6 @@ import { download } from "./download"
 import {
   bodyHit,
   chipsFor,
-  defaultHide,
   isHidden,
   matchesFilters,
   matchesQuery,
@@ -33,6 +32,7 @@ import type { Schemas } from "./schemas"
 import { FilterChips, SearchBox } from "./search"
 import { clampSize, isStacked } from "./splitter"
 import type { Tab } from "./tabs"
+import type { Workspaces } from "./workspaces"
 
 export function App(props: {
   store: Store
@@ -41,14 +41,14 @@ export function App(props: {
   // Reloads with the probe injected first, so streams opened while loading are live.
   onReloadCapture: () => void
   schemas: Schemas
+  workspaces: Workspaces
 }) {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
   const [selectedId, setSelectedId] = createSignal<number>()
   const [newestFirst, setNewestFirst] = createSignal(true)
   const [query, setQuery] = createSignal("")
-  const [filters, setFilters] = createSignal(noFilters)
-  const [hide, setHide] = createSignal(defaultHide)
+  const { filters, setFilters, hide, setHide } = props.workspaces
   const chips = createMemo(() => chipsFor(entries(), filters()))
   const filtered = () =>
     !!query() ||
