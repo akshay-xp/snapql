@@ -20,6 +20,7 @@
 
 - Generated, not checked in. `manifestPlugin` emits `manifest.json` per target from `manifestFor(target, version)`.
 - Version comes from `package.json`.
+- `name` and `description` are the Chrome Web Store title (max 75 chars) and summary (max 132), the fields its search weighs most; `scripts/build-manifests.test.ts` checks the limits. The DevTools tab title is separate (`createPanel("SnapQL", ...)` in `src/devtools.ts`). The long description lives in `store/listing.md`, plain text (the dashboard shows Markdown literally).
 - Firefox adds `browser_specific_settings.gecko`:
   - `id: "snapql@akshay-xp"`: provisional until an AMO account exists.
   - `data_collection_permissions: { required: ["none"] }`: required for new AMO extensions.
