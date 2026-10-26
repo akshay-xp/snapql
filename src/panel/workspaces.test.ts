@@ -134,3 +134,39 @@ describe("localWorkspaces", () => {
     expect(() => broken.save("x")).not.toThrow()
   })
 })
+
+describe("switching workspaces", () => {
+  const rest = {
+    id: "rest",
+    name: "REST",
+    filters: { kinds: ["json"], statuses: [] },
+    hide: defaultHide,
+  }
+  const two: Stored = { ...gql, workspaces: [...gql.workspaces, rest] }
+  const loaded = async (stored: Stored) => {
+    const save = vi.fn<(text: string) => void>()
+    const store = createWorkspaces({
+      load: async () => JSON.stringify(stored),
+      save,
+    })
+    await store.ready
+    return { store, save }
+  }
+
+  it("lists workspaces and selects one", async () => {
+    const { store, save } = await loaded(two)
+    expect(store.list()).toEqual([
+      { id: "gql", name: "GraphQL" },
+      { id: "rest", name: "REST" },
+    ])
+    expect(store.activeId()).toBe("gql")
+    store.select("rest")
+    expect(store.filters().kinds).toEqual(["json"])
+    expect(store.name()).toBe("REST")
+    expect(JSON.parse(save.mock.lastCall?.[0] ?? "").active).toBe("rest")
+    save.mockClear()
+    store.select("missing")
+    expect(store.activeId()).toBe("rest")
+    expect(save).not.toHaveBeenCalled()
+  })
+})
