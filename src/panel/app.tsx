@@ -189,7 +189,6 @@ export function App(props: {
                   }
                 >
                   <WorkspaceHiding
-                    name={props.workspaces.name()}
                     total={entries().length}
                     onShowAll={() => setShowAll(true)}
                     onClear={() => {
@@ -299,7 +298,6 @@ function NoMatches(props: { query: string; onClear: () => void }) {
 }
 
 function WorkspaceHiding(props: {
-  name: string
   total: number
   onShowAll: () => void
   onClear: () => void
@@ -307,7 +305,7 @@ function WorkspaceHiding(props: {
   return (
     <Message>
       <p class="text-[13px] font-semibold">
-        {props.name} is hiding {count(props.total, "request")}
+        Your workspace is hiding {count(props.total, "request")}
       </p>
       <div class="flex gap-3">
         <TextButton onClick={props.onShowAll}>Show all</TextButton>
