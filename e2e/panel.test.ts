@@ -1398,10 +1398,20 @@ test("filter chips narrow by protocol and status", async () => {
     await panel.toggleChip("json")
     await panel.toggleChip("4xx")
     await expect.poll(panel.rows).toEqual([])
-    expect(await panel.text("main")).toContain("No requests match the filters")
-    await panel.clickButton("Clear filter")
+    expect(await panel.text("main")).toMatch(/Default is hiding \d+ requests/)
+    expect(await panel.text("main")).toContain("Show all")
+    await panel.clickButton("Clear filters")
     await expect.poll(async () => (await panel.rows()).length).toBe(5)
     expect(await panel.pressedChips()).toEqual([])
+    expect(await panel.text("[data-hide] > button")).toBe("Hide")
+    const stored = JSON.parse(
+      (await panel.storageItem("snapql.workspaces")) ?? "",
+    )
+    expect(Object.values(stored.workspaces[0].hide)).toEqual([
+      false,
+      false,
+      false,
+    ])
 
     await panel.clear()
     await expect.poll(panel.chips).toEqual([])
