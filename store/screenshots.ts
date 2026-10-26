@@ -54,3 +54,17 @@ test("grpc", () =>
     await expect.poll(panel.detail).toContain("Decoded · grpc-web · OK")
     await expect.poll(panel.detail).toContain('"IN_STOCK"')
   }))
+
+test("websocket", () =>
+  shoot("3-websocket", async (panel) => {
+    await panel.page.goto(`${panel.origin}/chat`)
+    await expect.poll(panel.probed).toBe(true)
+    await panel.page.evaluate("start()")
+    await expect
+      .poll(async () => (await panel.rows()).find((r) => r.startsWith("/chat")))
+      .toMatch(/10 msgs/)
+    await panel.selectStarting("/chat")
+    await panel.openTab("Messages")
+    await panel.click('[aria-label="Messages"] [role="option"]:nth-child(7)')
+    await expect.poll(panel.detail).toContain("Message 7")
+  }))
