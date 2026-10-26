@@ -133,7 +133,7 @@ No capture, store, or UI change.
 - `soap`: root `Envelope` (SOAP 1.1 or 1.2, any prefix); title = first element after `Body` (`Header` skipped), e.g. `GetPrice`. Empty `Body` means no match, so `xml` takes it.
 - `xml`: title = root local name (`ns:Order` gives `Order`); prolog, comments and DOCTYPE skipped.
 - `data`: `{ xml: prettyXml(text) }`.
-- `prettyXml(text)`: two-space indent per depth; whitespace-only text dropped; an element whose only child is text or CDATA stays on one line, verbatim; tags, comments, PIs and CDATA never split. Unbalanced input (e.g. HTML void tags) or no elements: returned unchanged. Also used by the Body tab.
+- `prettyXml(text)`: two-space indent per depth; whitespace-only text dropped; an element whose only child is text or CDATA stays on one line, verbatim; tags, comments, PIs and CDATA never split. Unbalanced input (e.g. HTML void tags) or no elements: returned unchanged. Also used by the Response tab and Payload request bodies.
 
 ## Multipart (`src/decoders/multipart.ts`)
 
