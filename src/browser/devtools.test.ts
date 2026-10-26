@@ -96,6 +96,7 @@ describe("exchange", () => {
         httpVersion: "HTTP/1.1",
         content: { mimeType: "application/json", size: 2 },
       },
+      serverIPAddress: "10.0.0.1",
       timings: {
         blocked: 1,
         dns: -1,
@@ -116,6 +117,7 @@ describe("exchange", () => {
       httpVersion: "HTTP/1.1",
       statusText: "Created",
       size: 2,
+      remoteAddress: "10.0.0.1",
       timings: {
         blocked: 1,
         dns: -1,

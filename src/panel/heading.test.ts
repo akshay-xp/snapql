@@ -12,11 +12,7 @@ const entry = (
   status: 200,
   time: 34.4,
   startedAt,
-  exchange: {
-    ...emptyExchange,
-    statusText,
-    queryString: [{ name: "a", value: "1" }],
-  },
+  exchange: { ...emptyExchange, statusText },
   ...overrides,
 })
 
@@ -35,11 +31,10 @@ describe("summaryHeading", () => {
       ),
     ).toEqual({
       title: "GetUser",
-      titleParts: ["", "GetUser"],
       tag: "graphql query",
       method: "POST",
-      url: ["x.test/", "graphql"],
-      params: 1,
+      url: "https://x.test/graphql",
+      query: "?a=1",
       status: "200 OK",
       ok: true,
       time: "34 ms",
@@ -47,65 +42,56 @@ describe("summaryHeading", () => {
     })
   })
 
-  it("tags by kind alone without a detail, and not at all when undecoded", () => {
+  it("leaves the URL as the title when undecoded, untagged", () => {
+    const plain = summaryHeading(
+      entry({ method: "GET", url: "https://x.test/api/one" }),
+    )
+    expect(plain).not.toHaveProperty("title")
+    expect(plain).not.toHaveProperty("tag")
+    expect(plain).toMatchObject({ url: "https://x.test/api/one", query: "" })
+  })
+
+  it("tags by kind alone, dropping a detail that repeats the method", () => {
     const soap = summaryHeading(
       entry({ decoded: { kind: "soap", title: "GetPrice", data: {} } }),
     )
     expect(soap.tag).toBe("soap")
-    const plain = summaryHeading(
-      entry({ method: "GET", url: "https://x.test/api/one" }),
-    )
-    expect(plain.title).toBe("/api/one")
-    expect(plain).not.toHaveProperty("tag")
-  })
-
-  it("shows only the host when the title is already the path", () => {
-    const plain = summaryHeading(
-      entry({ method: "GET", url: "https://x.test/api/one?b=2" }),
-    )
-    expect(plain).toMatchObject({
-      titleParts: ["/api/", "one", "?b=2"],
-      url: ["", "x.test"],
-    })
-    expect(plain).not.toHaveProperty("params")
-  })
-
-  it("drops a tag detail that repeats the method", () => {
     const json = summaryHeading(
       entry({
         method: "GET",
-        url: "https://x.test/api/me",
         decoded: { kind: "json", title: "/api/me", detail: "GET", data: {} },
       }),
     )
-    expect(json).toMatchObject({ tag: "json", url: ["", "x.test"] })
+    expect(json.tag).toBe("json")
   })
 
-  it("adds the body size and cache source when known, skipping an empty body", () => {
-    const cached = summaryHeading(
+  it("leaves the URL as the title when the decoder titles by path", () => {
+    const json = summaryHeading(
       entry({
-        exchange: { ...emptyExchange, size: 1234, fromCache: "disk" },
+        url: "https://x.test/api/me",
+        decoded: { kind: "json", title: "/api/me", data: {} },
       }),
     )
-    expect(cached).toMatchObject({ size: "1.2 kB", cache: "disk cache" })
-    expect(summaryHeading(entry())).not.toHaveProperty("size")
-    const empty = { ...emptyExchange, size: 0 }
-    expect(summaryHeading(entry({ exchange: empty }))).not.toHaveProperty(
-      "size",
-    )
-    expect(summaryHeading(entry())).not.toHaveProperty("cache")
+    expect(json).not.toHaveProperty("title")
+    expect(json.tag).toBe("json")
   })
 
-  it("describes failures and bare status codes", () => {
+  it("names the status when the browser gives no text (HTTP/2 and later)", () => {
     expect(summaryHeading(entry({ status: 404 }, "Not Found"))).toMatchObject({
       status: "404 Not Found",
       ok: false,
     })
+    expect(summaryHeading(entry({ status: 404 }, "")).status).toBe(
+      "404 Not Found",
+    )
+    expect(summaryHeading(entry({ status: 204 }, "")).status).toBe(
+      "204 No Content",
+    )
+    expect(summaryHeading(entry({ status: 299 }, "")).status).toBe("299")
     expect(summaryHeading(entry({ status: 0 }, ""))).toMatchObject({
       status: "failed",
       ok: false,
     })
-    expect(summaryHeading(entry({ status: 204 }, "")).status).toBe("204")
   })
 
   it("describes how a socket closed", () => {
@@ -116,9 +102,37 @@ describe("summaryHeading", () => {
           "",
         ),
       )
-    expect(socket()).toMatchObject({ status: "101", ok: true })
+    expect(socket()).toMatchObject({
+      status: "101 Switching Protocols",
+      ok: true,
+    })
     expect(socket(1000)).toMatchObject({ status: "closed 1000", ok: true })
     expect(socket(1005).ok).toBe(true)
     expect(socket(1006)).toMatchObject({ status: "closed 1006", ok: false })
+  })
+
+  it("adds size, protocol, remote address and cache source when known", () => {
+    const full = summaryHeading(
+      entry({
+        exchange: {
+          ...emptyExchange,
+          size: 1234,
+          httpVersion: "h2",
+          remoteAddress: "10.0.0.1",
+          fromCache: "disk",
+        },
+      }),
+    )
+    expect(full).toMatchObject({
+      size: "1.2 kB",
+      protocol: "h2",
+      remote: "10.0.0.1",
+      cache: "disk cache",
+    })
+    const empty = summaryHeading(
+      entry({ exchange: { ...emptyExchange, size: 0 } }),
+    )
+    for (const key of ["size", "protocol", "remote", "cache"])
+      expect(empty).not.toHaveProperty(key)
   })
 })

@@ -212,10 +212,14 @@ const emptyPage = `<!doctype html>
 <script>fetch("/api/empty", { method: "OPTIONS" })</script>`
 
 export const deepPath = `/api/${"nested/".repeat(30)}target`
+export const longQuery = `/api/short/target?q=${"x".repeat(400)}`
 
 const deepPage = `<!doctype html>
 <link rel="icon" href="data:,">
-<script>fetch("${deepPath}?page=2")</script>`
+<script>
+  fetch("${deepPath}?page=2")
+  fetch("${longQuery}")
+</script>`
 
 const filtersPage = `<!doctype html>
 <link rel="icon" href="data:,">
@@ -978,7 +982,8 @@ async function startServer(): Promise<Server> {
     if (req.url === "/api/empty") return res.writeHead(204).end()
     if (req.url === "/deep")
       return res.writeHead(200, { "content-type": "text/html" }).end(deepPage)
-    if (req.url?.startsWith(deepPath)) return res.writeHead(204).end()
+    if (req.url?.startsWith(deepPath) || req.url?.startsWith("/api/short/"))
+      return res.writeHead(204).end()
     if (req.url === "/filters")
       return res
         .writeHead(200, { "content-type": "text/html" })
