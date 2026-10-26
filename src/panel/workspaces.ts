@@ -37,6 +37,12 @@ export function parseWorkspaces(text: string | undefined): Stored {
   return { active, workspaces }
 }
 
+function nextName(names: string[]) {
+  let n = 2
+  while (names.includes(`Workspace ${n}`)) n++
+  return `Workspace ${n}`
+}
+
 export type WorkspaceStorage = {
   load(): Promise<string | undefined>
   save(text: string): void
@@ -72,6 +78,17 @@ export function createWorkspaces(storage: WorkspaceStorage) {
     select: (id: string) => {
       if (stored().workspaces.some((w) => w.id === id))
         commit({ ...stored(), active: id })
+    },
+    // A copy of the active workspace, so the user starts from what they see.
+    create: () => {
+      const id = crypto.randomUUID()
+      const { workspaces } = stored()
+      const name = nextName(workspaces.map((w) => w.name))
+      commit({
+        active: id,
+        workspaces: [...workspaces, { ...active(), id, name }],
+      })
+      return id
     },
     name: () => active().name,
     filters: () => active().filters,

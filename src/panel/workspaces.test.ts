@@ -169,4 +169,28 @@ describe("switching workspaces", () => {
     expect(store.activeId()).toBe("rest")
     expect(save).not.toHaveBeenCalled()
   })
+
+  it("creates a copy named after the lowest free number", async () => {
+    const store = createWorkspaces({ load: async () => undefined, save() {} })
+    await store.ready
+    store.setFilters({ kinds: ["json"], statuses: [] })
+    const id = store.create()
+    expect(store.activeId()).toBe(id)
+    expect(store.name()).toBe("Workspace 2")
+    expect(store.filters().kinds).toEqual(["json"])
+    expect(store.hide()).toEqual(defaultHide)
+    expect(new Set(store.list().map((w) => w.id)).size).toBe(2)
+    store.create()
+    expect(store.name()).toBe("Workspace 3")
+
+    const { store: gap } = await loaded({
+      active: "default",
+      workspaces: [
+        { ...defaultWorkspaces.workspaces[0] },
+        { ...rest, id: "three", name: "Workspace 3" },
+      ],
+    })
+    gap.create()
+    expect(gap.name()).toBe("Workspace 2")
+  })
 })
