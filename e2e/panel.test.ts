@@ -318,7 +318,7 @@ test("Summary shows the request and its decoded data", async () => {
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
     expect(await panel.text('[role="tabpanel"] header')).toMatch(
-      /^GetUsergraphql query Copy as POST http:\/\/127\.0\.0\.1:\d+\/graphql 200 OK \d+ ms · [\d.]+ k?B · HTTP\/1\.1 · 127\.0\.0\.1 · \d\d:\d\d:\d\d$/,
+      /^graphql query GetUser Copy as POST http:\/\/127\.0\.0\.1:\d+\/graphql 200 OK \d+ ms · [\d.]+ k?B · HTTP\/1\.1 · 127\.0\.0\.1 · \d\d:\d\d:\d\d$/,
     )
     await panel.stubClipboard()
     await panel.click('[role="tabpanel"] header button[aria-label="Copy URL"]')

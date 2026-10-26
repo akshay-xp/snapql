@@ -696,17 +696,16 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
   return (
     <>
       <header class="flex flex-col gap-1.5 font-mono">
+        {/* Above the title, not inline: a chip after wrapping text never lines up. */}
+        <Show when={heading().tag}>
+          <p data-tag class="-mb-1 truncate text-[11px] text-muted">
+            {heading().tag}
+          </p>
+        </Show>
         <div class="flex items-start gap-1">
           <p class="min-w-0 flex-1 text-[15px] font-semibold [overflow-wrap:anywhere]">
             <Show when={heading().title} fallback={<Url heading={heading()} />}>
               {(title) => title()}
-            </Show>
-            <Show when={heading().tag}>
-              {(tag) => (
-                <span class="ml-2 inline-block max-w-full truncate rounded border border-border px-1.5 align-[2px] text-[11px] font-normal text-muted">
-                  {tag()}
-                </span>
-              )}
             </Show>
           </p>
           <Show when={!heading().title}>
