@@ -318,7 +318,7 @@ test("Summary shows the request and its decoded data", async () => {
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
     expect(await panel.text('[role="tabpanel"] header')).toMatch(
-      /^graphql query GetUser Copy as POST http:\/\/127\.0\.0\.1:\d+\/graphql 200 OK \d+ ms · [\d.]+ k?B · HTTP\/1\.1 · 127\.0\.0\.1 · \d\d:\d\d:\d\d$/,
+      /^POST · graphql query GetUser Copy as http:\/\/127\.0\.0\.1:\d+\/graphql 200 OK \d+ ms · [\d.]+ k?B · HTTP\/1\.1 · 127\.0\.0\.1 · \d\d:\d\d:\d\d$/,
     )
     await panel.stubClipboard()
     await panel.click('[role="tabpanel"] header button[aria-label="Copy URL"]')
@@ -1676,8 +1676,9 @@ test("Summary titles a plain request by its full URL and wraps it", async () => 
     await expect.poll(panel.rows).toContain(`${longQuery} GET`)
     await panel.select(`${longQuery} GET`)
     const header = '[role="tabpanel"] header'
-    expect(await panel.text(`${header} p`)).toBe(
-      `GET ${panel.origin}${longQuery}`,
+    expect(await panel.text(`${header} [data-label]`)).toBe("GET")
+    expect(await panel.text(`${header} [data-url]`)).toBe(
+      `${panel.origin}${longQuery}`,
     )
     expect(await panel.count(`${header} button[aria-label="Copy URL"]`)).toBe(1)
     expect(await panel.text(`${header} [data-status]`)).toBe("204 No Content")
