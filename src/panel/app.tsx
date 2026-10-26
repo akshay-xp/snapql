@@ -17,11 +17,11 @@ import { download } from "./download"
 import {
   bodyHit,
   chipsFor,
+  defaultHide,
   type Filters,
   isHidden,
   matchesFilters,
   matchesQuery,
-  noHide,
   prune,
   toggle,
 } from "./filter"
@@ -50,7 +50,7 @@ export function App(props: {
   const [query, setQuery] = createSignal("")
   const noFilters: Filters = { kinds: [], statuses: [] }
   const [filters, setFilters] = createSignal(noFilters)
-  const [hide, setHide] = createSignal(noHide)
+  const [hide, setHide] = createSignal(defaultHide)
   const chips = createMemo(() => chipsFor(entries()))
   // Pruned on read: a chip whose entries are gone stops filtering with it.
   const active = createMemo(() => prune(filters(), chips()))
@@ -58,7 +58,7 @@ export function App(props: {
     !!query() ||
     !!active().kinds.length ||
     !!active().statuses.length ||
-    Object.values(hide()).some(Boolean)
+    entries().some((e) => isHidden(e, hide()))
   const clearFilters = () => {
     setQuery("")
     setFilters(noFilters)
