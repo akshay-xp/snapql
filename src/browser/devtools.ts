@@ -27,6 +27,7 @@ export function toFinishedRequest(
       httpVersion: req.response.httpVersion ?? "",
       statusText: req.response.statusText ?? "",
       size: ms(req.response.content?.size),
+      ...(req.serverIPAddress && { remoteAddress: req.serverIPAddress }),
       timings: {
         blocked: ms(req.timings?.blocked),
         dns: ms(req.timings?.dns),

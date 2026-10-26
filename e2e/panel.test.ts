@@ -1,7 +1,13 @@
 import { expect, test } from "vitest"
 import { requestBytes } from "../src/decoders/bytes"
 import { defaultTheme } from "../src/panel/themes"
-import { bodiesToggle, deepPath, openPanel, PNG_BASE64 } from "./harness"
+import {
+  bodiesToggle,
+  deepPath,
+  longQuery,
+  openPanel,
+  PNG_BASE64,
+} from "./harness"
 
 test("panel lists requests from the inspected page", async () => {
   const panel = await openPanel()
@@ -312,14 +318,10 @@ test("Summary shows the request and its decoded data", async () => {
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
     expect(await panel.text('[role="tabpanel"] header')).toMatch(
-      /^GetUser graphql query Copy as 200 OK · POST · \d+ ms · [\d.]+ k?B · \d\d:\d\d:\d\d 127\.0\.0\.1:\d+\/ graphql$/,
-    )
-    const url = '[role="tabpanel"] header [data-url]'
-    expect(await panel.attr(`${url} [data-clipped]`, "title")).toBe(
-      `${panel.origin}/graphql`,
+      /^GetUsergraphql query Copy as POST http:\/\/127\.0\.0\.1:\d+\/graphql 200 OK \d+ ms · [\d.]+ k?B · HTTP\/1\.1 · 127\.0\.0\.1 · \d\d:\d\d:\d\d$/,
     )
     await panel.stubClipboard()
-    await panel.click(`${url} button[aria-label="Copy URL"]`)
+    await panel.click('[role="tabpanel"] header button[aria-label="Copy URL"]')
     expect(await panel.copied()).toBe(`${panel.origin}/graphql`)
     expect(
       await panel.style('[role="tabpanel"] header [data-status]', "color"),
@@ -1622,25 +1624,26 @@ test("steps through body matches", async () => {
   }
 })
 
-test("Summary shows a decoded request's URL and opens Params from its query", async () => {
+test("Summary titles a plain request by its full URL and wraps it", async () => {
   const panel = await openPanel()
   try {
-    await panel.page.goto(`${panel.origin}/decoders`)
-    const row = "user.byId, post.list 2 procedures trpc"
-    await expect.poll(panel.rows).toContain(row)
-    await panel.select(row)
-    const url = '[role="tabpanel"] header [data-url]'
-    expect(await panel.text(`${url} [data-clipped]`)).toMatch(
-      /^127\.0\.0\.1:\d+\/api\/trpc\/ user\.byId,post\.list$/,
+    await panel.page.goto(`${panel.origin}/deep`)
+    await panel.select(`${longQuery} GET`)
+    const header = '[role="tabpanel"] header'
+    expect(await panel.text(`${header} p`)).toBe(
+      `GET ${panel.origin}${longQuery}`,
     )
-    await panel.click(`${url} button:not([aria-label])`)
-    await expect.poll(panel.activeTab).toBe("Params/Cookies")
+    expect(await panel.count(`${header} button[aria-label="Copy URL"]`)).toBe(1)
+    expect(await panel.text(`${header} [data-status]`)).toBe("204 No Content")
+    expect(
+      await panel.overflowing('[aria-label="Requests"], [role="tabpanel"]'),
+    ).toEqual([])
   } finally {
     await panel.close()
   }
 })
 
-test("a long path clips its leading segments, keeping the last segment and query", async () => {
+test("a long URL clips its query, then its leading path, keeping the last segment", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/deep`)
@@ -1648,12 +1651,21 @@ test("a long path clips its leading segments, keeping the last segment and query
     await expect.poll(panel.rows).toContain(row)
     await panel.select(row)
     await panel.search("target?pa")
-    const title = `[aria-label="Requests"] [data-clipped]`
+    const title = `[aria-label="Requests"] [aria-selected="true"] [data-clipped]`
     expect(await panel.overflowing(`${title} [data-head]`)).toHaveLength(1)
     expect(await panel.overflowing(`${title} [data-tail]`)).toEqual([])
-    expect(await panel.text(`${title} [data-tail]`)).toBe("target?page=2")
+    expect(await panel.text(`${title} [data-tail]`)).toBe("target")
+    expect(await panel.text(`${title} [data-end]`)).toBe("?page=2")
     // One match split across the segment and the query, both highlighted.
     expect(await panel.count(`${title} mark`)).toBe(2)
+
+    // A long query clips before the path does.
+    await panel.search("")
+    await panel.select(`${longQuery} GET`)
+    expect(await panel.overflowing(`${title} [data-end]`)).toHaveLength(1)
+    expect(
+      await panel.overflowing(`${title} [data-head], ${title} [data-tail]`),
+    ).toEqual([])
   } finally {
     await panel.close()
   }

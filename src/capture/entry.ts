@@ -30,6 +30,7 @@ export type Exchange = {
   httpVersion: string
   statusText: string
   size: number
+  remoteAddress?: string
   timings: Timings
   fromCache?: "memory" | "disk"
 }

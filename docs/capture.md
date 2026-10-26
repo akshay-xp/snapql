@@ -8,7 +8,8 @@ Turns finished network requests into `Entry` objects and keeps them in a capped 
 - `Entry`: what the store holds. `id`, `method`, `url`, `status`, `startedAt` (epoch ms), `time`, `mimeType`, `decoded?` (`DecodeResult`), `getBody()`.
 - `Exchange` (on `FinishedRequest` and `Entry`): what the detail tabs show, mapped once by the adapter from the HAR entry.
   - `requestHeaders`, `responseHeaders`, `queryString`, `requestCookies`, `responseCookies`: `NameValue[]` (`{ name, value }` only; cookie attributes and HAR `comment`s dropped). Missing: `[]`.
-  - `httpVersion` (response's; used for request and status lines), `statusText`: missing `""`.
+  - `httpVersion` (response's; used for request and status lines and the Summary meta line), `statusText`: missing `""` (Chrome reports `""` over HTTP/2 and later).
+  - `remoteAddress`: HAR `serverIPAddress` (no port), absent when not reported.
   - `size` (response `content.size`), `timings` (`Timings`: `blocked, dns, connect, ssl, send, wait, receive` ms): missing `-1`, which also means "phase n/a" in HAR.
 - `Entry.requestBody`: the request body, kept for the Raw tab (decoders read it from `FinishedRequest` at capture).
 - `Body`: `{ content, encoding }`; `encoding` is `""` or `"base64"`, as reported by the browser.
