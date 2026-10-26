@@ -484,6 +484,8 @@ export type Panel = {
   dock(side: "right" | "bottom"): Promise<void>
   // Visual review aid, not used by assertions.
   screenshot(file: string): Promise<void>
+  // DevTools elements (shadow roots included) scrolled off their top.
+  devtoolsScrolled(): Promise<string[]>
   paneBoxes(): Promise<{ list: Box; detail: Box }>
   // Text of matches whose content is wider than their box.
   overflowing(selector: string): Promise<string[]>
@@ -633,6 +635,18 @@ export async function openPanel(
       devtools.evaluate<void>(`(async () => {
         const { DockController } = await import("./ui/legacy/legacy.js")
         DockController.DockController.instance().setDockSide(${JSON.stringify(side)})
+      })()`),
+    devtoolsScrolled: () =>
+      devtools.evaluate<string[]>(`(() => {
+        const scrolled = []
+        const walk = (root) => {
+          for (const el of root.querySelectorAll("*")) {
+            if (el.scrollTop > 0) scrolled.push(el.className + " " + el.scrollTop)
+            if (el.shadowRoot) walk(el.shadowRoot)
+          }
+        }
+        walk(document)
+        return scrolled
       })()`),
     screenshot: async (file: string) => {
       // Only DevTools: the page strip above a bottom dock is blank.
