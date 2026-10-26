@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest"
+import { emptyExchange } from "../capture/test-helpers"
 import {
   bodyHit,
   chipsFor,
   excerpt,
   highlight,
+  isHidden,
   kindOf,
   matchesFilters,
   matchesQuery,
+  noHide,
   prune,
   statusGroup,
   toggle,
@@ -176,5 +179,39 @@ describe("bodyHit", () => {
 
   it("is undefined without a match", () => {
     expect(bodyHit({ request: "", response: "ok" }, "x")).toBeUndefined()
+  })
+})
+
+describe("isHidden", () => {
+  const entry = (over: {
+    method?: string
+    status?: number
+    mimeType?: string
+    fromCache?: "memory" | "disk"
+  }) => ({
+    method: over.method ?? "GET",
+    status: over.status ?? 200,
+    mimeType: over.mimeType ?? "",
+    exchange: { ...emptyExchange, fromCache: over.fromCache },
+  })
+
+  it("hides nothing with every toggle off", () => {
+    expect(isHidden(entry({ method: "OPTIONS", status: 304 }), noHide)).toBe(
+      false,
+    )
+  })
+
+  it("hides preflights", () => {
+    const hide = { ...noHide, preflights: true }
+    expect(isHidden(entry({ method: "OPTIONS" }), hide)).toBe(true)
+    expect(isHidden(entry({}), hide)).toBe(false)
+  })
+
+  it("hides responses served from cache or not modified", () => {
+    const hide = { ...noHide, cached: true }
+    expect(isHidden(entry({ fromCache: "memory" }), hide)).toBe(true)
+    expect(isHidden(entry({ fromCache: "disk" }), hide)).toBe(true)
+    expect(isHidden(entry({ status: 304 }), hide)).toBe(true)
+    expect(isHidden(entry({}), hide)).toBe(false)
   })
 })
