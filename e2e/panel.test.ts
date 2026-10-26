@@ -547,6 +547,68 @@ test("Payload says when a request sent nothing, and skips empty params", async (
   }
 })
 
+test("body toolbars: titled, Expand all reopens everything, no jump when stuck", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/empty`)
+    await panel.page.evaluate(() =>
+      fetch("/api/two", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          a: { b: { c: { d: { e: 1 } } } },
+          list: Array.from({ length: 80 }, (_, i) => ({ i })),
+        }),
+      }),
+    )
+    const row = "/api/two POST json"
+    await expect.poll(panel.rows).toContain(row)
+    await panel.select(row)
+    await panel.openTab("Payload")
+    const toolbar = '[role="tabpanel"] [data-toolbar]'
+    expect(await panel.text(toolbar)).toMatch(/^Request body/)
+
+    const closed = '[role="tabpanel"] button[aria-expanded="false"]'
+    for (let i = 0; i < 2; i++) {
+      await panel.click('[role="tabpanel"] button[aria-label="a"]')
+      expect(await panel.count(closed)).toBeGreaterThan(0)
+      await panel.clickButton("Expand all")
+      expect(await panel.count(closed)).toBe(0)
+    }
+
+    const resting = await panel.top(toolbar)
+    await panel.scrollTo('[role="tabpanel"]', 300)
+    expect(await panel.top(toolbar)).toBe(resting)
+
+    await panel.openTab("Response")
+    await expect.poll(() => panel.text(toolbar)).toMatch(/^Response body/)
+  } finally {
+    await panel.close()
+  }
+})
+
+test("body notes sit in the toolbar, keeping it at the top", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/empty`)
+    await panel.page.evaluate(() => fetch("/api/two", { method: "POST" }))
+    const row = "/api/two POST"
+    await expect.poll(panel.rows).toContain(row)
+    await panel.select(row)
+    const toolbar = '[role="tabpanel"] [data-toolbar]'
+    for (const [tab, text] of [
+      ["Response", "Response body base64-encoded, 3 bytes Copy"],
+      ["Raw", "base64-encoded, 3 bytes Copy"],
+    ]) {
+      await panel.openTab(tab)
+      await expect.poll(() => panel.text(toolbar)).toBe(text)
+      expect(await panel.count('[role="tabpanel"] > p'), tab).toBe(0)
+    }
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Timing tab shows stage tiles over a labelled waterfall", async () => {
   const panel = await openPanel()
   try {
@@ -827,13 +889,17 @@ test("M3 decoders summarize their requests", async () => {
       await panel.style('[role="tabpanel"] header [data-status]', "color"),
     ).toBe("rgb(179, 38, 30)")
 
+    // Summary leaves a plain form to Payload instead of repeating it.
     await panel.select("/api/form 2 fields form")
+    expect(await panel.pairs()).toBe("")
+    await panel.openTab("Payload")
     const form = await panel.pairs()
     expect(form).toContain("a = 1")
     expect(form).toContain("b = x y")
     await panel.stubClipboard()
-    await panel.click('button[aria-label="Copy fields"]')
+    await panel.click('button[aria-label="Copy Form data"]')
     expect(await panel.copied()).toBe("a = 1\nb = x y")
+    await panel.openTab("Summary")
 
     await panel.select("/api/upload 1 field, 1 file multipart")
     const upload = await panel.pairs()

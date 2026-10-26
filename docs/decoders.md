@@ -147,14 +147,14 @@ No capture, store, or UI change.
 ## Form (`src/decoders/form.ts`)
 
 - Kind `form`. Matches a request body whose base mime is `application/x-www-form-urlencoded`.
-- Title: URL path; detail: field count, `1 field` / `<n> fields`. `data`: `{ fields: NameValue[] }`, decoded with `URLSearchParams` (`%XX` and `+`), rendered as rows (see `docs/panel.md`).
+- Title: URL path; detail: field count, `1 field` / `<n> fields`. No `data`: the Payload tab shows the fields (`requestPayload`, see `docs/panel.md`), so Summary would only repeat them.
 - Shared helpers in `src/decoders/text.ts`: `baseMime(mime)` (before `;`, lowercased), `count(n, word)`. Used by form and multipart.
 
 ## JSON (`src/decoders/json.ts`)
 
 - Kind `json`, the catch-all for REST/JSON calls; last in order so specific JSON protocols win.
 - Matches when the request body parses as JSON, or the response `mimeType` is JSON (base type before `;` ends in `/json` or `+json`).
-- Title: URL path (`/api/users/1`); detail: method. `data`: parsed request body, or `undefined` when there is none.
+- Title: URL path (`/api/users/1`); detail: method. No `data`: the body is the Payload tab's, so Summary would only repeat it. Protocol decoders (GraphQL, tRPC, JSON-RPC, SOAP, multipart) keep `data` because they reshape the body.
 - `parseJson(text)`: shared helper (also used by GraphQL), `undefined` on failure.
 
 ## GraphQL (`src/decoders/graphql.ts`)
