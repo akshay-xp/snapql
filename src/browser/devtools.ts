@@ -36,6 +36,8 @@ export function toFinishedRequest(
         wait: ms(req.timings?.wait),
         receive: ms(req.timings?.receive),
       },
+      // Chrome's HAR extension field, missing from the typings and from Firefox.
+      fromCache: (req as { _fromCache?: "memory" | "disk" })._fromCache,
     },
     requestBody:
       postData?.text === undefined
