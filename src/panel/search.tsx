@@ -2,6 +2,8 @@ import { For, type JSX, Show } from "solid-js"
 import { type Filters, type Hide, highlight } from "./filter"
 import { IconButton } from "./icon-button"
 import { createPopover } from "./popover"
+import { WorkspaceMenu } from "./workspace-menu"
+import type { Workspaces } from "./workspaces"
 
 export function SearchBox(props: {
   query: string
@@ -109,6 +111,8 @@ export function FilterChips(props: {
   onHide: (hide: Hide) => void
   showingAll: boolean
   onShowWorkspace: () => void
+  workspaces: Workspaces
+  onPickWorkspace: (id: string) => void
 }) {
   const group = (name: keyof Filters) => (
     <For each={props.chips[name]}>
@@ -124,6 +128,10 @@ export function FilterChips(props: {
   )
   return (
     <div class="flex h-8 shrink-0 items-center border-b border-border pr-2">
+      <WorkspaceMenu
+        workspaces={props.workspaces}
+        onPick={props.onPickWorkspace}
+      />
       <Show when={props.showingAll}>
         <button
           type="button"

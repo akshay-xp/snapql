@@ -169,6 +169,11 @@ export function App(props: {
               hide={shownHide()}
               showingAll={showAll()}
               onShowWorkspace={() => setShowAll(false)}
+              workspaces={props.workspaces}
+              onPickWorkspace={(id) => {
+                setShowAll(false)
+                props.workspaces.select(id)
+              }}
               onHide={(next) => {
                 leaveShowAll()
                 setHide(next)
