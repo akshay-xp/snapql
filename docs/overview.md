@@ -32,3 +32,7 @@ GitHub milestones M0 (foundation) to M7 (1.0 release).
 - `docs/capture.md`: entry model, capped store, lazy bodies.
 - `docs/decoders.md`: decoder contract, registry, GraphQL rules.
 - `docs/panel.md`: layout, keyboard map, detail pane, themes.
+
+## Store
+
+- `store/`: Chrome Web Store material, never bundled: `listing.txt` (long description), `screenshots/` (scripted shots), `demo.ts` and `screenshots.ts` (how they are made). See `docs/build.md`.
