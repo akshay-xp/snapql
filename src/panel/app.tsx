@@ -55,6 +55,13 @@ export function App(props: {
   const [showAll, setShowAll] = createSignal(false)
   const shownFilters = () => (showAll() ? noFilters : filters())
   const shownHide = () => (showAll() ? noHide : hide())
+  // Editing during Show all keeps what is shown: it becomes the workspace.
+  const leaveShowAll = () => {
+    if (!showAll()) return
+    setShowAll(false)
+    setFilters(noFilters)
+    setHide(noHide)
+  }
   const chips = createMemo(() => chipsFor(entries(), shownFilters()))
   const filtered = () =>
     !!query() ||
@@ -155,13 +162,17 @@ export function App(props: {
             <FilterChips
               chips={chips()}
               active={shownFilters()}
-              onToggle={(group, value) =>
+              onToggle={(group, value) => {
+                leaveShowAll()
                 setFilters(toggle(filters(), group, value))
-              }
+              }}
               hide={shownHide()}
               showingAll={showAll()}
               onShowWorkspace={() => setShowAll(false)}
-              onHide={setHide}
+              onHide={(next) => {
+                leaveShowAll()
+                setHide(next)
+              }}
             />
           </Show>
           <Show

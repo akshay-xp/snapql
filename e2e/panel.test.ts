@@ -1942,11 +1942,27 @@ test("Show all bypasses the workspace until reopened", async () => {
     expect((await active()).filters.statuses).toEqual(["4xx"])
     expect(Object.values((await active()).hide)).toEqual([true, true, true])
 
+    await panel.click("[data-showing-all]")
+    expect(await panel.count("[data-showing-all]")).toBe(0)
+    expect(await panel.pressedChips()).toEqual(["4xx"])
+
+    await panel.clickButton("Show all")
+    await panel.click("[data-hide] > button")
+    await panel.click('[data-hide-menu] input[value="cached"]')
+    expect(await panel.count("[data-showing-all]")).toBe(0)
+    expect(await panel.text("[data-hide] > button")).toBe("Hide (1)")
+    expect(await panel.pressedChips()).toEqual([])
+    expect(await active()).toMatchObject({
+      filters: { statuses: [] },
+      hide: { preflights: false, cached: true, assets: false },
+    })
+
+    await panel.toggleChip("2xx")
     await panel.reloadPanel()
     await panel.page.goto(`${panel.origin}/noise`)
     await expect.poll(panel.chips).toContain("other")
     expect(await panel.count("[data-showing-all]")).toBe(0)
-    expect(await panel.pressedChips()).toEqual(["4xx"])
+    expect(await panel.pressedChips()).toEqual(["2xx"])
   } finally {
     await panel.close()
   }
