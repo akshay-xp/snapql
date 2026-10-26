@@ -194,6 +194,7 @@ export function App(props: {
                   }
                 >
                   <WorkspaceHiding
+                    name={props.workspaces.name()}
                     total={entries().length}
                     onShowAll={() => setShowAll(true)}
                     onClear={() => {
@@ -303,6 +304,7 @@ function NoMatches(props: { query: string; onClear: () => void }) {
 }
 
 function WorkspaceHiding(props: {
+  name: string
   total: number
   onShowAll: () => void
   onClear: () => void
@@ -316,6 +318,10 @@ function WorkspaceHiding(props: {
         <TextButton onClick={props.onShowAll}>Show all</TextButton>
         <TextButton onClick={props.onClear}>Clear filters</TextButton>
       </div>
+      <p class="text-muted">
+        Using "{props.name}". Switch workspaces from the menu at the start of
+        the filter row.
+      </p>
     </Message>
   )
 }

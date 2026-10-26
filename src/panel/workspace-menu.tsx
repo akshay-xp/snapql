@@ -35,10 +35,17 @@ export function WorkspaceMenu(props: {
             aria-haspopup="menu"
             aria-expanded={open()}
             title={props.workspaces.name()}
-            class="block max-w-32 truncate rounded-full bg-surface px-2 py-0.5"
+            class="flex max-w-32 items-center gap-1 rounded-full bg-surface py-0.5 pr-1.5 pl-2"
             onClick={() => setOpen(!open())}
           >
-            {props.workspaces.name()}
+            <span class="truncate">{props.workspaces.name()}</span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              class="size-3 shrink-0 fill-none stroke-current stroke-2 text-muted"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
           </button>
         }
       >

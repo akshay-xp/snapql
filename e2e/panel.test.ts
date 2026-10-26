@@ -2031,3 +2031,40 @@ test("workspaces switch, create, rename and delete", async () => {
     await panel.close()
   }
 })
+
+test("a long workspace name truncates and the empty state says how to switch", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(panel.chips).toContain("4xx")
+    const button = "[data-workspace] > button"
+    const name = "My very long workspace name for GraphQL debugging sessions"
+    await panel.click(button)
+    await panel.clickButton("Rename")
+    await panel.fill("[data-workspace-name]", name)
+    await panel.dispatch("[data-workspace-name]", "keydown", "Enter")
+    expect(await panel.attr(button, "title")).toBe(name)
+    expect(Number.parseFloat(await panel.style(button, "width"))).toBeLessThan(
+      130,
+    )
+    expect(await panel.style("div:has(> [data-workspace])", "height")).toBe(
+      "32px",
+    )
+
+    await panel.toggleChip("4xx")
+    await panel.page.goto(`${panel.origin}/noise`)
+    await expect
+      .poll(() => panel.text("main"))
+      .toContain(
+        `Using "${name}". Switch workspaces from the menu at the start of the filter row.`,
+      )
+
+    await panel.clickButton("Show all")
+    expect(await panel.count("[data-showing-all]")).toBe(1)
+    await panel.click(button)
+    await panel.click('[data-workspace-menu] [role="menuitemradio"]')
+    expect(await panel.count("[data-showing-all]")).toBe(0)
+  } finally {
+    await panel.close()
+  }
+})
