@@ -1,4 +1,5 @@
 import type { Entry } from "../capture/entry"
+import { baseMime } from "../decoders/text"
 import type { BodyTexts } from "./body-index"
 import { rowLabel } from "./row"
 
@@ -110,9 +111,24 @@ export type Hide = { preflights: boolean; cached: boolean; assets: boolean }
 
 export const noHide: Hide = { preflights: false, cached: false, assets: false }
 
+const ASSET_PREFIXES = ["image/", "font/", "video/", "audio/"]
+const ASSET_MIMES = new Set([
+  "text/css",
+  "text/javascript",
+  "application/javascript",
+  "application/x-javascript",
+  "application/wasm",
+])
+
+const isAsset = (mimeType: string) => {
+  const mime = baseMime(mimeType)
+  return ASSET_MIMES.has(mime) || ASSET_PREFIXES.some((p) => mime.startsWith(p))
+}
+
 export const isHidden = (
   entry: Pick<Entry, "method" | "status" | "mimeType" | "exchange">,
   hide: Hide,
 ) =>
   (hide.preflights && entry.method === "OPTIONS") ||
-  (hide.cached && (!!entry.exchange.fromCache || entry.status === 304))
+  (hide.cached && (!!entry.exchange.fromCache || entry.status === 304)) ||
+  (hide.assets && isAsset(entry.mimeType))
