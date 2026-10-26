@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js"
-import { defaultHide, type Filters, type Hide } from "./filter"
+import { defaultHide, type Filters, type Hide, noFilters } from "./filter"
 
 export type Workspace = {
   id: string
@@ -16,7 +16,7 @@ export const defaultWorkspaces: Stored = {
     {
       id: "default",
       name: "Default",
-      filters: { kinds: [], statuses: [] },
+      filters: noFilters,
       hide: defaultHide,
     },
   ],

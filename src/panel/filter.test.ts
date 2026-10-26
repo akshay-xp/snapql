@@ -10,7 +10,6 @@ import {
   matchesFilters,
   matchesQuery,
   noHide,
-  prune,
   statusGroup,
   toggle,
 } from "./filter"
@@ -98,6 +97,22 @@ describe("filter chips", () => {
     })
     expect(chipsFor([])).toEqual({ kinds: [], statuses: [] })
   })
+
+  it("keeps selected chips that have no traffic yet", () => {
+    expect(chipsFor([], { kinds: ["graphql"], statuses: ["4xx"] })).toEqual({
+      kinds: ["graphql"],
+      statuses: ["4xx"],
+    })
+    expect(
+      chipsFor([{ status: 0 }, { status: 200, decoded: decoded("json") }], {
+        kinds: ["graphql", "json"],
+        statuses: ["4xx"],
+      }),
+    ).toEqual({
+      kinds: ["graphql", "json", "other"],
+      statuses: ["2xx", "4xx", "failed"],
+    })
+  })
 })
 
 describe("matchesFilters", () => {
@@ -129,15 +144,6 @@ describe("matchesFilters", () => {
     expect(on).toEqual({ kinds: ["json"], statuses: [] })
     expect(none.kinds).toEqual([])
     expect(toggle(on, "kinds", "json")).toEqual(none)
-  })
-
-  it("prunes values no longer present", () => {
-    expect(
-      prune(
-        { kinds: ["graphql", "json"], statuses: ["4xx"] },
-        { kinds: ["json"], statuses: ["2xx"] },
-      ),
-    ).toEqual({ kinds: ["json"], statuses: [] })
   })
 })
 
