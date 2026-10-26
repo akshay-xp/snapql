@@ -1398,7 +1398,9 @@ test("filter chips narrow by protocol and status", async () => {
     await panel.toggleChip("json")
     await panel.toggleChip("4xx")
     await expect.poll(panel.rows).toEqual([])
-    expect(await panel.text("main")).toMatch(/Default is hiding \d+ requests/)
+    expect(await panel.text("main")).toMatch(
+      /Your workspace is hiding \d+ requests/,
+    )
     expect(await panel.text("main")).toContain("Show all")
     await panel.clickButton("Clear filters")
     await expect.poll(async () => (await panel.rows()).length).toBe(5)
@@ -1925,7 +1927,9 @@ test("Show all bypasses the workspace until reopened", async () => {
     await expect.poll(panel.chips).toContain("4xx")
     await panel.toggleChip("4xx")
     await panel.page.goto(`${panel.origin}/noise`)
-    await expect.poll(() => panel.text("main")).toMatch(/Default is hiding/)
+    await expect
+      .poll(() => panel.text("main"))
+      .toMatch(/Your workspace is hiding/)
 
     await panel.clickButton("Show all")
     await expect
