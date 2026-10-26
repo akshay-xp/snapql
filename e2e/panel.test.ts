@@ -1971,3 +1971,20 @@ test("Show all bypasses the workspace until reopened", async () => {
     await panel.close()
   }
 })
+
+test("workspaces switch, create, rename and delete", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(panel.chips).toContain("graphql")
+    const button = "[data-workspace] > button"
+    expect(await panel.text(button)).toBe("Default")
+    expect(await panel.attr(button, "aria-haspopup")).toBe("menu")
+    await panel.click(button)
+    const item = '[data-workspace-menu] [role="menuitemradio"]'
+    expect(await panel.text(item)).toBe("Default")
+    expect(await panel.attr(item, "aria-checked")).toBe("true")
+  } finally {
+    await panel.close()
+  }
+})
