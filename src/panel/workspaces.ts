@@ -1,3 +1,4 @@
+import { createSignal } from "solid-js"
 import { defaultHide, type Filters, type Hide } from "./filter"
 
 export type Workspace = {
@@ -34,4 +35,40 @@ export function parseWorkspaces(text: string | undefined): Stored {
     ? (stored.active as string)
     : workspaces[0].id
   return { active, workspaces }
+}
+
+export type WorkspaceStorage = {
+  load(): Promise<string | undefined>
+  save(text: string): void
+}
+
+export type Workspaces = ReturnType<typeof createWorkspaces>
+
+// Every edit saves into the active workspace: there is no Save step.
+export function createWorkspaces(storage: WorkspaceStorage) {
+  const [stored, setStored] = createSignal(defaultWorkspaces)
+  const ready = storage.load().then((text) => {
+    setStored(parseWorkspaces(text))
+  })
+  const active = () =>
+    stored().workspaces.find((w) => w.id === stored().active) as Workspace
+  const update = (change: Partial<Workspace>) => {
+    const next = {
+      ...stored(),
+      workspaces: stored().workspaces.map((w) =>
+        w.id === stored().active ? { ...w, ...change } : w,
+      ),
+    }
+    setStored(next)
+    try {
+      storage.save(JSON.stringify(next))
+    } catch {}
+  }
+  return {
+    ready,
+    filters: () => active().filters,
+    hide: () => active().hide,
+    setFilters: (filters: Filters) => update({ filters }),
+    setHide: (hide: Hide) => update({ hide }),
+  }
 }
