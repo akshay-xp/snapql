@@ -1,7 +1,7 @@
 import { mkdir, readFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import { expect, test } from "vitest"
-import { openPanel, type Panel } from "../e2e/harness"
+import { bodiesToggle, openPanel, type Panel } from "../e2e/harness"
 import { CATALOG_PROTO, demoServer } from "./demo"
 
 // The store's 1280x800 screenshots, in listing order. Run with
@@ -77,4 +77,21 @@ test("llm stream", () =>
     await panel.select(row)
     await panel.openTab("Response")
     await expect.poll(panel.detail).toContain("Decoded · llm · tool_calls")
+  }))
+
+test("search", () =>
+  shoot("5-search", async (panel) => {
+    await panel.page.goto(panel.origin)
+    await expect.poll(panel.rows).toContain("BookSeat mutation graphql")
+    await panel.click(bodiesToggle)
+    await panel.search("JFK")
+    await panel.toggleChip("graphql")
+    await expect
+      .poll(async () => (await panel.rows()).length)
+      .toBeGreaterThan(1)
+    // Rows show the match while searching, so their text changes.
+    await panel.selectStarting("SearchFlights")
+    await expect
+      .poll(async () => (await panel.marks()).length)
+      .toBeGreaterThan(0)
   }))
