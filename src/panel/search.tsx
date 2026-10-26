@@ -1,4 +1,11 @@
-import { createSignal, For, type JSX, Show } from "solid-js"
+import {
+  createEffect,
+  createSignal,
+  For,
+  type JSX,
+  onCleanup,
+  Show,
+} from "solid-js"
 import { type Filters, type Hide, highlight } from "./filter"
 import { IconButton } from "./icon-button"
 
@@ -144,9 +151,20 @@ const HIDE_OPTIONS: [keyof Hide, string][] = [
 function HideMenu(props: { hide: Hide; onChange: (hide: Hide) => void }) {
   const [open, setOpen] = createSignal(false)
   const on = () => HIDE_OPTIONS.filter(([key]) => props.hide[key]).length
+  let root!: HTMLDivElement
+  let button!: HTMLButtonElement
+  createEffect(() => {
+    if (!open()) return
+    const outside = (e: PointerEvent) => {
+      if (!root.contains(e.target as Node)) setOpen(false)
+    }
+    window.addEventListener("pointerdown", outside)
+    onCleanup(() => window.removeEventListener("pointerdown", outside))
+  })
   return (
-    <div data-hide class="relative shrink-0">
+    <div ref={root} data-hide class="relative shrink-0">
       <button
+        ref={button}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open()}
@@ -163,6 +181,11 @@ function HideMenu(props: { hide: Hide; onChange: (hide: Hide) => void }) {
         <div
           data-hide-menu
           role="menu"
+          onKeyDown={(e) => {
+            if (e.key !== "Escape") return
+            setOpen(false)
+            button.focus()
+          }}
           class="absolute top-full right-0 z-10 mt-1 flex w-40 flex-col gap-1 rounded-md border border-border bg-bg p-2 shadow-lg"
         >
           <For each={HIDE_OPTIONS}>

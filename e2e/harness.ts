@@ -405,6 +405,13 @@ export type Panel = {
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
   count(selector: string): Promise<number>
+  // Dispatches a bubbling keydown (with key) or pointerdown on the first match.
+  dispatch(
+    selector: string,
+    type: "keydown" | "pointerdown",
+    key?: string,
+  ): Promise<void>
+  focused(selector: string): Promise<boolean>
   // Left edge of each match, in document order.
   lefts(selector: string): Promise<number[]>
   // Uncaught errors in the panel since it opened.
@@ -544,6 +551,15 @@ export async function openPanel(
         return box.top >= pane.top && box.bottom <= pane.bottom
       })()`),
     errors: () => panelFrame.evaluate<string[]>("window.__errors"),
+    dispatch: (selector, type, key) =>
+      panelFrame.evaluate<void>(`(() => {
+        const el = document.querySelector(${JSON.stringify(selector)})
+        el.dispatchEvent(${type === "keydown" ? `new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true })` : `new PointerEvent("pointerdown", { bubbles: true })`})
+      })()`),
+    focused: (selector) =>
+      panelFrame.evaluate<boolean>(
+        `document.activeElement === document.querySelector(${JSON.stringify(selector)})`,
+      ),
     count: (selector: string) =>
       panelFrame.evaluate<number>(
         `document.querySelectorAll(${JSON.stringify(selector)}).length`,

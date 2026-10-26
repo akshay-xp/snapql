@@ -1841,3 +1841,31 @@ test("Hide menu drops preflights, cached responses and static assets", async () 
     await panel.close()
   }
 })
+
+test("Hide menu closes on Escape or a click outside", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/noise`)
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/api/one GET"]))
+    const button = "[data-hide] > button"
+    const menu = "[data-hide-menu]"
+    const box = `${menu} input[value="cached"]`
+
+    await panel.click(button)
+    await panel.click(box)
+    expect(await panel.count(menu)).toBe(1)
+    await panel.dispatch(box, "keydown", "Escape")
+    expect(await panel.count(menu)).toBe(0)
+    expect(await panel.focused(button)).toBe(true)
+
+    await panel.click(button)
+    await panel.dispatch(box, "pointerdown")
+    expect(await panel.count(menu)).toBe(1)
+    await panel.dispatch('[aria-label="Requests"]', "pointerdown")
+    expect(await panel.count(menu)).toBe(0)
+  } finally {
+    await panel.close()
+  }
+})
