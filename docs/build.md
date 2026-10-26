@@ -14,7 +14,7 @@
 - Two HTML entries: `devtools.html` (devtools page, registers the panel) and `panel.html` (Solid UI).
 - `public/` (icon) is copied verbatim into each target dir, so no build-only files go there.
 - Module preload polyfill disabled: both browsers support it natively.
-- Panel bundle budget: 40960 bytes, `gzip -9c dist/chrome/assets/panel-*.js | wc -c`. Not enforced by a script; checked in each spec's last task. Raised from 24576 to 32768 for M5's binary decoders and schemas, then to 40960 for M6 (filters, body search, Copy as, diff, HAR export and redaction). The lazy `proto-schema-*.js` chunk (`.proto` parser and typed reader, loaded on first use) is outside the budget.
+- Panel bundle budget: 40960 bytes, `gzip -9c dist/chrome/assets/panel-*.js | wc -c`. Enforced by `pnpm release` (`PANEL_BUDGET` and `panelOverBudget` in `scripts/budget.ts`, gzip level 9) and checked in each spec's last task. Raised from 24576 to 32768 for M5's binary decoders and schemas, then to 40960 for M6 (filters, body search, Copy as, diff, HAR export and redaction). The lazy `proto-schema-*.js` chunk (`.proto` parser and typed reader, loaded on first use) is outside the budget.
 
 ## Manifests
 
@@ -53,6 +53,21 @@
 - `screenshot(file)` captures the DevTools window clipped to the `InspectorView` rect, so a bottom dock's blank page strip is left out.
 - `e2e/fixtures/glyph.ttf`: made for this repo with fontTools `FontBuilder` (`.notdef` and a square `A`, 1000 upm, family `SnapQL Glyph`); a font the Body preview can load, since CI has no system fonts to borrow. Regenerate the same way if it ever needs to change.
 - Rows include the document and favicon requests, so assert with `arrayContaining` unless the panel was just cleared.
+
+## Release
+
+- `pnpm release`: `vite build --mode chrome`, then `node scripts/release.ts` (Node runs the `.ts` directly; 22.18+ strips types unflagged). Exits 1 with `<file> is <n> bytes gzipped, over the 40960 budget` when the panel is too big; otherwise writes `release/snapql-chrome-<version>.zip` (gitignored, replaced on rerun) by running `zip -qrX` inside `dist/chrome`, so `manifest.json` is at the zip root as the store requires. Vite empties `dist/chrome` per build, so no stale files ship.
+- Steps:
+  1. Set `version` in `package.json` (the manifests take it from there).
+  2. `pnpm release`.
+  3. Merge to `master`, then tag it: `git tag v<version> && git push origin v<version>`.
+  4. `gh release create v<version> release/snapql-chrome-<version>.zip --title v<version> --notes "<what changed>"`.
+  5. Chrome Web Store developer dashboard, SnapQL item:
+     - Package: upload the zip.
+     - Store listing: paste `store/listing.txt` as the description; replace the screenshots with `store/screenshots/*.png` in file order. Title and summary come from the manifest (`name`, `description`), not the dashboard.
+     - Privacy: unchanged (no permissions, no data collected).
+     - Submit for review.
+- Firefox is built but not published; AMO submission is out of scope until it is.
 
 ## Store screenshots
 
