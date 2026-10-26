@@ -659,11 +659,11 @@ function Toolbar(props: { children: JSX.Element }) {
   )
 }
 
-// The method, then the URL with its query muted; wraps anywhere, never clips.
+// The URL with its query muted; wraps anywhere, never clips.
 function Url(props: { heading: Heading }) {
   return (
     <span data-url>
-      <span class="text-muted">{props.heading.method}</span> {props.heading.url}
+      {props.heading.url}
       <span class="font-normal text-muted">{props.heading.query}</span>
     </span>
   )
@@ -697,11 +697,10 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
     <>
       <header class="flex flex-col gap-1.5 font-mono">
         {/* Above the title, not inline: a chip after wrapping text never lines up. */}
-        <Show when={heading().tag}>
-          <p data-tag class="-mb-1 truncate text-[11px] text-muted">
-            {heading().tag}
-          </p>
-        </Show>
+        <p data-label class="-mb-1 truncate text-[11px] text-muted">
+          <span class="font-semibold">{heading().method}</span>
+          <Show when={heading().tag}> · {heading().tag}</Show>
+        </p>
         <div class="flex items-start gap-1">
           <p class="min-w-0 flex-1 text-[15px] font-semibold [overflow-wrap:anywhere]">
             <Show when={heading().title} fallback={<Url heading={heading()} />}>
