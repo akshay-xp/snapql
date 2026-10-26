@@ -105,7 +105,7 @@ export function App(props: {
   const select = (id: number | undefined) => {
     const entry = visible().find((e) => e.id === id)
     const hit = entry && hitOf(entry)
-    setOpenTab(hit && { tab: hit.side === "response" ? "Body" : "Raw" })
+    setOpenTab(hit && { tab: hit.side === "response" ? "Response" : "Raw" })
     setSelectedId(id)
   }
   // Undefined until the first drag: the pane takes half the panel. Not persisted.

@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest"
 import { shownTab, tabsFor } from "./tabs"
 
 describe("tabsFor", () => {
-  it("adds Messages after Body for streams and entries with messages", () => {
+  it("groups tabs by direction, with Messages after Response for streams", () => {
     expect(tabsFor({ mimeType: "text/event-stream" })).toEqual([
       "Summary",
-      "Body",
+      "Payload",
+      "Response",
       "Messages",
       "Headers",
-      "Params/Cookies",
       "Timing",
       "Raw",
     ])

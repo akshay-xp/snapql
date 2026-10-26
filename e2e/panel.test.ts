@@ -433,7 +433,7 @@ test("JSON bodies render as a tree with Expand all", async () => {
     const row = "/api/users/1 GET json"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
     await panel.select(row)
-    await panel.openTab("Body")
+    await panel.openTab("Response")
 
     await expect.poll(panel.detail).toContain("geo: {…} 1 key")
     const body = (await panel.detail()) ?? ""
@@ -473,16 +473,16 @@ test("Body tab loads and pretty-prints the response", async () => {
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
 
     await panel.select(row)
-    await panel.openTab("Body")
+    await panel.openTab("Response")
 
-    expect(await panel.activeTab()).toBe("Body")
+    expect(await panel.activeTab()).toBe("Response")
     await expect.poll(panel.detail).toContain("data: {}")
   } finally {
     await panel.close()
   }
 })
 
-test("Headers and Params/Cookies tabs list name/value pairs", async () => {
+test("Headers and Payload tabs list name/value pairs", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
@@ -495,7 +495,7 @@ test("Headers and Params/Cookies tabs list name/value pairs", async () => {
     expect(await panel.pairs()).toMatch(/content-type = application\/json/i)
 
     await panel.select(apq)
-    await panel.openTab("Params/Cookies")
+    await panel.openTab("Payload")
     expect(await panel.pairs()).toContain("operationName = GetUser")
   } finally {
     await panel.close()
@@ -550,7 +550,7 @@ test("Timing stages follow the selected request", async () => {
   }
 })
 
-test("a response without a body opens cleanly in Body and Raw", async () => {
+test("a response without a body opens cleanly in Response and Raw", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/empty`)
@@ -560,7 +560,7 @@ test("a response without a body opens cleanly in Body and Raw", async () => {
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
 
     await panel.select(row)
-    for (const tab of ["Body", "Raw"]) {
+    for (const tab of ["Response", "Raw"]) {
       await panel.openTab(tab)
       await expect
         .poll(panel.detail)
@@ -610,7 +610,7 @@ test("arrow keys move between detail tabs and wrap", async () => {
     await panel.press("ArrowDown")
 
     await panel.pressTab("ArrowRight")
-    expect(await panel.activeTab()).toBe("Body")
+    expect(await panel.activeTab()).toBe("Payload")
 
     await panel.pressTab("ArrowLeft")
     await panel.pressTab("ArrowLeft")
@@ -827,7 +827,7 @@ test("M3 decoders summarize their requests", async () => {
     await panel.click('button[aria-label="Copy Tokens"]')
     expect(await panel.copied()).toContain('"sub": "42"')
     expect(await panel.copied()).toContain('"alg": "HS256"')
-    await panel.openTab("Params/Cookies")
+    await panel.openTab("Headers")
     expect(await panel.pairs()).toContain("greeting = hello%20world")
     expect(await panel.detail()).toContain("\nhello world")
     await panel.openTab("Summary")
@@ -839,7 +839,7 @@ test("M3 decoders summarize their requests", async () => {
 
     await panel.select("GetPrice soap")
     expect(await panel.detail()).toContain("<m:Item>Apples</m:Item>")
-    await panel.openTab("Body")
+    await panel.openTab("Response")
     await expect.poll(panel.detail).toContain("\n  <soap:Body>")
   } finally {
     await panel.close()
@@ -857,7 +857,7 @@ test("streamed responses list their messages", async () => {
       )
 
     await panel.select("/api/sse GET sse")
-    await panel.openTab("Body")
+    await panel.openTab("Response")
     await expect.poll(panel.detail).toContain("event: ping")
     await panel.openTab("Messages")
     await expect
@@ -972,7 +972,7 @@ test("streams are captured live and merge when they finish", async () => {
       .poll(liveRow("/api/live-fetch"))
       .toEqual([expect.stringMatching(/ live \d+ msgs? sse$/)])
     await panel.selectStarting("/api/live-fetch ")
-    await panel.openTab("Body")
+    await panel.openTab("Response")
     await expect.poll(panel.detail).toContain('data: {"n":1}')
     await expect
       .poll(liveRow("/api/live-fetch"), { timeout: 6000 })
@@ -1334,7 +1334,7 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
     await expect.poll(panel.rows).toEqual(expect.arrayContaining(rows))
     const body = async (row: string) => {
       await panel.select(row)
-      await panel.openTab("Body")
+      await panel.openTab("Response")
     }
 
     await body("/api/png GET")
@@ -1495,7 +1495,7 @@ test("Body tab highlights body search matches", async () => {
     await panel.search("lat")
     await expect.poll(async () => (await panel.rows()).length).toBe(1)
     await panel.selectStarting("/api/users/1")
-    await panel.openTab("Body")
+    await panel.openTab("Response")
 
     // lat sits under geo, at a depth that starts collapsed.
     await expect.poll(panel.marks).toEqual(["lat"])
@@ -1528,13 +1528,13 @@ test("Body tab highlights text bodies and scrolls to clipped matches", async () 
       .poll(panel.rows)
       .toEqual(["/api/note response (1): a hidden pearl"])
     await panel.select("/api/note response (1): a hidden pearl")
-    await panel.openTab("Body")
+    await panel.openTab("Response")
     await expect.poll(panel.marks).toEqual(["pearl"])
 
     // Past the 200-character clip, at the end of a long body.
     await panel.search("needle")
     await panel.selectStarting("/api/long")
-    await panel.openTab("Body")
+    await panel.openTab("Response")
     await expect.poll(panel.marks).toEqual(["needle"])
     expect(await panel.scrollTop('[role="tabpanel"]')).toBeGreaterThan(0)
     // The toolbar stays put while the body scrolls under it.
@@ -1564,7 +1564,7 @@ test("selecting a body match opens the tab that shows it", async () => {
     await panel.search("apple")
     await expect.poll(async () => (await panel.rows()).length).toBe(1)
     await panel.selectStarting("/api/fruit")
-    await expect.poll(panel.activeTab).toBe("Body")
+    await expect.poll(panel.activeTab).toBe("Response")
 
     // A URL match keeps whatever tab was open.
     await panel.openTab("Raw")

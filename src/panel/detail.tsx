@@ -200,7 +200,7 @@ export function Detail(props: {
           <Match when={shown() === "Summary"}>
             <Summary entry={props.entry} schemas={props.schemas} />
           </Match>
-          <Match when={shown() === "Body"}>
+          <Match when={shown() === "Response"}>
             <LoadedBody entry={props.entry} pretty={true}>
               {(text, body) => (
                 <Show
@@ -274,6 +274,13 @@ export function Detail(props: {
               </Show>
             </Show>
           </Match>
+          <Match when={shown() === "Payload"}>
+            <Pairs
+              title="Query params"
+              pairs={props.entry.exchange.queryString}
+              decode
+            />
+          </Match>
           <Match when={shown() === "Headers"}>
             <Pairs
               title="Request headers"
@@ -281,20 +288,13 @@ export function Detail(props: {
               decode
             />
             <Pairs
-              title="Response headers"
-              pairs={props.entry.exchange.responseHeaders}
-              decode
-            />
-          </Match>
-          <Match when={shown() === "Params/Cookies"}>
-            <Pairs
-              title="Query params"
-              pairs={props.entry.exchange.queryString}
-              decode
-            />
-            <Pairs
               title="Request cookies"
               pairs={props.entry.exchange.requestCookies}
+              decode
+            />
+            <Pairs
+              title="Response headers"
+              pairs={props.entry.exchange.responseHeaders}
               decode
             />
             <Pairs
