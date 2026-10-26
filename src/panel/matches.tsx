@@ -14,7 +14,15 @@ export function createMatches(
     marks().forEach((m, j) => {
       m.toggleAttribute("data-current", j === i)
     })
-    marks()[i]?.scrollIntoView({ block: "center" })
+    const mark = marks()[i]
+    // Not scrollIntoView: it also scrolls DevTools' container around the
+    // panel frame, shifting the whole panel up.
+    const pane = mark?.closest('[role="tabpanel"]')
+    if (mark && pane) {
+      const box = mark.getBoundingClientRect()
+      const view = pane.getBoundingClientRect()
+      pane.scrollTop += box.top - view.top - (view.height - box.height) / 2
+    }
     setIndex(i)
   }
   const move = (by: 1 | -1) => {

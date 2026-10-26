@@ -1585,6 +1585,12 @@ test("search bodies matches request and response body text", async () => {
       "Filter requests and bodies",
     )
     await expect.poll(panel.rows).toEqual([geo])
+    // A long excerpt shares the row: the name keeps its room.
+    expect(
+      Number.parseFloat(
+        await panel.style('[role="option"] [data-clipped]', "width"),
+      ),
+    ).toBeGreaterThan(80)
     expect(await panel.text('[aria-label="Requests"] mark')).toBe("geo")
     expect(await panel.text("footer [data-count]")).toBe("1 of 5")
 
@@ -1733,6 +1739,8 @@ test("steps through body matches", async () => {
     await panel.click(next)
     await panel.click(next)
     expect(await panel.text(nav)).toBe("Match 3 of 3")
+    // Scrolling to a match moves only the tab, not DevTools around the panel.
+    expect(await panel.devtoolsScrolled()).toEqual([])
     await panel.click(next)
     expect(await panel.text(nav)).toBe("Match 1 of 3")
     await panel.click('button[aria-label="Previous match (Shift+Enter)"]')

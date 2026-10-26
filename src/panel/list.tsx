@@ -52,8 +52,10 @@ export function List(props: {
               }
             >
               {(hit) => (
+                // Capped like the detail: an excerpt is long and would
+                // otherwise squeeze the name out.
                 <span
-                  class="min-w-0 truncate"
+                  class="min-w-0 max-w-1/2 truncate"
                   classList={{ "text-muted": !selected() }}
                 >
                   {hit().side} ({hit().count}):{" "}
