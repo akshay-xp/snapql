@@ -105,3 +105,14 @@ export const prune = (filters: Filters, chips: Filters): Filters => ({
   kinds: filters.kinds.filter((k) => chips.kinds.includes(k)),
   statuses: filters.statuses.filter((s) => chips.statuses.includes(s)),
 })
+
+export type Hide = { preflights: boolean; cached: boolean; assets: boolean }
+
+export const noHide: Hide = { preflights: false, cached: false, assets: false }
+
+export const isHidden = (
+  entry: Pick<Entry, "method" | "status" | "mimeType" | "exchange">,
+  hide: Hide,
+) =>
+  (hide.preflights && entry.method === "OPTIONS") ||
+  (hide.cached && (!!entry.exchange.fromCache || entry.status === 304))
