@@ -116,7 +116,7 @@ export function Detail(props: {
   // Width side by side, height stacked; undefined means half the panel.
   size: number | undefined
   onResize: (clientX: number, clientY: number) => void
-  // Highlighted in the Body tab; empty unless body search is on.
+  // Highlighted in Payload, Response and Raw; empty unless body search is on.
   bodyQuery: string
   // Set when a body-only match is selected: the tab that shows it.
   openTab?: { tab: Tab }

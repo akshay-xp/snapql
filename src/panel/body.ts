@@ -3,7 +3,7 @@ import { baseMime } from "../decoders/text"
 import { prettyXml } from "../decoders/xml"
 import { decodeBase64 } from "./values"
 
-// How the Body tab shows a body; absent means text (pretty-printed if it can be).
+// How the Response tab shows a body; absent means text (pretty-printed if it can be).
 export type BodyViewKind = "image" | "font" | "hex"
 
 export type FormattedBody = {
@@ -14,7 +14,7 @@ export type FormattedBody = {
 
 export type FormatOptions = { pretty?: boolean; mimeType?: string }
 
-// The panel's getBody() path: the Response group and Body tab use it where a
+// The panel's getBody() path: the Response group and Response tab use it where a
 // body is shown, and the body index while body search is on.
 export async function loadBody(
   entry: Pick<Entry, "getBody" | "mimeType">,
