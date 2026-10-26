@@ -66,6 +66,7 @@ export function createWorkspaces(storage: WorkspaceStorage) {
   }
   return {
     ready,
+    name: () => active().name,
     filters: () => active().filters,
     hide: () => active().hide,
     setFilters: (filters: Filters) => update({ filters }),
