@@ -405,12 +405,14 @@ export type Panel = {
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
   count(selector: string): Promise<number>
-  // Dispatches a bubbling keydown (with key) or pointerdown on the first match.
+  // Dispatches a bubbling keydown (with key) or pointerdown, or a blur, on the first match.
   dispatch(
     selector: string,
-    type: "keydown" | "pointerdown",
+    type: "keydown" | "pointerdown" | "blur",
     key?: string,
   ): Promise<void>
+  // Sets an input's value and dispatches input.
+  fill(selector: string, value: string): Promise<void>
   focused(selector: string): Promise<boolean>
   // Reloads the panel page, as reopening DevTools would; captured entries are lost.
   reloadPanel(): Promise<void>
@@ -562,7 +564,19 @@ export async function openPanel(
     dispatch: (selector, type, key) =>
       panelFrame.evaluate<void>(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)})
-        el.dispatchEvent(${type === "keydown" ? `new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true })` : `new PointerEvent("pointerdown", { bubbles: true })`})
+        el.dispatchEvent(${
+          {
+            keydown: `new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true })`,
+            pointerdown: `new PointerEvent("pointerdown", { bubbles: true })`,
+            blur: `new FocusEvent("blur")`,
+          }[type]
+        })
+      })()`),
+    fill: (selector, value) =>
+      panelFrame.evaluate<void>(`(() => {
+        const el = document.querySelector(${JSON.stringify(selector)})
+        el.value = ${JSON.stringify(value)}
+        el.dispatchEvent(new Event("input", { bubbles: true }))
       })()`),
     unhide: (...values) =>
       panelFrame.evaluate<void>(`(() => {
