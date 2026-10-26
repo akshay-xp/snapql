@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js"
+import { createSignal, For, onMount, Show } from "solid-js"
 import { createPopover } from "./popover"
 import type { Workspaces } from "./workspaces"
 
@@ -14,19 +14,43 @@ export function WorkspaceMenu(props: {
     () => root,
     () => button,
   )
+  const [editing, setEditing] = createSignal(false)
+  const edit = () => {
+    setOpen(false)
+    setEditing(true)
+  }
+  const action = (label: string, run: () => void) => (
+    <button type="button" role="menuitem" class={ITEM} onClick={run}>
+      {label}
+    </button>
+  )
   return (
     <div ref={root} data-workspace class="relative shrink-0 pl-2">
-      <button
-        ref={button}
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open()}
-        title={props.workspaces.name()}
-        class="block max-w-32 truncate rounded-full bg-surface px-2 py-0.5"
-        onClick={() => setOpen(!open())}
+      <Show
+        when={editing()}
+        fallback={
+          <button
+            ref={button}
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={open()}
+            title={props.workspaces.name()}
+            class="block max-w-32 truncate rounded-full bg-surface px-2 py-0.5"
+            onClick={() => setOpen(!open())}
+          >
+            {props.workspaces.name()}
+          </button>
+        }
       >
-        {props.workspaces.name()}
-      </button>
+        <NameInput
+          name={props.workspaces.name()}
+          onDone={(name) => {
+            if (name !== undefined) props.workspaces.rename(name)
+            setEditing(false)
+            button.focus()
+          }}
+        />
+      </Show>
       <Show when={open()}>
         <div
           data-workspace-menu
@@ -53,8 +77,46 @@ export function WorkspaceMenu(props: {
               </button>
             )}
           </For>
+          <div class="my-1 h-px bg-border" />
+          {action("New workspace", () => {
+            props.workspaces.create()
+            edit()
+          })}
+          {action("Rename", edit)}
         </div>
       </Show>
     </div>
+  )
+}
+
+// Enter or blur saves the typed name; Escape gives undefined (cancel).
+function NameInput(props: {
+  name: string
+  onDone: (name: string | undefined) => void
+}) {
+  let input!: HTMLInputElement
+  let done = false
+  const finish = (name: string | undefined) => {
+    if (done) return
+    done = true
+    props.onDone(name)
+  }
+  onMount(() => {
+    input.focus()
+    input.select()
+  })
+  return (
+    <input
+      ref={input}
+      data-workspace-name
+      aria-label="Workspace name"
+      value={props.name}
+      class="block w-32 rounded-full bg-surface px-2 py-0.5 outline-none ring-1 ring-accent"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") finish(input.value)
+        if (e.key === "Escape") finish(undefined)
+      }}
+      onBlur={() => finish(input.value)}
+    />
   )
 }

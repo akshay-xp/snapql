@@ -1984,6 +1984,41 @@ test("workspaces switch, create, rename and delete", async () => {
     const item = '[data-workspace-menu] [role="menuitemradio"]'
     expect(await panel.text(item)).toBe("Default")
     expect(await panel.attr(item, "aria-checked")).toBe("true")
+
+    const input = "[data-workspace-name]"
+    const pick = async (name: string) => {
+      await panel.click(button)
+      await panel.clickButton(name)
+    }
+    const rename = async (value: string, end: "Enter" | "Escape" | "blur") => {
+      await panel.click(button)
+      await panel.clickButton("Rename")
+      await panel.fill(input, value)
+      if (end === "blur") await panel.dispatch(input, "blur")
+      else await panel.dispatch(input, "keydown", end)
+    }
+
+    await panel.clickButton("New workspace")
+    expect(await panel.count(input)).toBe(1)
+    expect(await panel.focused(input)).toBe(true)
+    await panel.dispatch(input, "keydown", "Enter")
+    expect(await panel.count(input)).toBe(0)
+    expect(await panel.text(button)).toBe("Workspace 2")
+
+    await panel.toggleChip("graphql")
+    await pick("Default")
+    expect(await panel.pressedChips()).toEqual([])
+    await pick("Workspace 2")
+    expect(await panel.pressedChips()).toEqual(["graphql"])
+
+    await rename("GraphQL", "Enter")
+    expect(await panel.text(button)).toBe("GraphQL")
+    await rename("   ", "Enter")
+    expect(await panel.text(button)).toBe("GraphQL")
+    await rename("X", "Escape")
+    expect(await panel.text(button)).toBe("GraphQL")
+    await rename("API", "blur")
+    expect(await panel.text(button)).toBe("API")
   } finally {
     await panel.close()
   }
