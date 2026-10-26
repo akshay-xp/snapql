@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server } from "node:http"
+import { WebSocketServer } from "ws"
 
 // Demo pages for the store screenshots: a fictional travel app, so the shots
 // show realistic traffic without real companies or people.
@@ -214,6 +215,30 @@ const grpcPage = page(`
   call("GetProduct", ${JSON.stringify(frame(0, message([[1, "P-1042"]])))})
 `)
 
+// Opened on click, once the panel's probe is in the page to see it.
+const chatPage = page(`
+  window.start = () => {
+    const ws = new WebSocket(location.origin.replace("http", "ws") + "/chat?room=trip-2841")
+    const send = (msg) => ws.send(JSON.stringify(msg))
+    ws.onopen = async () => {
+      send({ type: "join", room: "trip-2841", user: "sam" })
+      for (const text of [
+        "Landed at JFK, heading to the hotel",
+        "Can we push dinner to 8?",
+        "Booked the 8:15 table at Harbor View",
+      ]) {
+        await new Promise((r) => setTimeout(r, 40))
+        send({ type: "message", room: "trip-2841", text })
+      }
+    }
+  }
+`)
+
+const replies: Record<string, string> = {
+  "Can we push dinner to 8?": "Sure, see you at 8",
+  "Booked the 8:15 table at Harbor View": "Perfect, thanks!",
+}
+
 const json = (res: import("node:http").ServerResponse, body: unknown) =>
   res
     .writeHead(200, { "content-type": "application/json" })
@@ -233,7 +258,7 @@ const answer = (op: { operationName?: string }) => ({
 })
 
 export function demoServer(): Server {
-  return createServer(async (req, res) => {
+  const server = createServer(async (req, res) => {
     const path = new URL(req.url ?? "/", "http://demo").pathname
     if (path === "/")
       return res.writeHead(200, { "content-type": "text/html" }).end(travelPage)
@@ -241,6 +266,8 @@ export function demoServer(): Server {
       const body = JSON.parse(await readBody(req))
       return json(res, Array.isArray(body) ? body.map(answer) : answer(body))
     }
+    if (path === "/chat")
+      return res.writeHead(200, { "content-type": "text/html" }).end(chatPage)
     if (path === "/grpc")
       return res.writeHead(200, { "content-type": "text/html" }).end(grpcPage)
     const grpc = grpcReplies[path]
@@ -256,4 +283,22 @@ export function demoServer(): Server {
     if (path === "/api/newsletter") return res.writeHead(204).end()
     res.writeHead(404).end()
   })
+  let acks = 3120
+  new WebSocketServer({ server }).on("connection", (ws) =>
+    ws.on("message", (data) => {
+      const msg = JSON.parse(String(data))
+      const send = (reply: object) => ws.send(JSON.stringify(reply))
+      if (msg.type === "join")
+        return send({
+          type: "presence",
+          room: msg.room,
+          online: ["sam", "jo", "priya"],
+        })
+      send({ type: "ack", id: `m_${acks++}` })
+      const reply = replies[msg.text]
+      if (reply)
+        send({ type: "message", room: msg.room, user: "jo", text: reply })
+    }),
+  )
+  return server
 }
