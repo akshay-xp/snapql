@@ -113,6 +113,8 @@ export function FilterChips(props: {
   onToggle: (group: keyof Filters, value: string) => void
   hide: Hide
   onHide: (hide: Hide) => void
+  showingAll: boolean
+  onShowWorkspace: () => void
 }) {
   const group = (name: keyof Filters) => (
     <For each={props.chips[name]}>
@@ -128,6 +130,17 @@ export function FilterChips(props: {
   )
   return (
     <div class="flex h-8 shrink-0 items-center border-b border-border pr-2">
+      <Show when={props.showingAll}>
+        <button
+          type="button"
+          data-showing-all
+          title="Back to the workspace's filters"
+          class="ml-2 shrink-0 rounded-full bg-accent px-2 py-0.5 text-bg"
+          onClick={props.onShowWorkspace}
+        >
+          Showing all
+        </button>
+      </Show>
       <fieldset
         aria-label="Filters"
         class="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2"
