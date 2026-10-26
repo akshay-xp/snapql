@@ -1,5 +1,5 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
-import { createServer, type Server } from "node:http"
+import { createServer, Server } from "node:http"
 import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
@@ -497,30 +497,64 @@ export type Panel = {
 }
 
 export async function openPanel(
-  options: { visitFirst?: boolean; devtoolsTheme?: "light" | "dark" } = {},
+  options: {
+    visitFirst?: boolean
+    devtoolsTheme?: "light" | "dark"
+    // A server not yet listening (started on a free port and closed with the
+    // panel), or the origin of one the caller runs. Default: the test server.
+    server?: Server | { origin: string }
+    // DevTools area in CSS px, docked at the bottom (store screenshots).
+    // Default: the window's default size, docked right.
+    size?: { width: number; height: number }
+  } = {},
 ): Promise<Panel> {
-  const server = await startServer()
-  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  const server =
+    options.server instanceof Server
+      ? await listen(options.server)
+      : options.server
+        ? undefined
+        : await startServer()
+  const origin = server
+    ? `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    : (options.server as { origin: string }).origin
   const userDataDir = await mkdtemp(join(tmpdir(), "snapql-e2e-"))
-  if (options.devtoolsTheme) {
+  const { size } = options
+  // DevTools settings are JSON strings inside the profile's preferences.
+  const preferences = {
     // Headless DevTools ignores emulated color schemes; its own setting works.
-    const ui = options.devtoolsTheme === "dark" ? "dark" : "default"
+    ...(options.devtoolsTheme && {
+      "ui-theme": JSON.stringify(
+        options.devtoolsTheme === "dark" ? "dark" : "default",
+      ),
+    }),
+    // Docked bottom from launch. The split asks for more than the window has,
+    // so DevTools takes all but Chrome's minimum page strip and the resize
+    // below sets its height (asking for exactly the height gives 1px less).
+    ...(size && {
+      currentDockState: JSON.stringify("bottom"),
+      "inspector-view.split-view-state": JSON.stringify({
+        horizontal: { size: size.height * 2 },
+      }),
+    }),
+  }
+  if (Object.keys(preferences).length) {
     await mkdir(join(userDataDir, "Default"))
     await writeFile(
       join(userDataDir, "Default", "Preferences"),
-      JSON.stringify({
-        devtools: { preferences: { "ui-theme": JSON.stringify(ui) } },
-      }),
+      JSON.stringify({ devtools: { preferences } }),
     )
   }
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: "chromium",
     headless: true,
+    // Otherwise Playwright pins the window to its default viewport.
+    ...(size && { viewport: null }),
     args: [
       `--disable-extensions-except=${extensionDir}`,
       `--load-extension=${extensionDir}`,
       "--auto-open-devtools-for-tabs",
       "--remote-debugging-port=0",
+      ...(size ? [`--window-size=${size.width},${size.height}`] : []),
     ],
   })
   const page = context.pages()[0] ?? (await context.newPage())
@@ -563,6 +597,36 @@ export async function openPanel(
     )
   }
   await booted()
+  const inspectorRect = () =>
+    devtools.evaluate<{
+      x: number
+      y: number
+      width: number
+      height: number
+    }>(`(async () => {
+      const { InspectorView } = await import("./ui/legacy/legacy.js")
+      const r = InspectorView.InspectorView.instance().element.getBoundingClientRect()
+      return { x: r.x, y: r.y, width: r.width, height: r.height }
+    })()`)
+  if (size) {
+    // The window frame and the page strip are Chrome's, and the strip rounds,
+    // so grow the window by whatever the DevTools area falls short until exact.
+    // The Browser domain needs a browser-attached session; the DevTools
+    // target's own socket refuses it.
+    const cdp = await context.newCDPSession(page)
+    await poll(async () => {
+      const rect = await inspectorRect()
+      if (rect.width === size.width && rect.height === size.height) return true
+      const { windowId, bounds } = await cdp.send("Browser.getWindowForTarget")
+      await cdp.send("Browser.setWindowBounds", {
+        windowId,
+        bounds: {
+          width: (bounds.width ?? 0) + size.width - rect.width,
+          height: (bounds.height ?? 0) + size.height - rect.height,
+        },
+      })
+    })
+  }
 
   return {
     dock: (side: "right" | "bottom") =>
@@ -571,9 +635,10 @@ export async function openPanel(
         DockController.DockController.instance().setDockSide(${JSON.stringify(side)})
       })()`),
     screenshot: async (file: string) => {
+      // Only DevTools: the page strip above a bottom dock is blank.
       const { data } = await devtools.send<{ data: string }>(
         "Page.captureScreenshot",
-        { format: "png" },
+        { format: "png", clip: { ...(await inspectorRect()), scale: 1 } },
       )
       await writeFile(file, Buffer.from(data, "base64"))
     },
@@ -876,7 +941,7 @@ export async function openPanel(
       devtools.close()
       panelFrame.close()
       await context.close()
-      server.close()
+      server?.close()
       await rm(userDataDir, { recursive: true, force: true })
     },
   }
@@ -1107,6 +1172,10 @@ async function startServer(): Promise<Server> {
   new WebSocketServer({ server }).on("connection", (ws) =>
     ws.on("message", (data, isBinary) => ws.send(data, { binary: isBinary })),
   )
+  return listen(server)
+}
+
+function listen(server: Server): Promise<Server> {
   return new Promise((done) =>
     server.listen(0, "127.0.0.1", () => done(server)),
   )
