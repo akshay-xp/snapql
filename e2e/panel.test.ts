@@ -1,7 +1,7 @@
 import { expect, test } from "vitest"
 import { requestBytes } from "../src/decoders/bytes"
 import { defaultTheme } from "../src/panel/themes"
-import { bodiesToggle, openPanel, PNG_BASE64 } from "./harness"
+import { bodiesToggle, deepPath, openPanel, PNG_BASE64 } from "./harness"
 
 test("panel lists requests from the inspected page", async () => {
   const panel = await openPanel()
@@ -1614,6 +1614,25 @@ test("steps through body matches", async () => {
 
     await panel.search("zzz")
     await expect.poll(() => panel.count(nav)).toBe(0)
+  } finally {
+    await panel.close()
+  }
+})
+
+test("a long path clips its leading segments, keeping the last segment and query", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/deep`)
+    const row = `${deepPath}?page=2 GET`
+    await expect.poll(panel.rows).toContain(row)
+    await panel.select(row)
+    await panel.search("target?pa")
+    const title = `[aria-label="Requests"] [data-title]`
+    expect(await panel.overflowing(`${title} [data-head]`)).toHaveLength(1)
+    expect(await panel.overflowing(`${title} [data-tail]`)).toEqual([])
+    expect(await panel.text(`${title} [data-tail]`)).toBe("target?page=2")
+    // One match split across the segment and the query, both highlighted.
+    expect(await panel.count(`${title} mark`)).toBe(2)
   } finally {
     await panel.close()
   }

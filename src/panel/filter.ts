@@ -33,6 +33,25 @@ export function highlight(text: string, query: string): Segment[] {
   return segments
 }
 
+export function highlightParts(parts: string[], query: string): Segment[][] {
+  const segments = highlight(parts.join(""), query)
+  let at = 0
+  return parts.map((part) => {
+    const from = at
+    at += part.length
+    let start = 0
+    return segments.flatMap((segment) => {
+      const end = start + segment.text.length
+      const text = segment.text.slice(
+        Math.max(0, from - start),
+        Math.max(0, at - start),
+      )
+      start = end
+      return text ? [{ text, hit: segment.hit }] : []
+    })
+  })
+}
+
 export function excerpt(text: string, query: string): string | undefined {
   const flat = text.replace(/\s+/g, " ").trim()
   const at = flat.toLowerCase().indexOf(query.toLowerCase())

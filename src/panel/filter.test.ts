@@ -5,6 +5,7 @@ import {
   chipsFor,
   excerpt,
   highlight,
+  highlightParts,
   isHidden,
   kindOf,
   matchesFilters,
@@ -38,6 +39,30 @@ describe("matchesQuery", () => {
   it("matches undecoded rows by path and method", () => {
     expect(matchesQuery(two, "post")).toBe(true)
     expect(matchesQuery(two, "/api/t")).toBe(true)
+  })
+})
+
+describe("highlightParts", () => {
+  it("highlights across part boundaries, split per part", () => {
+    expect(highlightParts(["/api/", "users", "?q"], "i/us")).toEqual([
+      [
+        { text: "/ap", hit: false },
+        { text: "i/", hit: true },
+      ],
+      [
+        { text: "us", hit: true },
+        { text: "ers", hit: false },
+      ],
+      [{ text: "?q", hit: false }],
+    ])
+  })
+
+  it("gives an empty part no segments", () => {
+    expect(highlightParts(["", "/", ""], "")).toEqual([
+      [],
+      [{ text: "/", hit: false }],
+      [],
+    ])
   })
 })
 
