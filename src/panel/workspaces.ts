@@ -52,20 +52,27 @@ export function createWorkspaces(storage: WorkspaceStorage) {
   })
   const active = () =>
     stored().workspaces.find((w) => w.id === stored().active) as Workspace
-  const update = (change: Partial<Workspace>) => {
-    const next = {
-      ...stored(),
-      workspaces: stored().workspaces.map((w) =>
-        w.id === stored().active ? { ...w, ...change } : w,
-      ),
-    }
+  const commit = (next: Stored) => {
     setStored(next)
     try {
       storage.save(JSON.stringify(next))
     } catch {}
   }
+  const update = (change: Partial<Workspace>) =>
+    commit({
+      ...stored(),
+      workspaces: stored().workspaces.map((w) =>
+        w.id === stored().active ? { ...w, ...change } : w,
+      ),
+    })
   return {
     ready,
+    list: () => stored().workspaces.map(({ id, name }) => ({ id, name })),
+    activeId: () => stored().active,
+    select: (id: string) => {
+      if (stored().workspaces.some((w) => w.id === id))
+        commit({ ...stored(), active: id })
+    },
     name: () => active().name,
     filters: () => active().filters,
     hide: () => active().hide,
