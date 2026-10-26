@@ -1,12 +1,19 @@
 import type { Entry } from "../capture/entry"
-import { rowLabel } from "./row"
+import { byteLabel } from "./messages"
+import { type Parts, rowLabel, splitPath } from "./row"
 import { cleanClose } from "./socket"
 
 export type Heading = {
   title: string
+  titleParts: Parts
   tag?: string
   method: string
-  path: string
+  // Host, plus the path when the title is something else (an operation name).
+  url: Parts
+  // Query parameter count, when the title doesn't already show the query.
+  params?: number
+  size?: string
+  cache?: string
   status: string
   ok: boolean
   time: string
@@ -30,15 +37,29 @@ export function summaryHeading(
 ): Heading {
   const { decoded, status } = entry
   const closeCode = entry.socket?.closeCode
-  const url = new URL(entry.url)
+  const { host, pathname, search } = new URL(entry.url)
   const started = new Date(entry.startedAt)
+  const { title } = rowLabel(entry)
+  const titleIsPath = title === pathname || title === pathname + search
+  const [lead, last] = splitPath(pathname)
+  const params =
+    titleIsPath && title !== pathname ? 0 : entry.exchange.queryString.length
+  const { size, fromCache } = entry.exchange
   return {
-    title: rowLabel(entry).title,
+    title,
+    titleParts: titleIsPath
+      ? [lead, last, title.slice(pathname.length)]
+      : ["", title],
     ...(decoded && {
-      tag: [decoded.kind, decoded.detail].filter(Boolean).join(" "),
+      tag: [decoded.kind, decoded.detail !== entry.method && decoded.detail]
+        .filter(Boolean)
+        .join(" "),
     }),
     method: entry.method,
-    path: url.pathname + url.search,
+    url: titleIsPath ? ["", host] : [host + lead, last],
+    ...(params > 0 && { params }),
+    ...(size > 0 && { size: byteLabel(size) }),
+    ...(fromCache && { cache: `${fromCache} cache` }),
     ...(closeCode === undefined
       ? {
           status:

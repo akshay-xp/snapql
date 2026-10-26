@@ -1,8 +1,9 @@
 import { type JSX, Show } from "solid-js"
 import type { Entry } from "../capture/entry"
-import { type BodyHit, highlightParts } from "./filter"
+import { Clipped } from "./clipped"
+import type { BodyHit } from "./filter"
 import { rowLabel } from "./row"
-import { Marked, Segments } from "./search"
+import { Marked } from "./search"
 import { VirtualListbox } from "./virtual-listbox"
 
 export function List(props: {
@@ -25,11 +26,12 @@ export function List(props: {
         const label = rowLabel(entry)
         return (
           <>
-            <Title
-              parts={label.parts ?? ["", label.title, ""]}
+            <Clipped
+              parts={label.parts ?? ["", label.title]}
+              title={entry.url}
               query={props.query}
-              url={entry.url}
               selected={selected()}
+              class="flex-1"
             />
             <Show
               when={props.bodyHit(entry)}
@@ -98,30 +100,6 @@ function Muted(props: { selected: boolean; children: JSX.Element }) {
   return (
     <span class="shrink-0" classList={{ "text-muted": !props.selected }}>
       {props.children}
-    </span>
-  )
-}
-
-// The leading path clips first; the last segment and query only clip once it
-// is gone, since the end of a URL is what tells requests apart.
-function Title(props: {
-  parts: [string, string, string]
-  query: string
-  url: string
-  selected: boolean
-}) {
-  const parts = () => highlightParts(props.parts, props.query)
-  return (
-    <span data-title class="flex min-w-0 flex-1" title={props.url}>
-      <span data-head class="min-w-0 truncate">
-        <Segments segments={parts()[0]} />
-      </span>
-      <span data-tail class="max-w-full shrink-0 truncate">
-        <Segments segments={parts()[1]} />
-        <span classList={{ "text-muted": !props.selected }}>
-          <Segments segments={parts()[2]} />
-        </span>
-      </span>
     </span>
   )
 }

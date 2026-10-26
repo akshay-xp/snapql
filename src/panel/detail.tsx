@@ -15,7 +15,7 @@ import { bytes } from "../decoders/bytes"
 import { grpcRequestData, grpcResponse } from "../decoders/grpc-web"
 import { decoderFor } from "../decoders/registry"
 import { parseStream } from "../decoders/stream"
-import { baseMime } from "../decoders/text"
+import { baseMime, count } from "../decoders/text"
 import type { DecodedResponse } from "../decoders/types"
 import {
   type BinaryFormat,
@@ -29,6 +29,7 @@ import {
   imageSrc,
   loadBody,
 } from "./body"
+import { Clipped } from "./clipped"
 import { valueText } from "./copy"
 import { CopyButton, createCopied } from "./copy-button"
 import { toCurl, toFetch } from "./curl"
@@ -198,7 +199,15 @@ export function Detail(props: {
       >
         <Switch>
           <Match when={shown() === "Summary"}>
-            <Summary entry={props.entry} schemas={props.schemas} />
+            <Summary
+              entry={props.entry}
+              schemas={props.schemas}
+              onParams={
+                tabs().includes("Params/Cookies")
+                  ? () => setActive("Params/Cookies")
+                  : undefined
+              }
+            />
           </Match>
           <Match when={shown() === "Body"}>
             <LoadedBody entry={props.entry} pretty={true}>
@@ -623,7 +632,12 @@ function Toolbar(props: { children: JSX.Element }) {
   )
 }
 
-function Summary(props: { entry: Entry; schemas: Schemas }) {
+function Summary(props: {
+  entry: Entry
+  schemas: Schemas
+  // Absent when the entry has no Params tab (sockets).
+  onParams?: () => void
+}) {
   const readers = useSchemaReaders(props)
   const requestData = () => {
     const r = readers()
@@ -642,17 +656,24 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
     return decode && ((body: Body) => decode(body, decoded, headers))
   }
   const heading = () => summaryHeading(props.entry)
+  const facts = () => {
+    const { method, time, size, cache, clock } = heading()
+    return [method, time, size, cache, clock].filter(Boolean)
+  }
 
   return (
     <>
       <header class="flex flex-col gap-1 font-mono">
-        <div class="flex items-baseline gap-2">
-          <span class="text-[15px] font-semibold [overflow-wrap:anywhere]">
-            {heading().title}
-          </span>
+        {/* Not items-baseline: clipped text's baseline is its bottom edge. */}
+        <div class="flex items-center gap-2">
+          <Clipped
+            parts={heading().titleParts}
+            title={heading().title}
+            class="text-[15px] font-semibold"
+          />
           <Show when={heading().tag}>
             <span
-              class="min-w-0 max-w-1/2 truncate rounded border border-border px-1.5 text-[11px] text-muted"
+              class="min-w-0 max-w-1/2 shrink-0 truncate rounded border border-border px-1.5 text-[11px] text-muted"
               title={heading().tag}
             >
               {heading().tag}
@@ -664,14 +685,6 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
         </div>
         <div class="flex flex-wrap gap-x-1.5 text-muted">
           <span
-            data-path
-            class="min-w-0 [overflow-wrap:anywhere]"
-            title={props.entry.url}
-          >
-            {heading().method} {heading().path}
-          </span>
-          <span>·</span>
-          <span
             data-status
             classList={{
               "text-success": heading().ok,
@@ -680,10 +693,29 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
           >
             {heading().status}
           </span>
-          <span>·</span>
-          <span>{heading().time}</span>
-          <span>·</span>
-          <span>{heading().clock}</span>
+          <For each={facts()}>
+            {(fact) => (
+              <>
+                <span>·</span>
+                <span>{fact}</span>
+              </>
+            )}
+          </For>
+        </div>
+        <div data-url class="flex h-6 items-center gap-1.5 text-muted">
+          <Clipped parts={heading().url} title={props.entry.url} />
+          <Show when={props.onParams && heading().params}>
+            {(n) => (
+              <button
+                type="button"
+                class="shrink-0 text-accent hover:underline"
+                onClick={() => props.onParams?.()}
+              >
+                ?{count(n(), "param")}
+              </button>
+            )}
+          </Show>
+          <CopyButton label="Copy URL" value={() => props.entry.url} />
         </div>
       </header>
       <Show when={props.entry.socket}>
