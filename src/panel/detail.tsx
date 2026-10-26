@@ -1,5 +1,6 @@
 import {
   createEffect,
+  createMemo,
   createResource,
   createSignal,
   For,
@@ -140,6 +141,8 @@ export function Detail(props: {
     )
   }
   const tabs = () => tabsFor(props.entry)
+  const params = () => props.entry.exchange.queryString
+  const payload = createMemo(() => requestPayload(props.entry.requestBody))
   const shown = () => shownTab(active(), tabs())
   const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
   const onTabKey = (e: KeyboardEvent) => {
@@ -276,13 +279,11 @@ export function Detail(props: {
             </Show>
           </Match>
           <Match when={shown() === "Payload"}>
-            <Pairs
-              title="Query params"
-              pairs={props.entry.exchange.queryString}
-              decode
-            />
+            <Show when={params().length}>
+              <Pairs title="Query params" pairs={params()} decode />
+            </Show>
             {/* Keyed: the form/body choice is made once per payload. */}
-            <Show when={requestPayload(props.entry.requestBody)} keyed>
+            <Show when={payload()} keyed>
               {(p) =>
                 "form" in p ? (
                   <Pairs title="Form data" pairs={p.form} decode />
@@ -298,6 +299,9 @@ export function Detail(props: {
                   </Section>
                 )
               }
+            </Show>
+            <Show when={!params().length && !payload()}>
+              <p class="text-muted">No query params or request body</p>
             </Show>
           </Match>
           <Match when={shown() === "Headers"}>

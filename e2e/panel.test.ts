@@ -523,6 +523,30 @@ test("Payload shows form fields and the request body", async () => {
   }
 })
 
+test("Payload says when a request sent nothing, and skips empty params", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/noise`)
+    await expect.poll(panel.rows).toContain("/api/one GET")
+    await panel.select("/api/one GET")
+    await panel.openTab("Payload")
+    expect(await panel.detail()).toBe("No query params or request body")
+
+    await panel.page.goto(`${panel.origin}/decoders`)
+    await expect
+      .poll(async () =>
+        (await panel.rows()).some((r) => r.startsWith("/api/form")),
+      )
+      .toBe(true)
+    await panel.selectStarting("/api/form")
+    await panel.openTab("Payload")
+    await expect.poll(panel.detail).toContain("Form data")
+    expect(await panel.detail()).not.toContain("Query params")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Timing tab shows stage tiles over a labelled waterfall", async () => {
   const panel = await openPanel()
   try {
