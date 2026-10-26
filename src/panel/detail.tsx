@@ -288,15 +288,16 @@ export function Detail(props: {
                 "form" in p ? (
                   <Pairs title="Form data" pairs={p.form} decode />
                 ) : (
-                  <Section title="Request body">
+                  <>
                     <Notes notes={p.notes} />
                     <BodyView
+                      title="Request body"
                       text={p.text}
                       entry={props.entry}
                       query={props.bodyQuery}
                       step={props.stepMatch}
                     />
-                  </Section>
+                  </>
                 )
               }
             </Show>
@@ -507,6 +508,9 @@ function LoadedBody(props: {
 }
 
 function BodyView(props: {
+  // Shown at the start of the sticky toolbar, where a Section heading would
+  // put a second bar above it.
+  title?: string
   text: string
   view?: BodyViewKind
   entry: Entry
@@ -524,6 +528,11 @@ function BodyView(props: {
   return (
     <div ref={view} class="contents">
       <Toolbar>
+        <Show when={props.title}>
+          <h2 class="mr-auto self-center font-semibold text-muted">
+            {props.title}
+          </h2>
+        </Show>
         <MatchNav
           index={matches.index()}
           count={matches.count()}
