@@ -132,6 +132,7 @@ export function FilterChips(props: {
         workspaces={props.workspaces}
         onPick={props.onPickWorkspace}
       />
+      <span aria-hidden="true" class="ml-2 h-4 w-px shrink-0 bg-border" />
       <Show when={props.showingAll}>
         <button
           type="button"
