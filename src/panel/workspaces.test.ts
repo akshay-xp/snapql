@@ -58,6 +58,13 @@ describe("createWorkspaces", () => {
     return stored.workspaces.find((w) => w.id === stored.active)
   }
 
+  it("names the active workspace", async () => {
+    expect(createWorkspaces(adapter()).name()).toBe("Default")
+    const store = createWorkspaces(adapter(JSON.stringify(gql)))
+    await store.ready
+    expect(store.name()).toBe("GraphQL")
+  })
+
   it("applies the loaded workspace", async () => {
     const store = createWorkspaces(adapter(JSON.stringify(gql)))
     await store.ready
