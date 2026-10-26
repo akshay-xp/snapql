@@ -2,7 +2,7 @@ import { mkdir, readFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import { expect, test } from "vitest"
 import { openPanel, type Panel } from "../e2e/harness"
-import { demoServer } from "./demo"
+import { CATALOG_PROTO, demoServer } from "./demo"
 
 // The store's 1280x800 screenshots, in listing order. Run with
 // `pnpm screenshots`; each shot waits for its content, so a failed render
@@ -40,4 +40,17 @@ test("graphql", () =>
     await panel.select(row)
     await panel.openTab("Payload")
     await expect.poll(panel.detail).toContain("Decoded · graphql")
+  }))
+
+test("grpc", () =>
+  shoot("2-grpc", async (panel) => {
+    await panel.page.goto(`${panel.origin}/grpc`)
+    const row = "GetProduct catalog.ProductService grpc-web"
+    await expect.poll(panel.rows).toContain(row)
+    await panel.addSchema("catalog.proto", CATALOG_PROTO)
+    await panel.clickButton("Schemas")
+    await panel.select(row)
+    await panel.openTab("Response")
+    await expect.poll(panel.detail).toContain("Decoded · grpc-web · OK")
+    await expect.poll(panel.detail).toContain('"IN_STOCK"')
   }))

@@ -108,6 +108,112 @@ const answers: Record<string, unknown> = {
   BookSeat: { bookSeat: { confirmation: "WF8K2Q", seat: "14C" } },
 }
 
+// Just enough protobuf to encode the catalog messages below.
+const varint = (n: number) => {
+  const out: number[] = []
+  while (n > 0x7f) {
+    out.push((n & 0x7f) | 0x80)
+    n = Math.floor(n / 128)
+  }
+  out.push(n)
+  return out
+}
+type Field = [number, string | number]
+const message = (fields: Field[]): number[] =>
+  fields.flatMap(([n, v]) => {
+    if (typeof v === "number") return [...varint(n << 3), ...varint(v)]
+    const bytes = [...Buffer.from(v)]
+    return [...varint((n << 3) | 2), ...varint(bytes.length), ...bytes]
+  })
+const frame = (flag: number, bytes: number[]) => [
+  flag,
+  ...[24, 16, 8, 0].map((shift) => (bytes.length >>> shift) & 0xff),
+  ...bytes,
+]
+const trailer = (status: string) =>
+  frame(0x80, [...Buffer.from(`grpc-status:${status}\r\n`)])
+
+export const CATALOG_PROTO = `
+syntax = "proto3";
+package catalog;
+enum Availability { AVAILABILITY_UNKNOWN = 0; IN_STOCK = 1; BACKORDER = 2; }
+message GetProductRequest { string id = 1; }
+message ListProductsRequest { string category = 1; int32 limit = 2; }
+message Product {
+  string id = 1;
+  string name = 2;
+  int64 price_cents = 3;
+  repeated string tags = 4;
+  Availability availability = 5;
+}
+service ProductService {
+  rpc GetProduct(GetProductRequest) returns (Product);
+  rpc ListProducts(ListProductsRequest) returns (stream Product);
+}
+`
+
+const product = (
+  id: string,
+  name: string,
+  cents: number,
+  tags: string[],
+  availability: number,
+) =>
+  message([
+    [1, id],
+    [2, name],
+    [3, cents],
+    ...tags.map((t): Field => [4, t]),
+    [5, availability],
+  ])
+
+const grpcReplies: Record<string, number[]> = {
+  "/catalog.ProductService/GetProduct": [
+    ...frame(
+      0,
+      product(
+        "P-1042",
+        "Carry-on Spinner 22in",
+        18900,
+        ["luggage", "carry-on", "lightweight"],
+        1,
+      ),
+    ),
+    ...trailer("0"),
+  ],
+  "/catalog.ProductService/ListProducts": [
+    ...frame(
+      0,
+      product("P-1042", "Carry-on Spinner 22in", 18900, ["luggage"], 1),
+    ),
+    ...frame(
+      0,
+      product("P-2210", "Packing Cubes, set of 4", 3400, ["organizers"], 1),
+    ),
+    ...frame(0, product("P-3307", "Travel Pillow", 2900, ["comfort"], 2)),
+    ...trailer("0"),
+  ],
+}
+
+const grpcPage = page(`
+  const call = (method, bytes) =>
+    fetch("/catalog.ProductService/" + method, {
+      method: "POST",
+      headers: { "content-type": "application/grpc-web+proto", "x-grpc-web": "1" },
+      body: new Uint8Array(bytes),
+    })
+  call("ListProducts", ${JSON.stringify(
+    frame(
+      0,
+      message([
+        [1, "travel"],
+        [2, 3],
+      ]),
+    ),
+  )})
+  call("GetProduct", ${JSON.stringify(frame(0, message([[1, "P-1042"]])))})
+`)
+
 const json = (res: import("node:http").ServerResponse, body: unknown) =>
   res
     .writeHead(200, { "content-type": "application/json" })
@@ -135,6 +241,13 @@ export function demoServer(): Server {
       const body = JSON.parse(await readBody(req))
       return json(res, Array.isArray(body) ? body.map(answer) : answer(body))
     }
+    if (path === "/grpc")
+      return res.writeHead(200, { "content-type": "text/html" }).end(grpcPage)
+    const grpc = grpcReplies[path]
+    if (grpc)
+      return res
+        .writeHead(200, { "content-type": "application/grpc-web+proto" })
+        .end(Buffer.from(grpc))
     if (path === "/api/session")
       return json(res, {
         user: { id: "u_5f2a", name: "Sam Rivera", tier: "gold" },
