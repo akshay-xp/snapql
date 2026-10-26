@@ -219,11 +219,16 @@ describe("isHidden", () => {
     status?: number
     mimeType?: string
     fromCache?: "memory" | "disk"
+    serviceWorker?: true
   }) => ({
     method: over.method ?? "GET",
     status: over.status ?? 200,
     mimeType: over.mimeType ?? "",
-    exchange: { ...emptyExchange, fromCache: over.fromCache },
+    exchange: {
+      ...emptyExchange,
+      fromCache: over.fromCache,
+      serviceWorker: over.serviceWorker,
+    },
   })
 
   it("hides nothing with every toggle off", () => {
@@ -244,6 +249,13 @@ describe("isHidden", () => {
     expect(isHidden(entry({ fromCache: "disk" }), hide)).toBe(true)
     expect(isHidden(entry({ status: 304 }), hide)).toBe(true)
     expect(isHidden(entry({}), hide)).toBe(false)
+  })
+
+  it("hides responses a service worker answered", () => {
+    const hide = { ...noHide, worker: true }
+    expect(isHidden(entry({ serviceWorker: true }), hide)).toBe(true)
+    expect(isHidden(entry({}), hide)).toBe(false)
+    expect(isHidden(entry({ serviceWorker: true }), noHide)).toBe(false)
   })
 
   it("hides static assets by mime", () => {

@@ -8,7 +8,7 @@ export const json: Decoder = {
   decode(req) {
     const body = req.requestBody ? parseJson(req.requestBody.text) : undefined
     if (body === undefined && !isJsonMime(req.mimeType)) return
-    // No data: the Payload tab shows the body, so Summary would only repeat it.
+    // No data: Payload shows the body, so a breakdown would only repeat it.
     return {
       title: new URL(req.url).pathname,
       detail: req.method,

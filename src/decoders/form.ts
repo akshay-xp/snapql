@@ -10,7 +10,7 @@ export const form: Decoder = {
       baseMime(body.mimeType) !== "application/x-www-form-urlencoded"
     )
       return
-    // No data: the Payload tab shows the fields, so Summary would only repeat them.
+    // No data: Payload shows the fields, so a breakdown would only repeat them.
     return {
       title: new URL(req.url).pathname,
       detail: count([...new URLSearchParams(body.text)].length, "field"),

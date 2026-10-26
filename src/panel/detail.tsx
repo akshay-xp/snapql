@@ -47,6 +47,7 @@ import type { Schemas } from "./schemas"
 import { Pairs, Section, Sections, Text } from "./section"
 import { socketRows } from "./socket"
 import { Splitter } from "./splitter.tsx"
+import { dataSections } from "./summary"
 import { shownTab, type Tab, tabsFor } from "./tabs"
 import { type Stage, timingView } from "./timing"
 import { findTokens } from "./values"
@@ -143,6 +144,23 @@ export function Detail(props: {
   const tabs = () => tabsFor(props.entry)
   const params = () => props.entry.exchange.queryString
   const payload = createMemo(() => requestPayload(props.entry.requestBody))
+  const readers = useSchemaReaders(props)
+  const requestData = () => {
+    const r = readers()
+    const body = props.entry.requestBody
+    return r && body
+      ? grpcRequestData(body.mimeType, body.text, r.input)
+      : props.entry.decoded?.data
+  }
+  const decodeResponse = () => {
+    const decoded = props.entry.decoded
+    if (!decoded) return
+    const headers = props.entry.exchange.responseHeaders
+    const r = readers()
+    if (r) return (body: Body) => grpcResponse(body, headers, r.output)
+    const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
+    return decode && ((body: Body) => decode(body, decoded, headers))
+  }
   const shown = () => shownTab(active(), tabs())
   const id = (tab: Tab) => tab.toLowerCase().replace(/\W+/g, "-")
   const onTabKey = (e: KeyboardEvent) => {
@@ -202,9 +220,14 @@ export function Detail(props: {
       >
         <Switch>
           <Match when={shown() === "Summary"}>
-            <Summary entry={props.entry} schemas={props.schemas} />
+            <Summary entry={props.entry} />
           </Match>
           <Match when={shown() === "Response"}>
+            <Show when={decodeResponse()}>
+              {(decode) => (
+                <ResponseGroup entry={props.entry} decode={decode()} />
+              )}
+            </Show>
             <LoadedBody entry={props.entry} pretty={true}>
               {(text, body) => (
                 <Show
@@ -286,6 +309,9 @@ export function Detail(props: {
           <Match when={shown() === "Payload"}>
             <Show when={params().length}>
               <Pairs title="Query params" pairs={params()} decode />
+            </Show>
+            <Show when={props.entry.decoded}>
+              {(d) => <Decoded label={d().kind} data={requestData()} />}
             </Show>
             {/* Keyed: the form/body choice is made once per payload. */}
             <Show when={payload()} keyed>
@@ -686,28 +712,11 @@ function Url(props: { heading: Heading }) {
   )
 }
 
-function Summary(props: { entry: Entry; schemas: Schemas }) {
-  const readers = useSchemaReaders(props)
-  const requestData = () => {
-    const r = readers()
-    const body = props.entry.requestBody
-    return r && body
-      ? grpcRequestData(body.mimeType, body.text, r.input)
-      : props.entry.decoded?.data
-  }
-  const decodeResponse = () => {
-    const decoded = props.entry.decoded
-    if (!decoded) return
-    const headers = props.entry.exchange.responseHeaders
-    const r = readers()
-    if (r) return (body: Body) => grpcResponse(body, headers, r.output)
-    const decode = decoderFor(decoded.kind, decoders)?.decodeResponse
-    return decode && ((body: Body) => decode(body, decoded, headers))
-  }
+function Summary(props: { entry: Entry }) {
   const heading = () => summaryHeading(props.entry)
   const facts = () => {
-    const { time, size, protocol, remote, cache, clock } = heading()
-    return [time, size, protocol, remote, cache, clock].filter(Boolean)
+    const { time, size, protocol, remote, source, clock } = heading()
+    return [time, size, protocol, remote, source, clock].filter(Boolean)
   }
 
   return (
@@ -765,11 +774,7 @@ function Summary(props: { entry: Entry; schemas: Schemas }) {
       <Show when={props.entry.socket}>
         <Pairs title="Socket" pairs={socketRows(props.entry)} />
       </Show>
-      <Sections data={requestData()} />
       <Tokens entry={props.entry} />
-      <Show when={decodeResponse()}>
-        {(decode) => <ResponseGroup entry={props.entry} decode={decode()} />}
-      </Show>
     </>
   )
 }
@@ -793,7 +798,7 @@ function useSchemaReaders(props: { entry: Entry; schemas: Schemas }) {
   return () => (method() ? readers() : undefined)
 }
 
-// Mounted only while Summary is shown, so the response body loads on demand.
+// Mounted only while Response is shown, so the response body loads on demand.
 function ResponseGroup(props: {
   entry: Entry
   decode: (body: Body) => DecodedResponse | undefined
@@ -809,13 +814,25 @@ function ResponseGroup(props: {
   return (
     <Show when={decoded()}>
       {(d) => (
-        <div class="flex flex-col gap-4">
-          <h2 class="font-semibold">
-            Response <span class="font-normal text-muted">· {d().summary}</span>
-          </h2>
-          <Sections data={d().data} />
-        </div>
+        <Decoded
+          label={`${props.entry.decoded?.kind} · ${d().summary}`}
+          data={d().data}
+        />
       )}
+    </Show>
+  )
+}
+
+// One heading for both directions, so Payload and Response read alike.
+function Decoded(props: { label: string; data: unknown }) {
+  return (
+    <Show when={dataSections(props.data).length}>
+      <div data-decoded class="flex flex-col gap-4">
+        <h2 class="font-semibold">
+          Decoded <span class="font-normal text-muted">· {props.label}</span>
+        </h2>
+        <Sections data={props.data} />
+      </div>
     </Show>
   )
 }

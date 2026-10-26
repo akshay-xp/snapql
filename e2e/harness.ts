@@ -283,6 +283,30 @@ const noisePage = `<!doctype html>
   })()
 </script>`
 
+// A service worker that forwards one API call, so DevTools lists the page's
+// request (answered by the worker) and the worker's own fetch.
+const workerPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  ;(async () => {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/worker" })
+    if (!navigator.serviceWorker.controller)
+      await new Promise((r) =>
+        navigator.serviceWorker.addEventListener("controllerchange", r),
+      )
+    await fetch("/api/sw-data")
+  })()
+</script>`
+
+const workerScript = `
+self.addEventListener("install", () => self.skipWaiting())
+self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()))
+self.addEventListener("fetch", (e) => {
+  if (new URL(e.request.url).pathname === "/api/sw-data")
+    e.respondWith(fetch(e.request))
+})
+`
+
 const media: Record<string, [string, () => Promise<Buffer> | Buffer]> = {
   "/api/png": ["image/png", () => Buffer.from(PNG_BASE64, "base64")],
   "/api/svg": ["image/svg+xml", () => Buffer.from(SVG)],
@@ -390,7 +414,8 @@ export type Panel = {
   paneWidths(): Promise<{ list: number; detail: number }>
   selectedVisible(): Promise<boolean>
   press(key: string, list?: string): Promise<void>
-  select(row: string): Promise<void>
+  // nth picks among rows with the same text.
+  select(row: string, nth?: number): Promise<void>
   selectedRow(): Promise<string | undefined>
   // Clicks the first request row whose text starts with prefix (for rows that change).
   selectStarting(prefix: string): Promise<void>
@@ -433,7 +458,9 @@ export type Panel = {
   reloadPanel(): Promise<void>
   storageItem(key: string): Promise<string | null>
   // Unchecks Hide options (all hidden by default) so their rows show.
-  unhide(...values: ("preflights" | "cached" | "assets")[]): Promise<void>
+  unhide(
+    ...values: ("preflights" | "cached" | "worker" | "assets")[]
+  ): Promise<void>
   // Left edge of each match, in document order.
   lefts(selector: string): Promise<number[]>
   // Uncaught errors in the panel since it opened.
@@ -696,9 +723,9 @@ export async function openPanel(
         list.focus()
         list.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true }))
       })()`),
-    select: (row: string) =>
+    select: (row: string, nth = 0) =>
       panelFrame.evaluate<void>(
-        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${optionText})(o) === ${JSON.stringify(row)}).click()`,
+        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].filter((o) => (${optionText})(o) === ${JSON.stringify(row)})[${nth}].click()`,
       ),
     messages: () =>
       panelFrame.evaluate<string[]>(
@@ -1008,6 +1035,16 @@ async function startServer(): Promise<Server> {
     if (req.url === "/noise")
       return res.writeHead(200, { "content-type": "text/html" }).end(noisePage)
     if (req.url === "/api/preflight") return res.writeHead(204).end()
+    if (req.url === "/worker")
+      return res.writeHead(200, { "content-type": "text/html" }).end(workerPage)
+    if (req.url === "/sw.js")
+      return res
+        .writeHead(200, { "content-type": "text/javascript" })
+        .end(workerScript)
+    if (req.url === "/api/sw-data")
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end('{"from":"network"}')
     if (req.url === "/api/cached")
       return res
         .writeHead(200, { "cache-control": "max-age=600" })

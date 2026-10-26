@@ -164,6 +164,7 @@ export function FilterChips(props: {
 const HIDE_OPTIONS: [keyof Hide, string][] = [
   ["preflights", "Preflights"],
   ["cached", "Cached"],
+  ["worker", "Service worker"],
   ["assets", "Static assets"],
 ]
 

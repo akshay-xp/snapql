@@ -84,7 +84,8 @@ export const xml: Decoder = {
   kind: "xml",
   decode(req) {
     const doc = elements(req)
-    return doc && { title: doc.names[0], data: { xml: prettyXml(doc.text) } }
+    // No data: Payload shows the body, so a breakdown would only repeat it.
+    return doc && { title: doc.names[0], data: undefined }
   },
 }
 
@@ -96,6 +97,6 @@ export const soap: Decoder = {
     const body = doc.names.indexOf("Body")
     const operation = body > 0 ? doc.names[body + 1] : undefined
     if (!operation) return
-    return { title: operation, data: { xml: prettyXml(doc.text) } }
+    return { title: operation, data: undefined }
   },
 }

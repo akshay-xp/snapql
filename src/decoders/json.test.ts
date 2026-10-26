@@ -15,7 +15,7 @@ function req(overrides: Partial<RequestView>): RequestView {
 const body = (text: string) => ({ mimeType: "application/json", text })
 
 describe("json", () => {
-  // No data: Payload shows the body, so Summary would only repeat it.
+  // No data: Payload shows the body, so a breakdown would only repeat it.
   it("matches a JSON request body, summarized by path, leaving the body to Payload", () => {
     expect(
       json.decode(

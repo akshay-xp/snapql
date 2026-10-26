@@ -33,6 +33,7 @@ export type Exchange = {
   remoteAddress?: string
   timings: Timings
   fromCache?: "memory" | "disk"
+  serviceWorker?: true
 }
 
 export const emptyExchange: Exchange = {
