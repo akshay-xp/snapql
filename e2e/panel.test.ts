@@ -312,11 +312,15 @@ test("Summary shows the request and its decoded data", async () => {
     const detail = await panel.detail()
     expect(detail).toContain("query GetUser { user { id } }")
     expect(await panel.text('[role="tabpanel"] header')).toMatch(
-      /^GetUser graphql query Copy as POST \/graphql · 200 OK · \d+ ms · \d\d:\d\d:\d\d$/,
+      /^GetUser graphql query Copy as 200 OK · POST · \d+ ms · [\d.]+ k?B · \d\d:\d\d:\d\d 127\.0\.0\.1:\d+\/ graphql$/,
     )
-    expect(
-      await panel.attr('[role="tabpanel"] header [data-path]', "title"),
-    ).toBe(`${panel.origin}/graphql`)
+    const url = '[role="tabpanel"] header [data-url]'
+    expect(await panel.attr(`${url} [data-clipped]`, "title")).toBe(
+      `${panel.origin}/graphql`,
+    )
+    await panel.stubClipboard()
+    await panel.click(`${url} button[aria-label="Copy URL"]`)
+    expect(await panel.copied()).toBe(`${panel.origin}/graphql`)
     expect(
       await panel.style('[role="tabpanel"] header [data-status]', "color"),
     ).toBe("rgb(129, 201, 149)")
@@ -331,7 +335,6 @@ test("Summary shows the request and its decoded data", async () => {
     )
     expect(detail).toContain('id: "1"')
 
-    await panel.stubClipboard()
     await panel.click('button[aria-label="Copy variables"]')
     expect(await panel.copied()).toBe('{\n  "id": "1"\n}')
     expect(
@@ -1619,6 +1622,24 @@ test("steps through body matches", async () => {
   }
 })
 
+test("Summary shows a decoded request's URL and opens Params from its query", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/decoders`)
+    const row = "user.byId, post.list 2 procedures trpc"
+    await expect.poll(panel.rows).toContain(row)
+    await panel.select(row)
+    const url = '[role="tabpanel"] header [data-url]'
+    expect(await panel.text(`${url} [data-clipped]`)).toMatch(
+      /^127\.0\.0\.1:\d+\/api\/trpc\/ user\.byId,post\.list$/,
+    )
+    await panel.click(`${url} button:not([aria-label])`)
+    await expect.poll(panel.activeTab).toBe("Params/Cookies")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("a long path clips its leading segments, keeping the last segment and query", async () => {
   const panel = await openPanel()
   try {
@@ -1627,7 +1648,7 @@ test("a long path clips its leading segments, keeping the last segment and query
     await expect.poll(panel.rows).toContain(row)
     await panel.select(row)
     await panel.search("target?pa")
-    const title = `[aria-label="Requests"] [data-title]`
+    const title = `[aria-label="Requests"] [data-clipped]`
     expect(await panel.overflowing(`${title} [data-head]`)).toHaveLength(1)
     expect(await panel.overflowing(`${title} [data-tail]`)).toEqual([])
     expect(await panel.text(`${title} [data-tail]`)).toBe("target?page=2")

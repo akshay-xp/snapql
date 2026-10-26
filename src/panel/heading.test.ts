@@ -12,7 +12,11 @@ const entry = (
   status: 200,
   time: 34.4,
   startedAt,
-  exchange: { ...emptyExchange, statusText },
+  exchange: {
+    ...emptyExchange,
+    statusText,
+    queryString: [{ name: "a", value: "1" }],
+  },
   ...overrides,
 })
 
@@ -31,9 +35,11 @@ describe("summaryHeading", () => {
       ),
     ).toEqual({
       title: "GetUser",
+      titleParts: ["", "GetUser"],
       tag: "graphql query",
       method: "POST",
-      path: "/graphql?a=1",
+      url: ["x.test/", "graphql"],
+      params: 1,
       status: "200 OK",
       ok: true,
       time: "34 ms",
@@ -51,6 +57,43 @@ describe("summaryHeading", () => {
     )
     expect(plain.title).toBe("/api/one")
     expect(plain).not.toHaveProperty("tag")
+  })
+
+  it("shows only the host when the title is already the path", () => {
+    const plain = summaryHeading(
+      entry({ method: "GET", url: "https://x.test/api/one?b=2" }),
+    )
+    expect(plain).toMatchObject({
+      titleParts: ["/api/", "one", "?b=2"],
+      url: ["", "x.test"],
+    })
+    expect(plain).not.toHaveProperty("params")
+  })
+
+  it("drops a tag detail that repeats the method", () => {
+    const json = summaryHeading(
+      entry({
+        method: "GET",
+        url: "https://x.test/api/me",
+        decoded: { kind: "json", title: "/api/me", detail: "GET", data: {} },
+      }),
+    )
+    expect(json).toMatchObject({ tag: "json", url: ["", "x.test"] })
+  })
+
+  it("adds the body size and cache source when known, skipping an empty body", () => {
+    const cached = summaryHeading(
+      entry({
+        exchange: { ...emptyExchange, size: 1234, fromCache: "disk" },
+      }),
+    )
+    expect(cached).toMatchObject({ size: "1.2 kB", cache: "disk cache" })
+    expect(summaryHeading(entry())).not.toHaveProperty("size")
+    const empty = { ...emptyExchange, size: 0 }
+    expect(summaryHeading(entry({ exchange: empty }))).not.toHaveProperty(
+      "size",
+    )
+    expect(summaryHeading(entry())).not.toHaveProperty("cache")
   })
 
   it("describes failures and bare status codes", () => {

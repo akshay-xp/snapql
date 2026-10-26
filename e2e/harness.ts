@@ -9,8 +9,8 @@ import { WebSocketServer } from "ws"
 const extensionDir = resolve("dist/chrome")
 
 const rowText = `(o) => o.innerText.replace(/\\s+/g, " ").trim()`
-// A row title's parts are flex items, which innerText would separate with spaces.
-const optionText = `(o) => [...o.children].map((c) => c.hasAttribute("data-title") ? c.textContent : (${rowText})(c)).join(" ").replace(/\\s+/g, " ").trim()`
+// A row title's clipped parts are flex items, which innerText would separate with spaces.
+const optionText = `(o) => [...o.children].map((c) => c.hasAttribute("data-clipped") ? c.textContent : (${rowText})(c)).join(" ").replace(/\\s+/g, " ").trim()`
 
 const b64url = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString("base64url")
