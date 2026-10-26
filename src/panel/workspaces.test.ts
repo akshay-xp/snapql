@@ -193,4 +193,27 @@ describe("switching workspaces", () => {
     gap.create()
     expect(gap.name()).toBe("Workspace 2")
   })
+
+  it("renames with a trimmed non-empty name", async () => {
+    const { store, save } = await loaded(two)
+    store.rename("  API  ")
+    expect(store.name()).toBe("API")
+    save.mockClear()
+    store.rename("   ")
+    expect(store.name()).toBe("API")
+    expect(save).not.toHaveBeenCalled()
+    store.select("rest")
+    store.rename("API")
+    expect(store.list().map((w) => w.name)).toEqual(["API", "API"])
+  })
+
+  it("deletes the active workspace unless it is the last", async () => {
+    const { store } = await loaded(two)
+    store.select("rest")
+    store.remove()
+    expect(store.list()).toEqual([{ id: "gql", name: "GraphQL" }])
+    expect(store.activeId()).toBe("gql")
+    store.remove()
+    expect(store.list()).toEqual([{ id: "gql", name: "GraphQL" }])
+  })
 })
