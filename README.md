@@ -1,6 +1,6 @@
 # SnapQL
 
-Inspect GraphQL requests and responses in DevTools.
+Human-readable network traffic in DevTools: GraphQL, REST, gRPC-web, protobuf, WebSocket, SSE and LLM streams, decoded.
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/bopfjlgmfhmpnceeknaddfgeanchkbmm?label=Chrome%20Web%20Store&logo=googlechrome&color=blue)](https://chrome.google.com/webstore/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm)
 ![Made with Solid](https://img.shields.io/badge/Made%20with-Solid-2C4F7C?logo=solid&logoColor=white)
@@ -9,45 +9,86 @@ Inspect GraphQL requests and responses in DevTools.
 ![TypeScript](https://img.shields.io/badge/Code-TypeScript-3178C6?logo=typescript&logoColor=white)
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 
-SnapQL adds a powerful GraphQL inspection tab to Chrome DevTools. It automatically detects and displays GraphQL network requests on the current page — including queries, variables, and JSON responses — in a clean and readable interface.
+SnapQL adds a tab to Chrome DevTools that lists the page's traffic by what it means: GraphQL operations by name, gRPC calls by method, WebSockets by their messages, LLM streams by their reassembled reply. Pick a request and read its payload and response decoded, instead of raw bytes and escaped JSON.
+
+![A GraphQL operation with its query and variables decoded](store/screenshots/1-graphql.png)
+
+|                                                                                          |                                                                          |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| ![gRPC-web response with named fields](store/screenshots/2-grpc.png)                     | ![WebSocket chat messages](store/screenshots/3-websocket.png)            |
+| gRPC-web decoded with field names from your `.proto` files                               | WebSocket frames, each decoded on its own                                |
+| ![LLM stream reassembled into a reply and tool call](store/screenshots/4-llm-stream.png) | ![Searching request and response bodies](store/screenshots/5-search.png) |
+| LLM streams put back together: reply, tool calls, usage                                  | Search inside request and response bodies                                |
 
 ---
 
-### ✨ Features
+### What it decodes
 
-- **Instant Visibility** - See all GraphQL requests in one place.
-- **Clear Formatting** - View queries, variables, and responses with syntax highlighting.
-- **Zero Setup** - No configuration needed. Just install and open DevTools.
-- **Universal** - Works with any site using GraphQL.
-- **Privacy First** - Runs entirely within DevTools; no data is ever collected or sent.
+- **GraphQL**: operation names and types, variables, batching, persisted queries, file uploads, `@defer` and error paths
+- **REST and JSON**, form data and multipart uploads
+- **XML and SOAP**, **JSON-RPC** and **tRPC**
+- **gRPC-web and protobuf**, readable without a schema, with field names once you add your `.proto` files
+- **MessagePack** and **CBOR**
+- **WebSocket**, **Socket.IO** and **graphql-ws** messages
+- **Server-sent events** and **NDJSON** streams
+- **LLM streams** (OpenAI and Anthropic APIs): reply, thinking, tool calls and token usage
+- **JWTs** in headers and cookies, images and fonts as previews
 
----
+### Find the request you want
 
-### 🚀 Get Started
+- Search request names, URLs and, optionally, bodies; jump between matches
+- Filter by protocol and status
+- Save filters as workspaces; hide preflights, cached responses, service worker copies and static assets
+- Copy any request as cURL or fetch
+- Export to HAR with tokens, cookies and passwords redacted
+- Follows the DevTools light or dark theme
 
-You can get SnapQL directly from the Chrome Web Store:
+### Privacy
 
-[**👉 Install from Chrome Web Store**](https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm?utm_source=item-share-cb)
-
-#### Manual Installation (Development)
-
-1.  Clone the repo: `git clone https://github.com/akshay-xp/snapql.git`
-2.  Install dependencies: `pnpm install`
-3.  Build the extension: `pnpm build` (outputs `dist/chrome` and `dist/firefox`)
-4.  Load it:
-    - **Chrome:** open `chrome://extensions`, enable Developer Mode, and load `dist/chrome` as an unpacked extension
-    - **Firefox:** open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and pick `dist/firefox/manifest.json`
-
----
-
-### 🤝 Contributing
-
-Contributions are welcome!
-If you have a feature idea, bug report, or fix, feel free to [open an issue](https://github.com/akshay-xp/snapql/issues) or submit a pull request.
+SnapQL needs no permissions and runs only while DevTools is open. It collects nothing and sends nothing anywhere.
 
 ---
 
-### 📄 License
+### Install
 
-Licensed under the **GNU General Public License v3.0**.  
+[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm), then open DevTools and pick the **SnapQL** tab.
+
+Firefox builds work when loaded unpacked (below) but are not published yet.
+
+### Development
+
+Requires Node 22+ and pnpm 10+.
+
+```sh
+pnpm install
+pnpm build        # dist/chrome and dist/firefox
+```
+
+Load the build:
+- **Chrome:** open `chrome://extensions`, enable Developer mode, Load unpacked, pick `dist/chrome`
+- **Firefox:** open `about:debugging#/runtime/this-firefox`, Load Temporary Add-on, pick `dist/firefox/manifest.json`
+
+Checks:
+
+```sh
+pnpm lint         # Biome
+pnpm typecheck
+pnpm test         # unit tests
+pnpm e2e          # the panel in headless Chromium DevTools
+pnpm screenshots  # retakes the store screenshots in store/screenshots
+```
+
+Releasing is described in [docs/build.md](docs/build.md); how the pieces fit together starts at [docs/overview.md](docs/overview.md).
+
+---
+
+### Contributing
+
+Contributions are welcome. If you have a format to support, a bug report or a fix, [open an issue](https://github.com/akshay-xp/snapql/issues) or submit a pull request.
+
+---
+
+### License
+
+Licensed under the **GNU General Public License v3.0**.
 See [LICENSE](LICENSE) for details.
