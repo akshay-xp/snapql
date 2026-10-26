@@ -40,6 +40,7 @@ import { nextTab } from "./keys"
 import { createMatches, MatchNav, type Step } from "./matches"
 import { byteLabel } from "./messages"
 import { Messages } from "./messages.tsx"
+import { requestPayload } from "./payload"
 import { rawRequest, rawResponse } from "./raw"
 import type { Schemas } from "./schemas"
 import { Pairs, Section, Sections, Text } from "./section"
@@ -280,6 +281,24 @@ export function Detail(props: {
               pairs={props.entry.exchange.queryString}
               decode
             />
+            {/* Keyed: the form/body choice is made once per payload. */}
+            <Show when={requestPayload(props.entry.requestBody)} keyed>
+              {(p) =>
+                "form" in p ? (
+                  <Pairs title="Form data" pairs={p.form} decode />
+                ) : (
+                  <Section title="Request body">
+                    <Notes notes={p.notes} />
+                    <BodyView
+                      text={p.text}
+                      entry={props.entry}
+                      query={props.bodyQuery}
+                      step={props.stepMatch}
+                    />
+                  </Section>
+                )
+              }
+            </Show>
           </Match>
           <Match when={shown() === "Headers"}>
             <Pairs
@@ -456,6 +475,12 @@ function TimingPanel(props: { entry: Entry }) {
 }
 
 // Mounted only while its tab is active, so the body loads on demand.
+function Notes(props: { notes: string[] }) {
+  return (
+    <For each={props.notes}>{(note) => <p class="text-muted">{note}</p>}</For>
+  )
+}
+
 function LoadedBody(props: {
   entry: Entry
   pretty: boolean
@@ -469,9 +494,7 @@ function LoadedBody(props: {
     <Show when={body()}>
       {(b) => (
         <>
-          <For each={b().notes}>
-            {(note) => <p class="text-muted">{note}</p>}
-          </For>
+          <Notes notes={b().notes} />
           {props.children(b().text, b())}
         </>
       )}

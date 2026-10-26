@@ -502,6 +502,27 @@ test("Headers and Payload tabs list name/value pairs", async () => {
   }
 })
 
+test("Payload shows form fields and the request body", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/decoders`)
+    await expect
+      .poll(async () => (await panel.rows()).some((r) => r.startsWith("A, B")))
+      .toBe(true)
+
+    await panel.selectStarting("/api/form")
+    await panel.openTab("Payload")
+    await expect.poll(panel.pairs).toContain("a = 1")
+    expect(await panel.pairs()).toContain("b = x y")
+
+    await panel.selectStarting("A, B")
+    await expect.poll(panel.detail).toContain('query: "query A { a }"')
+    expect(await panel.detail()).toContain("Request body")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Timing tab shows stage tiles over a labelled waterfall", async () => {
   const panel = await openPanel()
   try {
