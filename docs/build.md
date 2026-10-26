@@ -54,6 +54,15 @@
 - `e2e/fixtures/glyph.ttf`: made for this repo with fontTools `FontBuilder` (`.notdef` and a square `A`, 1000 upm, family `SnapQL Glyph`); a font the Body preview can load, since CI has no system fonts to borrow. Regenerate the same way if it ever needs to change.
 - Rows include the document and favicon requests, so assert with `arrayContaining` unless the panel was just cleared.
 
+## Store screenshots
+
+- `pnpm screenshots`: `vite build --mode chrome`, then Vitest with `vitest.store.config.ts` (include `store/screenshots.ts`, 60s timeout). Writes the Chrome Web Store shots to `store/screenshots/` (committed), in listing order: `1-graphql`, `2-grpc`, `3-websocket`, `4-llm-stream`, `5-search`. About 6s.
+- Not run in CI (slow to review, and the shots only change with the UI); `tsc` and lint cover `store/`. `store/screenshots.ts` is not a `*.test.ts`, so `pnpm test` skips it.
+- Each shot: `openPanel({ server: demoServer(), size: 1280x800, devtoolsTheme: "dark" })`, a setup that polls for the shot's key text (`Decoded · graphql`, `Decoded · grpc-web · OK` and `"IN_STOCK"`, `Message 7`, `Decoded · llm · tool_calls`, a body `mark`), `screenshot()`, then an IHDR check for exactly 1280x800. A render that never arrives fails the run instead of writing a blank image.
+- Shots stay on Payload, Response and Messages, never Summary, so the `127.0.0.1:<port>` origin doesn't show; rows show only paths and operation names.
+- `store/demo.ts` (`demoServer()`, an unstarted `Server` with a `WebSocketServer`): a fictional travel app, Wayfare (no real companies or people). `/` fires GraphQL operations (`SearchFlights`, `GetTrips`, a batch, a persisted query, a mutation) plus a JSON and a form request; `/grpc` calls `catalog.ProductService` (`CATALOG_PROTO`, added as a schema so fields are named; replies built by a small protobuf writer); `/chat` exposes `start()` (called once the probe is in) to open the `/chat` socket; `/assistant` streams an OpenAI-style `demo-chat-1` reply with a `search_flights` tool call and usage. Ack ids are a counter, so reshoots match.
+- Retake after UI changes: `pnpm screenshots`, look at each PNG, commit.
+
 ## CI
 
 - `.github/workflows/ci.yml`: one `ci` job on push and PR to `master`.
