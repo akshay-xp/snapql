@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "vite build --mode chrome && vite build --mode firefox",
-    "e2e": "vite build --mode chrome && vitest run --config vitest.e2e.config.ts"
+    "e2e": "vite build --mode chrome && vitest run --config vitest.e2e.config.ts",
+    "screenshots": "vite build --mode chrome && vitest run --config vitest.store.config.ts"
   },
   "engines": {
     "node": ">=22",
