@@ -68,3 +68,13 @@ test("websocket", () =>
     await panel.click('[aria-label="Messages"] [role="option"]:nth-child(7)')
     await expect.poll(panel.detail).toContain("Message 7")
   }))
+
+test("llm stream", () =>
+  shoot("4-llm-stream", async (panel) => {
+    await panel.page.goto(`${panel.origin}/assistant`)
+    const row = "demo-chat-1 stream llm"
+    await expect.poll(panel.rows).toContain(row)
+    await panel.select(row)
+    await panel.openTab("Response")
+    await expect.poll(panel.detail).toContain("Decoded · llm · tool_calls")
+  }))

@@ -234,6 +234,70 @@ const chatPage = page(`
   }
 `)
 
+const assistantPage = page(`
+  fetch("/api/session")
+  fetch("/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      model: "demo-chat-1",
+      stream: true,
+      stream_options: { include_usage: true },
+      tools: [{ type: "function", function: { name: "search_flights" } }],
+      messages: [
+        { role: "system", content: "You are Wayfare's trip assistant." },
+        { role: "user", content: "Find me a nonstop from SFO to JFK on Nov 14, morning if possible." },
+      ],
+    }),
+  })
+`)
+
+const chunk = (delta: object, finish_reason: string | null = null) =>
+  JSON.stringify({
+    id: "chatcmpl-demo",
+    object: "chat.completion.chunk",
+    model: "demo-chat-1",
+    choices: [{ index: 0, delta, finish_reason }],
+  })
+
+const replyText =
+  "Happy to help. Nonstops from SFO to JFK on Nov 14 leave from 7:05 AM, so a morning flight works. Let me check fares for two passengers."
+const toolArgs = JSON.stringify({
+  from: "SFO",
+  to: "JFK",
+  date: "2026-11-14",
+  nonstop: true,
+  departs_before: "12:00",
+})
+
+const chatStream = [
+  chunk({ role: "assistant", content: "" }),
+  ...replyText.split(/(?<= )/).map((word) => chunk({ content: word })),
+  chunk({
+    tool_calls: [
+      {
+        index: 0,
+        id: "call_7Qd2",
+        type: "function",
+        function: { name: "search_flights", arguments: "" },
+      },
+    ],
+  }),
+  ...[toolArgs.slice(0, 30), toolArgs.slice(30)].map((part) =>
+    chunk({ tool_calls: [{ index: 0, function: { arguments: part } }] }),
+  ),
+  chunk({}, "tool_calls"),
+  JSON.stringify({
+    id: "chatcmpl-demo",
+    object: "chat.completion.chunk",
+    choices: [],
+    usage: { prompt_tokens: 412, completion_tokens: 68, total_tokens: 480 },
+  }),
+  "[DONE]",
+]
+  .map((data) => `data: ${data}\n\n`)
+  .join("")
+
 const replies: Record<string, string> = {
   "Can we push dinner to 8?": "Sure, see you at 8",
   "Booked the 8:15 table at Harbor View": "Perfect, thanks!",
@@ -266,6 +330,14 @@ export function demoServer(): Server {
       const body = JSON.parse(await readBody(req))
       return json(res, Array.isArray(body) ? body.map(answer) : answer(body))
     }
+    if (path === "/assistant")
+      return res
+        .writeHead(200, { "content-type": "text/html" })
+        .end(assistantPage)
+    if (path === "/v1/chat/completions")
+      return res
+        .writeHead(200, { "content-type": "text/event-stream" })
+        .end(chatStream)
     if (path === "/chat")
       return res.writeHead(200, { "content-type": "text/html" }).end(chatPage)
     if (path === "/grpc")
