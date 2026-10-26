@@ -1603,7 +1603,7 @@ test("selecting a body match opens the tab that shows it", async () => {
     const order = "/api/order request (1): plum"
     await expect.poll(panel.rows).toEqual([order])
     await panel.select(order)
-    await expect.poll(panel.activeTab).toBe("Raw")
+    await expect.poll(panel.activeTab).toBe("Payload")
     await expect.poll(panel.marks).toEqual(["plum"])
 
     await panel.search("apple")
