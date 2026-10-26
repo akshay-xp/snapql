@@ -83,6 +83,12 @@ export function WorkspaceMenu(props: {
             edit()
           })}
           {action("Rename", edit)}
+          <Show when={props.workspaces.list().length > 1}>
+            {action("Delete", () => {
+              props.workspaces.remove()
+              setOpen(false)
+            })}
+          </Show>
         </div>
       </Show>
     </div>

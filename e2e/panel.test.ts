@@ -2019,6 +2019,14 @@ test("workspaces switch, create, rename and delete", async () => {
     expect(await panel.text(button)).toBe("GraphQL")
     await rename("API", "blur")
     expect(await panel.text(button)).toBe("API")
+
+    await panel.click(button)
+    expect(await panel.text("[data-workspace-menu]")).toContain("Delete")
+    await panel.clickButton("Delete")
+    expect(await panel.text(button)).toBe("Default")
+    await panel.click(button)
+    expect(await panel.count(item)).toBe(1)
+    expect(await panel.text("[data-workspace-menu]")).not.toContain("Delete")
   } finally {
     await panel.close()
   }
