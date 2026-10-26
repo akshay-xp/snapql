@@ -1,5 +1,5 @@
-import { For, type JSX, Show } from "solid-js"
-import { type Filters, highlight } from "./filter"
+import { createSignal, For, type JSX, Show } from "solid-js"
+import { type Filters, type Hide, highlight } from "./filter"
 import { IconButton } from "./icon-button"
 
 export function SearchBox(props: {
@@ -104,6 +104,8 @@ export function FilterChips(props: {
   chips: Filters
   active: Filters
   onToggle: (group: keyof Filters, value: string) => void
+  hide: Hide
+  onHide: (hide: Hide) => void
 }) {
   const group = (name: keyof Filters) => (
     <For each={props.chips[name]}>
@@ -118,13 +120,74 @@ export function FilterChips(props: {
     </For>
   )
   return (
-    <fieldset
-      aria-label="Filters"
-      class="flex h-8 min-w-0 shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2"
-    >
-      {group("kinds")}
-      <span aria-hidden="true" class="mx-1 h-4 w-px shrink-0 bg-border" />
-      {group("statuses")}
-    </fieldset>
+    <div class="flex h-8 shrink-0 items-center border-b border-border pr-2">
+      <fieldset
+        aria-label="Filters"
+        class="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2"
+      >
+        {group("kinds")}
+        <span aria-hidden="true" class="mx-1 h-4 w-px shrink-0 bg-border" />
+        {group("statuses")}
+      </fieldset>
+      <HideMenu hide={props.hide} onChange={props.onHide} />
+    </div>
+  )
+}
+
+const HIDE_OPTIONS: [keyof Hide, string][] = [
+  ["preflights", "Preflights"],
+  ["cached", "Cached"],
+  ["assets", "Static assets"],
+]
+
+// Outside the scrolling chips, which would clip the popover.
+function HideMenu(props: { hide: Hide; onChange: (hide: Hide) => void }) {
+  const [open, setOpen] = createSignal(false)
+  const on = () => HIDE_OPTIONS.filter(([key]) => props.hide[key]).length
+  return (
+    <div data-hide class="relative shrink-0">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open()}
+        class="rounded-full px-2 py-0.5"
+        classList={{
+          "bg-accent/20 text-accent": on() > 0,
+          "bg-surface": on() === 0,
+        }}
+        onClick={() => setOpen(!open())}
+      >
+        {on() ? `Hide (${on()})` : "Hide"}
+      </button>
+      <Show when={open()}>
+        <div
+          data-hide-menu
+          role="menu"
+          class="absolute top-full right-0 z-10 mt-1 flex w-40 flex-col gap-1 rounded-md border border-border bg-bg p-2 shadow-lg"
+        >
+          <For each={HIDE_OPTIONS}>
+            {([key, label]) => (
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  role="menuitemcheckbox"
+                  aria-checked={props.hide[key]}
+                  class="accent-accent"
+                  value={key}
+                  checked={props.hide[key]}
+                  onChange={(e) =>
+                    props.onChange({
+                      ...props.hide,
+                      [key]: e.currentTarget.checked,
+                    })
+                  }
+                />
+                {label}
+              </label>
+            )}
+          </For>
+        </div>
+      </Show>
+    </div>
   )
 }
