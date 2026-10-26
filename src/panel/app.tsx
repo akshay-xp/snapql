@@ -11,6 +11,7 @@ import {
 import { version } from "../../package.json"
 import type { Entry } from "../capture/entry"
 import type { Store } from "../capture/store"
+import { count } from "../decoders/text"
 import { createBodyIndex } from "./body-index"
 import { Detail } from "./detail"
 import { download } from "./download"
@@ -21,6 +22,7 @@ import {
   matchesFilters,
   matchesQuery,
   noFilters,
+  noHide,
   toggle,
 } from "./filter"
 import { Footer } from "./footer"
@@ -162,7 +164,24 @@ export function App(props: {
           >
             <Show
               when={visible().length}
-              fallback={<NoMatches query={query()} onClear={clearFilters} />}
+              fallback={
+                <Show
+                  when={!query()}
+                  fallback={
+                    <NoMatches query={query()} onClear={clearFilters} />
+                  }
+                >
+                  <WorkspaceHiding
+                    name={props.workspaces.name()}
+                    total={entries().length}
+                    onShowAll={() => {}}
+                    onClear={() => {
+                      setFilters(noFilters)
+                      setHide(noHide)
+                    }}
+                  />
+                </Show>
+              }
             >
               <List
                 entries={visible()}
@@ -211,6 +230,14 @@ export function App(props: {
   )
 }
 
+function TextButton(props: { onClick: () => void; children: string }) {
+  return (
+    <button type="button" class="text-accent underline" onClick={props.onClick}>
+      {props.children}
+    </button>
+  )
+}
+
 function Message(props: { children: JSX.Element }) {
   return (
     <div class="flex flex-1 flex-col items-center justify-center gap-1.5 p-4 text-center">
@@ -238,13 +265,9 @@ function Waiting(props: { onReloadCapture: () => void }) {
       </svg>
       <p class="text-[13px] font-semibold">Waiting for requests</p>
       <p class="text-muted">Reload the page to capture its traffic.</p>
-      <button
-        type="button"
-        class="text-accent underline"
-        onClick={props.onReloadCapture}
-      >
+      <TextButton onClick={props.onReloadCapture}>
         Reload and capture
-      </button>
+      </TextButton>
     </Message>
   )
 }
@@ -252,18 +275,27 @@ function Waiting(props: { onReloadCapture: () => void }) {
 function NoMatches(props: { query: string; onClear: () => void }) {
   return (
     <Message>
+      <p class="text-[13px] font-semibold">No requests match "{props.query}"</p>
+      <TextButton onClick={props.onClear}>Clear filter</TextButton>
+    </Message>
+  )
+}
+
+function WorkspaceHiding(props: {
+  name: string
+  total: number
+  onShowAll: () => void
+  onClear: () => void
+}) {
+  return (
+    <Message>
       <p class="text-[13px] font-semibold">
-        {props.query
-          ? `No requests match "${props.query}"`
-          : "No requests match the filters"}
+        {props.name} is hiding {count(props.total, "request")}
       </p>
-      <button
-        type="button"
-        class="text-accent underline"
-        onClick={props.onClear}
-      >
-        Clear filter
-      </button>
+      <div class="flex gap-3">
+        <TextButton onClick={props.onShowAll}>Show all</TextButton>
+        <TextButton onClick={props.onClear}>Clear filters</TextButton>
+      </div>
     </Message>
   )
 }
