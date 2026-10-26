@@ -1,5 +1,5 @@
 import { For, type JSX, Show } from "solid-js"
-import { type Filters, type Hide, highlight } from "./filter"
+import { type Filters, type Hide, highlight, type Segment } from "./filter"
 import { IconButton } from "./icon-button"
 import { createPopover } from "./popover"
 import { WorkspaceMenu } from "./workspace-menu"
@@ -64,8 +64,12 @@ export function SearchBox(props: {
 }
 
 export function Marked(props: { text: string; query: string }) {
+  return <Segments segments={highlight(props.text, props.query)} />
+}
+
+export function Segments(props: { segments: Segment[] }) {
   return (
-    <For each={highlight(props.text, props.query)}>
+    <For each={props.segments}>
       {(segment) =>
         segment.hit ? (
           <mark class="rounded-sm bg-accent/30 text-inherit data-current:bg-accent data-current:text-bg">

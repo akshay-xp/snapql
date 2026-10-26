@@ -9,6 +9,8 @@ import { WebSocketServer } from "ws"
 const extensionDir = resolve("dist/chrome")
 
 const rowText = `(o) => o.innerText.replace(/\\s+/g, " ").trim()`
+// A row title's parts are flex items, which innerText would separate with spaces.
+const optionText = `(o) => [...o.children].map((c) => c.hasAttribute("data-title") ? c.textContent : (${rowText})(c)).join(" ").replace(/\\s+/g, " ").trim()`
 
 const b64url = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString("base64url")
@@ -208,6 +210,12 @@ const mediaPage = `<!doctype html>
 const emptyPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>fetch("/api/empty", { method: "OPTIONS" })</script>`
+
+export const deepPath = `/api/${"nested/".repeat(30)}target`
+
+const deepPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>fetch("${deepPath}?page=2")</script>`
 
 const filtersPage = `<!doctype html>
 <link rel="icon" href="data:,">
@@ -624,7 +632,7 @@ export async function openPanel(
       ),
     rows: () =>
       panelFrame.evaluate<string[]>(
-        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].map(${rowText})`,
+        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].map(${optionText})`,
       ),
     dragDivider: (dx: number, dy = 0) =>
       panelFrame.evaluate<void>(`(() => {
@@ -675,7 +683,7 @@ export async function openPanel(
       })()`),
     select: (row: string) =>
       panelFrame.evaluate<void>(
-        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${rowText})(o) === ${JSON.stringify(row)}).click()`,
+        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${optionText})(o) === ${JSON.stringify(row)}).click()`,
       ),
     messages: () =>
       panelFrame.evaluate<string[]>(
@@ -705,7 +713,7 @@ export async function openPanel(
       ),
     selectStarting: (prefix: string) =>
       panelFrame.evaluate<void>(
-        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${rowText})(o).startsWith(${JSON.stringify(prefix)})).click()`,
+        `[...document.querySelectorAll('[aria-label="Requests"] [role="option"]')].find((o) => (${optionText})(o).startsWith(${JSON.stringify(prefix)})).click()`,
       ),
     scrollList: (label: string, to: "top" | "bottom") =>
       panelFrame.evaluate<void>(`(() => {
@@ -748,7 +756,7 @@ export async function openPanel(
         const list = document.querySelector('[role="listbox"][aria-label="Requests"]')
         const option = document.querySelector('[aria-label="Requests"] [role="option"][aria-selected="true"]')
         if (!option || list.getAttribute("aria-activedescendant") !== option.id) return undefined
-        return (${rowText})(option)
+        return (${optionText})(option)
       })()`),
     clear: () =>
       panelFrame.evaluate<void>(
@@ -968,6 +976,9 @@ async function startServer(): Promise<Server> {
     if (req.url === "/empty")
       return res.writeHead(200, { "content-type": "text/html" }).end(emptyPage)
     if (req.url === "/api/empty") return res.writeHead(204).end()
+    if (req.url === "/deep")
+      return res.writeHead(200, { "content-type": "text/html" }).end(deepPage)
+    if (req.url?.startsWith(deepPath)) return res.writeHead(204).end()
     if (req.url === "/filters")
       return res
         .writeHead(200, { "content-type": "text/html" })

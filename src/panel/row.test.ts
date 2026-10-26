@@ -32,8 +32,17 @@ describe("rowLabel", () => {
   it("titles undecoded requests by path and query, with the method as detail", () => {
     expect(rowLabel(entry())).toEqual({
       title: "/api/item?i=9",
+      parts: ["/api/", "item", "?i=9"],
       detail: "GET",
     })
+  })
+
+  it("splits the title before the last path segment, keeping a trailing slash with it", () => {
+    const parts = (path: string) =>
+      rowLabel(entry({ url: `https://x.test${path}` })).parts
+    expect(parts("/a/b/c")).toEqual(["/a/b/", "c", ""])
+    expect(parts("/api/users/")).toEqual(["/api/", "users/", ""])
+    expect(parts("/?q=1")).toEqual(["", "/", "?q=1"])
   })
 
   it("labels failures by status, or failed when there is none", () => {
