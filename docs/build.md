@@ -43,6 +43,13 @@
 - No fixed sleeps: tests wait with `expect.poll`, harness with its internal `poll` helper (the only `setTimeout`).
 - Test server also serves `/other` (fetches `/api/three`) for navigation tests; `togglePreserveLog()` clicks the panel's Preserve log checkbox.
 - `openPanel({ visitFirst: true })` loads the test page after DevTools is up but before the panel is shown (backfill test). DevTools must be loaded first or it records nothing.
+- `openPanel({ server })`: a `node:http` `Server` not yet listening (started on port 0, closed by `close()`; attach a `WebSocketServer` first if needed), or `{ origin }` of a server the caller runs (left alone). Default: the test server.
+- `openPanel({ size: { width, height } })` (store screenshots): DevTools docked at the bottom with its area exactly `size` CSS px.
+  - Presets `currentDockState: "bottom"` and `inspector-view.split-view-state` (horizontal size twice the height) in the profile's DevTools preferences, merged with `devtoolsTheme`'s `ui-theme`. Asking for exactly the height gives 1px less (the resizer).
+  - Launches with Playwright `viewport: null` (else the window is pinned to the default viewport) and `--window-size`.
+  - Chrome keeps a ~151px page strip above a bottom dock, and it rounds, so the harness measures `InspectorView` and grows the window with `Browser.setWindowBounds` until the area matches. The Browser domain needs `context.newCDPSession(page)`: the DevTools target's own socket refuses it.
+  - Without `size`, DevTools stays docked right at the default window size, as every test expects.
+- `screenshot(file)` captures the DevTools window clipped to the `InspectorView` rect, so a bottom dock's blank page strip is left out.
 - `e2e/fixtures/glyph.ttf`: made for this repo with fontTools `FontBuilder` (`.notdef` and a square `A`, 1000 upm, family `SnapQL Glyph`); a font the Body preview can load, since CI has no system fonts to borrow. Regenerate the same way if it ever needs to change.
 - Rows include the document and favicon requests, so assert with `arrayContaining` unless the panel was just cleared.
 
