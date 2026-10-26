@@ -8,7 +8,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - `Decoder`: `{ kind, decode(req): Decoded | undefined }`. One call covers detect, decode, summarize, so the body is parsed once.
 - `Decoded`: `{ title, detail?, data }`. `title` names the request (operation, method, path, element); `detail` qualifies it (operation type, method, counts). Kept apart so the panel never parses text. `data` is the parsed request (decoder-specific).
 - `BodyView`: `{ content, encoding }` (`encoding` `""` or `"base64"`), the shape of capture's `Body`, so decoders don't import capture.
-- `decodeResponse?(body, decoded, headers)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response `BodyView`, the stored `DecodeResult` and the response headers (`NameValue[]`: `{ name, value }`, defined here; capture re-exports it). Never run at capture: the panel calls it lazily (Response group in Summary, see `docs/panel.md`), so response bodies still load only on demand. Bodies over `BODY_LIMIT` (1 MB of content) are not decoded; a failed body fetch shows no Response group.
+- `decodeResponse?(body, decoded, headers)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response `BodyView`, the stored `DecodeResult` and the response headers (`NameValue[]`: `{ name, value }`, defined here; capture re-exports it). Never run at capture: the panel calls it lazily (Response group in the Response tab, see `docs/panel.md`), so response bodies still load only on demand. Bodies over `BODY_LIMIT` (1 MB of content) are not decoded; a failed body fetch shows no Response group.
 - `decodeMessage?(frame, frames)`: optional; titles one socket frame (`FrameView`: `{ dir, text, bytes? }`, which `Message` satisfies) as a `Decoded`, or `undefined` to fall back to the preview. `frames` is the entry's whole list, for protocols whose frames refer to earlier ones. Never run at capture: the panel calls it per rendered Messages row (and for the selected frame).
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
 - `RequestView.protocols?`: WebSockets only, the protocols requested at creation (from the probe), so socket decoders run at capture like the rest.
@@ -94,7 +94,7 @@ No capture, store, or UI change.
 
 ## Proto schemas (`src/decoders/proto-schema.ts`, `src/decoders/proto-types.ts`)
 
-- Lazy chunk: imported dynamically by the panel only (picker, typed Summary), never by capture. Decoding at capture stays schema-less: decoders are pure and run once, while schemas are panel state that can change after capture.
+- Lazy chunk: imported dynamically by the panel only (picker, typed Payload and Response), never by capture. Decoding at capture stays schema-less: decoders are pure and run once, while schemas are panel state that can change after capture.
 - `Schema` (JSON, stored): `messages` (full name to `{ fields: Record<number, Field> }`), `enums` (full name to number-to-name), `methods` (`/pkg.Service/Method` to `{ input, output }`). `Field`: `{ name, type, repeated?, map?: { key, value } }`; `type` is a scalar name, a full name, or `map`. Full names have no leading dot.
 - `parseProto(files)`: hand-written tokenizer (identifiers, numbers, strings, symbols; `//` and `/* */` comments) and recursive descent. proto3: `syntax`, `package`, `import` (`public`/`weak`), `message` (nested), `enum`, fields (`repeated`, `optional`, `map<K, V>`, `oneof` flattened), `service`/`rpc` (`stream` accepted, rpc bodies skipped). Skipped: `option`, `reserved`, `extensions`, field options `[...]` incl. aggregate `{}` values. Not handled: proto2 `required`, groups, extensions' fields.
 - Names resolve after every file is parsed: innermost scope first out to the root, a leading `.` is absolute. `google.protobuf.*` resolve by name without a file and decode schema-less. Imports must match a loaded file by name or path suffix (`protos/a.proto` matches `a.proto`), `google/protobuf/*` excepted; visibility across files isn't enforced.
@@ -104,7 +104,7 @@ No capture, store, or UI change.
 
 ## LLM (`src/decoders/llm.ts`)
 
-- Kind `llm`. Matches a JSON request body that is a plain object with `stream: true`, a string `model`, and a `messages` array or an `input` field. Host is ignored (proxies, gateways, self-hosted). Title = `model`, detail `stream`, `data` = the body. First in order, so an LLM body with a stray `query` field isn't GraphQL. Non-streaming requests don't match.
+- Kind `llm`. Matches a JSON request body that is a plain object with `stream: true`, a string `model`, and a `messages` array or an `input` field. Host is ignored (proxies, gateways, self-hosted). Title = `model`, detail `stream`, no `data` (Payload shows the body). First in order, so an LLM body with a stray `query` field isn't GraphQL. Non-streaming requests don't match.
 - `reassemble(events: StreamEvent[])`: `Reassembled` (`{ text, thinking?, toolCalls: { id?, name, arguments }[], stopReason?, usage? }`) or `undefined`. Each event's text is JSON-parsed (failures, e.g. `[DONE]`, skipped); the first payload of a known format picks the folder:
   - OpenAI Chat Completions (`choices` array): `choices[0].delta.content` concatenated; `delta.tool_calls` merged by `index` (`id`, `function.name`, `function.arguments` appended); `finish_reason`; `usage` (final `choices: []` chunk).
   - OpenAI Responses (`type` starts `response.`): `response.output_text.delta`; a `function_call` item from `response.output_item.added` (`call_id`, `name`) keyed by `output_index`, filled by `response.function_call_arguments.delta`; `response.completed`/`response.incomplete` give `status` (as stop reason) and `usage`.
@@ -132,7 +132,7 @@ No capture, store, or UI change.
 - Hand-written regex tokenizer (CDATA, comments, `<?...?>`, `<!...>`, tags, text), no `DOMParser`: decoders run in Vitest without a browser. Names are local names (prefix before `:` stripped).
 - `soap`: root `Envelope` (SOAP 1.1 or 1.2, any prefix); title = first element after `Body` (`Header` skipped), e.g. `GetPrice`. Empty `Body` means no match, so `xml` takes it.
 - `xml`: title = root local name (`ns:Order` gives `Order`); prolog, comments and DOCTYPE skipped.
-- `data`: `{ xml: prettyXml(text) }`.
+- No `data`: Payload shows the body pretty-printed with `prettyXml`, so a breakdown would only repeat it.
 - `prettyXml(text)`: two-space indent per depth; whitespace-only text dropped; an element whose only child is text or CDATA stays on one line, verbatim; tags, comments, PIs and CDATA never split. Unbalanced input (e.g. HTML void tags) or no elements: returned unchanged. Also used by the Response tab and Payload request bodies.
 
 ## Multipart (`src/decoders/multipart.ts`)
@@ -147,14 +147,14 @@ No capture, store, or UI change.
 ## Form (`src/decoders/form.ts`)
 
 - Kind `form`. Matches a request body whose base mime is `application/x-www-form-urlencoded`.
-- Title: URL path; detail: field count, `1 field` / `<n> fields`. No `data`: the Payload tab shows the fields (`requestPayload`, see `docs/panel.md`), so Summary would only repeat them.
+- Title: URL path; detail: field count, `1 field` / `<n> fields`. No `data`: the Payload tab shows the fields (`requestPayload`, see `docs/panel.md`), so a breakdown would only repeat them.
 - Shared helpers in `src/decoders/text.ts`: `baseMime(mime)` (before `;`, lowercased), `count(n, word)`. Used by form and multipart.
 
 ## JSON (`src/decoders/json.ts`)
 
 - Kind `json`, the catch-all for REST/JSON calls; last in order so specific JSON protocols win.
 - Matches when the request body parses as JSON, or the response `mimeType` is JSON (base type before `;` ends in `/json` or `+json`).
-- Title: URL path (`/api/users/1`); detail: method. No `data`: the body is the Payload tab's, so Summary would only repeat it. Protocol decoders (GraphQL, tRPC, JSON-RPC, SOAP, multipart) keep `data` because they reshape the body.
+- Title: URL path (`/api/users/1`); detail: method. No `data`: the body is the Payload tab's, so a breakdown would only repeat it. Protocol decoders (GraphQL, tRPC, JSON-RPC, multipart, binary) keep `data` because they reshape the body; Payload shows it above the body.
 - `parseJson(text)`: shared helper (also used by GraphQL), `undefined` on failure.
 
 ## GraphQL (`src/decoders/graphql.ts`)

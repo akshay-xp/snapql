@@ -23,7 +23,7 @@ describe("llm.decode", () => {
     expect(llm.decode(post(JSON.stringify(body)))).toEqual({
       title: "gpt-4o",
       detail: "stream",
-      data: body,
+      data: undefined,
     })
     expect(
       llm.decode(post('{"model":"x","input":"hi","stream":true}'))?.title,

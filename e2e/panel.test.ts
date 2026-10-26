@@ -306,7 +306,7 @@ test("selecting opens the detail pane; Esc and Clear close it", async () => {
   }
 })
 
-test("Summary shows the request and its decoded data", async () => {
+test("Summary shows the request, Payload its decoded data", async () => {
   const panel = await openPanel({ devtoolsTheme: "dark" })
   try {
     await panel.page.goto(panel.origin)
@@ -315,8 +315,6 @@ test("Summary shows the request and its decoded data", async () => {
 
     await panel.select(row)
 
-    const detail = await panel.detail()
-    expect(detail).toContain("query GetUser { user { id } }")
     expect(await panel.text('[role="tabpanel"] header')).toMatch(
       /^POST · graphql query GetUser Copy as http:\/\/127\.0\.0\.1:\d+\/graphql 200 OK \d+ ms · [\d.]+ k?B · HTTP\/1\.1 · 127\.0\.0\.1 · \d\d:\d\d:\d\d$/,
     )
@@ -326,6 +324,12 @@ test("Summary shows the request and its decoded data", async () => {
     expect(
       await panel.style('[role="tabpanel"] header [data-status]', "color"),
     ).toBe("rgb(129, 201, 149)")
+    expect(await panel.detail()).not.toContain("variables")
+
+    await panel.openTab("Payload")
+    const detail = await panel.detail()
+    expect(detail).toContain("Decoded · graphql")
+    expect(detail).toContain("query GetUser { user { id } }")
     expect(
       await panel.style(
         '[role="tabpanel"] section > [data-block]',
@@ -363,7 +367,8 @@ test("Summary shows the request and its decoded data", async () => {
     ).toBe("rgb(124, 172, 248)")
     await panel.click(caret)
     expect(await panel.detail()).toContain("{…} 1 key")
-    expect(await panel.detail()).not.toContain('id: "1"')
+    // Only the request body's tree still shows it.
+    expect((await panel.detail())?.match(/id: "1"/g)?.length).toBe(1)
   } finally {
     await panel.close()
   }
@@ -404,17 +409,16 @@ test("labels are sans and request data is monospace", async () => {
     for (const label of [
       "main",
       '[role="tab"]',
-      '[role="tabpanel"] section h2',
       "footer span",
       'input[aria-label="Filter requests"]',
     ])
       expect(await mono(label), label).toBe(false)
-    for (const data of [
-      '[role="option"]',
-      '[role="tabpanel"] header',
-      '[role="tabpanel"] pre',
-    ])
+    for (const data of ['[role="option"]', '[role="tabpanel"] header'])
       expect(await mono(data), data).toBe(true)
+
+    await panel.openTab("Payload")
+    expect(await mono('[role="tabpanel"] section h2')).toBe(false)
+    expect(await mono('[role="tabpanel"] pre')).toBe(true)
 
     await panel.openTab("Headers")
     expect(await mono('[role="tabpanel"] dd')).toBe(true)
@@ -889,9 +893,7 @@ test("M3 decoders summarize their requests", async () => {
       await panel.style('[role="tabpanel"] header [data-status]', "color"),
     ).toBe("rgb(179, 38, 30)")
 
-    // Summary leaves a plain form to Payload instead of repeating it.
     await panel.select("/api/form 2 fields form")
-    expect(await panel.pairs()).toBe("")
     await panel.openTab("Payload")
     const form = await panel.pairs()
     expect(form).toContain("a = 1")
@@ -899,7 +901,6 @@ test("M3 decoders summarize their requests", async () => {
     await panel.stubClipboard()
     await panel.click('button[aria-label="Copy Form data"]')
     expect(await panel.copied()).toBe("a = 1\nb = x y")
-    await panel.openTab("Summary")
 
     await panel.select("/api/upload 1 field, 1 file multipart")
     const upload = await panel.pairs()
@@ -913,7 +914,8 @@ test("M3 decoders summarize their requests", async () => {
     expect(await panel.pairs()).toContain("0 = a.txt (text/plain, ")
 
     await panel.select("Broken query graphql")
-    for (const text of ["Response", "2 errors"])
+    await panel.openTab("Response")
+    for (const text of ["Decoded · graphql · 2 errors"])
       await expect.poll(panel.detail).toContain(text)
     for (const pair of ["user.posts.0 = boom", "(root) = bad"])
       await expect.poll(panel.pairs).toContain(pair)
@@ -926,6 +928,7 @@ test("M3 decoders summarize their requests", async () => {
       await expect.poll(panel.detail).toContain(text)
 
     await panel.select("/api/me GET json")
+    await panel.openTab("Summary")
     const me = await panel.detail()
     for (const text of [
       "Tokens",
@@ -941,7 +944,7 @@ test("M3 decoders summarize their requests", async () => {
     await panel.openTab("Headers")
     expect(await panel.pairs()).toContain("greeting = hello%20world")
     expect(await panel.detail()).toContain("\nhello world")
-    await panel.openTab("Summary")
+    await panel.openTab("Payload")
 
     await panel.select("user.byId, post.list 2 procedures trpc")
     const batch = await panel.pairs()
@@ -1028,7 +1031,7 @@ test("selecting a stream message shows it with a copy button", async () => {
   }
 })
 
-test("LLM streams show the reassembled reply in Summary", async () => {
+test("LLM streams show the reassembled reply in Response", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/streams`)
@@ -1037,8 +1040,9 @@ test("LLM streams show the reassembled reply in Summary", async () => {
       .toEqual(expect.arrayContaining(["gpt-test stream llm"]))
     await panel.select("gpt-test stream llm")
     await panel.stubClipboard()
+    await panel.openTab("Response")
 
-    await expect.poll(panel.detail).toContain("Response · tool_calls")
+    await expect.poll(panel.detail).toContain("Decoded · llm · tool_calls")
     const detail = await panel.detail()
     expect(detail).toContain("reply")
     expect(detail).toContain("Hello")
@@ -1284,10 +1288,13 @@ test("protobuf requests and responses show their messages", async () => {
       .poll(panel.rows)
       .toEqual(expect.arrayContaining(["/api/proto POST protobuf"]))
     await panel.select("/api/proto POST protobuf")
-    await expect.poll(panel.detail).toContain("Response · 7 bytes")
+    await panel.openTab("Payload")
+    await expect.poll(panel.detail).toContain('"hi"')
+    expect(await panel.detail()).toContain("150")
+    await panel.openTab("Response")
+    await expect.poll(panel.detail).toContain("Decoded · protobuf · 7 bytes")
     const detail = await panel.detail()
-    for (const text of ["message", '"hi"', "150", '"abc"'])
-      expect(detail).toContain(text)
+    for (const text of ["message", '"abc"']) expect(detail).toContain(text)
   } finally {
     await panel.close()
   }
@@ -1304,12 +1311,15 @@ test("gRPC-web calls show method, messages and status", async () => {
       .toEqual(expect.arrayContaining([unary, stream]))
 
     await panel.select(unary)
-    await expect.poll(panel.detail).toContain("Response · OK")
-    const detail = await panel.detail()
-    for (const text of ['"hi"', "150", '"abc"']) expect(detail).toContain(text)
+    await panel.openTab("Payload")
+    await expect.poll(panel.detail).toContain('"hi"')
+    expect(await panel.detail()).toContain("150")
+    await panel.openTab("Response")
+    await expect.poll(panel.detail).toContain("Decoded · grpc-web · OK")
+    expect(await panel.detail()).toContain('"abc"')
 
     await panel.select(stream)
-    await expect.poll(panel.detail).toContain("Response · NOT_FOUND")
+    await expect.poll(panel.detail).toContain("Decoded · grpc-web · NOT_FOUND")
     const streamed = await panel.detail()
     for (const text of ["message 1", "message 2", "NOT_FOUND: gone"])
       expect(streamed).toContain(text)
@@ -1329,12 +1339,15 @@ test("msgpack and CBOR exchanges show their values", async () => {
       .toEqual(expect.arrayContaining([msgpack, cbor]))
 
     await panel.select(msgpack)
+    await panel.openTab("Payload")
+    await expect.poll(panel.detail).toContain("256")
+    await panel.openTab("Response")
     await expect.poll(panel.detail).toContain('"ok"')
-    expect(await panel.detail()).toContain("256")
 
     await panel.select(cbor)
-    await expect.poll(panel.detail).toContain("Response · 1 byte")
-    expect(await panel.detail()).toContain("2023-11-14T22:13:20.000Z")
+    await expect.poll(panel.detail).toContain("Decoded · cbor · 1 byte")
+    await panel.openTab("Payload")
+    await expect.poll(panel.detail).toContain("2023-11-14T22:13:20.000Z")
   } finally {
     await panel.close()
   }
@@ -1359,7 +1372,8 @@ test(".proto schemas name gRPC-web fields", async () => {
     const unary = "GetUser example.UserService grpc-web"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([unary]))
     await panel.select(unary)
-    await expect.poll(panel.detail).toContain("Response · OK")
+    await panel.openTab("Response")
+    await expect.poll(panel.detail).toContain("Decoded · grpc-web · OK")
     expect(await panel.detail()).not.toContain("scores")
 
     await panel.addSchema("user.proto", userProto)
@@ -1368,8 +1382,12 @@ test(".proto schemas name gRPC-web fields", async () => {
       .toContain("user.proto")
     await expect.poll(panel.detail).toContain("scores")
     const detail = await panel.detail()
-    for (const text of ["name", "id", "role", '"ADMIN"', "150", '"abc"'])
+    for (const text of ["name", "role", '"ADMIN"', '"abc"'])
       expect(detail).toContain(text)
+    await panel.openTab("Payload")
+    await expect.poll(panel.detail).toContain("id")
+    expect(await panel.detail()).toContain("150")
+    await panel.openTab("Response")
 
     await panel.select("ListUsers example.UserService grpc-web")
     await expect.poll(panel.detail).toContain("message 1")
@@ -1383,7 +1401,7 @@ test(".proto schemas name gRPC-web fields", async () => {
 
     await panel.click('button[aria-label="Remove user.proto"]')
     await panel.select(unary)
-    await expect.poll(panel.detail).toContain("Response · OK")
+    await expect.poll(panel.detail).toContain("Decoded · grpc-web · OK")
     expect(await panel.detail()).not.toContain("scores")
   } finally {
     await panel.close()
@@ -1526,6 +1544,7 @@ test("filter chips narrow by protocol and status", async () => {
       (await panel.storageItem("snapql.workspaces")) ?? "",
     )
     expect(Object.values(stored.workspaces[0].hide)).toEqual([
+      false,
       false,
       false,
       false,
@@ -1975,7 +1994,7 @@ test("Export HAR redacts secrets unless unchecked", async () => {
   }
 })
 
-test("Hide menu drops preflights, cached responses and static assets by default", async () => {
+test("Hide menu drops preflights, cached, service worker and static assets by default", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/noise`)
@@ -1992,19 +2011,19 @@ test("Hide menu drops preflights, cached responses and static assets by default"
     for (const row of noise) expect(await panel.rows()).not.toContain(row)
 
     const button = "[data-hide] > button"
-    expect(await panel.text(button)).toBe("Hide (3)")
+    expect(await panel.text(button)).toBe("Hide (4)")
     expect(await panel.attr(button, "aria-expanded")).toBe("false")
     expect(await panel.text("footer [data-count]")).toMatch(/^\d+ of \d+$/)
     await panel.click(button)
     expect(await panel.text("[data-hide-menu]")).toBe(
-      "Preflights Cached Static assets",
+      "Preflights Cached Service worker Static assets",
     )
     const toggle = (value: string) =>
       panel.click(`[data-hide-menu] input[value="${value}"]`)
 
     await toggle("preflights")
     expect(await panel.rows()).toContain("/api/preflight OPTIONS")
-    expect(await panel.text(button)).toBe("Hide (2)")
+    expect(await panel.text(button)).toBe("Hide (3)")
 
     await toggle("cached")
     expect(await panel.rows()).toContain("/api/etag GET")
@@ -2012,6 +2031,8 @@ test("Hide menu drops preflights, cached responses and static assets by default"
 
     await toggle("assets")
     expect(await panel.rows()).toEqual(expect.arrayContaining(noise))
+    expect(await panel.text(button)).toBe("Hide (1)")
+    await toggle("worker")
     expect(await panel.text(button)).toBe("Hide")
     expect(await panel.text("footer [data-count]")).toMatch(/^\d+ requests$/)
 
@@ -2063,7 +2084,7 @@ test("filters persist across panel reloads and sites", async () => {
     await panel.page.goto(`${panel.origin}/noise`)
     await expect.poll(panel.chips).toContain("other")
     expect(await panel.pressedChips()).toEqual(["graphql"])
-    expect(await panel.text("[data-hide] > button")).toBe("Hide (2)")
+    expect(await panel.text("[data-hide] > button")).toBe("Hide (3)")
 
     const stored = JSON.parse(
       (await panel.storageItem("snapql.workspaces")) ?? "",
@@ -2110,7 +2131,12 @@ test("Show all bypasses the workspace until reopened", async () => {
     expect(await panel.text("[data-hide] > button")).toBe("Hide")
     expect(await panel.text("[data-showing-all]")).toBe("Showing all")
     expect((await active()).filters.statuses).toEqual(["4xx"])
-    expect(Object.values((await active()).hide)).toEqual([true, true, true])
+    expect(Object.values((await active()).hide)).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ])
 
     await panel.click("[data-showing-all]")
     expect(await panel.count("[data-showing-all]")).toBe(0)
@@ -2124,7 +2150,7 @@ test("Show all bypasses the workspace until reopened", async () => {
     expect(await panel.pressedChips()).toEqual([])
     expect(await active()).toMatchObject({
       filters: { statuses: [] },
-      hide: { preflights: false, cached: true, assets: false },
+      hide: { preflights: false, cached: true, worker: false, assets: false },
     })
 
     await panel.toggleChip("2xx")
@@ -2230,6 +2256,28 @@ test("a long workspace name truncates and the empty state says how to switch", a
     await panel.click(button)
     await panel.click('[data-workspace-menu] [role="menuitemradio"]')
     expect(await panel.count("[data-showing-all]")).toBe(0)
+  } finally {
+    await panel.close()
+  }
+})
+
+test("Hide drops the copy a service worker answered", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/worker`)
+    const row = "/api/sw-data GET json"
+    const copies = async () => (await panel.rows()).filter((r) => r === row)
+    await expect.poll(copies).toHaveLength(1)
+
+    await panel.unhide("worker")
+    await expect.poll(copies).toHaveLength(2)
+    expect(await panel.text("[data-hide] > button")).toBe("Hide (3)")
+    const sources = []
+    for (const nth of [0, 1]) {
+      await panel.select(row, nth)
+      sources.push(await panel.text('[role="tabpanel"] header'))
+    }
+    expect(sources.filter((h) => h?.includes("service worker"))).toHaveLength(1)
   } finally {
     await panel.close()
   }

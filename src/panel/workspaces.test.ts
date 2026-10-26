@@ -41,6 +41,15 @@ describe("parseWorkspaces", () => {
     expect(parseWorkspaces(JSON.stringify(gql))).toEqual(gql)
   })
 
+  it("turns on Hide options added since a workspace was saved", () => {
+    const { worker: _, ...saved } = gql.workspaces[0].hide
+    const old = { ...gql, workspaces: [{ ...gql.workspaces[0], hide: saved }] }
+    expect(parseWorkspaces(JSON.stringify(old)).workspaces[0].hide).toEqual({
+      ...saved,
+      worker: true,
+    })
+  })
+
   it("points a dangling active id at the first workspace", () => {
     expect(
       parseWorkspaces(JSON.stringify({ ...gql, active: "gone" })).active,

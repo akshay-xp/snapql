@@ -16,7 +16,7 @@ function post(
 }
 
 describe("form", () => {
-  // No data: Payload shows the fields, so Summary would only repeat them.
+  // No data: Payload shows the fields, so a breakdown would only repeat them.
   it("counts fields, leaving the fields themselves to Payload", () => {
     expect(form.decode(post("a=1&b=x%20y"))).toEqual({
       title: "/login",

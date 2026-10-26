@@ -127,14 +127,27 @@ export function toggle(
   }
 }
 
-export type Hide = { preflights: boolean; cached: boolean; assets: boolean }
+export type Hide = {
+  preflights: boolean
+  cached: boolean
+  // Answered by a service worker: one that forwards to the network also lists
+  // its own fetch, so hiding these drops duplicates, not data.
+  worker: boolean
+  assets: boolean
+}
 
-export const noHide: Hide = { preflights: false, cached: false, assets: false }
+export const noHide: Hide = {
+  preflights: false,
+  cached: false,
+  worker: false,
+  assets: false,
+}
 
 // Noise is off until asked for: most sessions target the app's own calls.
 export const defaultHide: Hide = {
   preflights: true,
   cached: true,
+  worker: true,
   assets: true,
 }
 
@@ -158,4 +171,5 @@ export const isHidden = (
 ) =>
   (hide.preflights && entry.method === "OPTIONS") ||
   (hide.cached && (!!entry.exchange.fromCache || entry.status === 304)) ||
+  (hide.worker && !!entry.exchange.serviceWorker) ||
   (hide.assets && isAsset(entry.mimeType))

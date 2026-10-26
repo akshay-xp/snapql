@@ -34,7 +34,14 @@ export function parseWorkspaces(text: string | undefined): Stored {
   const active = workspaces.some((w) => w.id === stored.active)
     ? (stored.active as string)
     : workspaces[0].id
-  return { active, workspaces }
+  // Hide options added since a workspace was saved start at their default.
+  return {
+    active,
+    workspaces: workspaces.map((w) => ({
+      ...w,
+      hide: { ...defaultHide, ...w.hide },
+    })),
+  }
 }
 
 function nextName(names: string[]) {

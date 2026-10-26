@@ -45,6 +45,20 @@ describe("toFinishedRequest", () => {
     })
   })
 
+  it("reads API bodies at once, before Chrome drops them", async () => {
+    for (const type of ["xhr", "fetch"]) {
+      const req = Object.assign(chromeRequest(), { _resourceType: type })
+      const finished = toFinishedRequest(req)
+
+      expect(req.getContent).toHaveBeenCalledTimes(1)
+      await finished.fetchBody()
+      expect(req.getContent).toHaveBeenCalledTimes(1)
+    }
+    const image = Object.assign(chromeRequest(), { _resourceType: "image" })
+    toFinishedRequest(image)
+    expect(image.getContent).not.toHaveBeenCalled()
+  })
+
   it("reads a missing body as empty text", async () => {
     const req = chromeRequest()
     req.getContent.mockImplementation((cb) => cb(null, ""))
@@ -61,6 +75,17 @@ describe("toFinishedRequest", () => {
     expect(toFinishedRequest(cached).exchange.fromCache).toBe("disk")
     expect(
       toFinishedRequest(chromeRequest()).exchange.fromCache,
+    ).toBeUndefined()
+  })
+
+  it("records when a service worker answered", () => {
+    const answered = Object.assign(chromeRequest(), {
+      response: { status: 200, _fetchedViaServiceWorker: true },
+    })
+
+    expect(toFinishedRequest(answered).exchange.serviceWorker).toBe(true)
+    expect(
+      toFinishedRequest(chromeRequest()).exchange.serviceWorker,
     ).toBeUndefined()
   })
 

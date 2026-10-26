@@ -16,7 +16,8 @@ export const llm: Decoder = {
     if (!isObject(body) || body.stream !== true) return
     if (typeof body.model !== "string") return
     if (!Array.isArray(body.messages) && !("input" in body)) return
-    return { title: body.model, detail: "stream", data: body }
+    // No data: Payload shows the body, so a breakdown would only repeat it.
+    return { title: body.model, detail: "stream", data: undefined }
   },
   decodeResponse(body) {
     const reply = reassemble(

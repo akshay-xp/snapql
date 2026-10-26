@@ -13,6 +13,18 @@ export function toFinishedRequest(
   req: chrome.devtools.network.Request,
 ): FinishedRequest {
   const postData = req.request.postData
+  // Callback form: the promise overload is not guaranteed in Firefox's chrome.* namespace.
+  // Content is null, despite the typings, for responses without a body (204, preflights).
+  const content = () =>
+    new Promise<Body>((resolve) =>
+      req.getContent((content, encoding) =>
+        resolve({ content: content ?? "", encoding }),
+      ),
+    )
+  // Chrome drops older bodies as a page loads more, so API bodies are read as
+  // they finish; the rest (scripts, images) load only when opened.
+  const type = (req as { _resourceType?: string })._resourceType
+  const early = type === "xhr" || type === "fetch" ? content() : undefined
   return {
     method: req.request.method,
     url: req.request.url,
@@ -39,6 +51,8 @@ export function toFinishedRequest(
       },
       // Chrome's HAR extension field, missing from the typings and from Firefox.
       fromCache: (req as { _fromCache?: "memory" | "disk" })._fromCache,
+      ...((req.response as { _fetchedViaServiceWorker?: boolean })
+        ._fetchedViaServiceWorker && { serviceWorker: true as const }),
     },
     requestBody:
       postData?.text === undefined
@@ -46,14 +60,7 @@ export function toFinishedRequest(
         : { mimeType: postData.mimeType, text: postData.text },
     startedDateTime: req.startedDateTime,
     time: req.time,
-    // Callback form: the promise overload is not guaranteed in Firefox's chrome.* namespace.
-    // Content is null, despite the typings, for responses without a body (204, preflights).
-    fetchBody: () =>
-      new Promise<Body>((resolve) =>
-        req.getContent((content, encoding) =>
-          resolve({ content: content ?? "", encoding }),
-        ),
-      ),
+    fetchBody: () => early ?? content(),
   }
 }
 

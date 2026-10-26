@@ -111,7 +111,7 @@ describe("summaryHeading", () => {
     expect(socket(1006)).toMatchObject({ status: "closed 1006", ok: false })
   })
 
-  it("adds size, protocol, remote address and cache source when known", () => {
+  it("adds size, protocol, remote address and response source when known", () => {
     const full = summaryHeading(
       entry({
         exchange: {
@@ -127,12 +127,16 @@ describe("summaryHeading", () => {
       size: "1.2 kB",
       protocol: "h2",
       remote: "10.0.0.1",
-      cache: "disk cache",
+      source: "disk cache",
     })
     const empty = summaryHeading(
       entry({ exchange: { ...emptyExchange, size: 0 } }),
     )
-    for (const key of ["size", "protocol", "remote", "cache"])
+    for (const key of ["size", "protocol", "remote", "source"])
       expect(empty).not.toHaveProperty(key)
+    const worker = summaryHeading(
+      entry({ exchange: { ...emptyExchange, serviceWorker: true } }),
+    )
+    expect(worker.source).toBe("service worker")
   })
 })

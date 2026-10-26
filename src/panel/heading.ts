@@ -15,7 +15,7 @@ export type Heading = {
   size?: string
   protocol?: string
   remote?: string
-  cache?: string
+  source?: string
   clock: string
 }
 
@@ -123,7 +123,9 @@ export function summaryHeading(
     ...(exchange.size > 0 && { size: byteLabel(exchange.size) }),
     ...(exchange.httpVersion && { protocol: exchange.httpVersion }),
     ...(exchange.remoteAddress && { remote: exchange.remoteAddress }),
-    ...(exchange.fromCache && { cache: `${exchange.fromCache} cache` }),
+    ...(exchange.fromCache
+      ? { source: `${exchange.fromCache} cache` }
+      : exchange.serviceWorker && { source: "service worker" }),
     clock: [started.getHours(), started.getMinutes(), started.getSeconds()]
       .map(pad)
       .join(":"),

@@ -47,7 +47,7 @@ describe("xml", () => {
       '<?xml version="1.0"?><!-- c --><!DOCTYPE r><ns:Order id="1"><Item/></ns:Order>'
     expect(xml.decode(post(body))).toEqual({
       title: "Order",
-      data: { xml: prettyXml(body) },
+      data: undefined,
     })
   })
 
@@ -69,7 +69,7 @@ describe("soap", () => {
   it("names a SOAP 1.1 call by its Body operation, skipping Header", () => {
     expect(soap.decode(post(soap11, "text/xml"))).toEqual({
       title: "GetPrice",
-      data: { xml: prettyXml(soap11) },
+      data: undefined,
     })
   })
 
