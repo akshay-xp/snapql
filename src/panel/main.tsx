@@ -17,6 +17,7 @@ import { decoders } from "../decoders"
 import { App } from "./app"
 import { createSchemas } from "./schemas"
 import { defaultTheme, type Theme, themeVars } from "./themes"
+import { createWorkspaces, localWorkspaces } from "./workspaces"
 import "./index.css"
 
 function applyTheme(theme: Theme) {
@@ -61,6 +62,7 @@ let storage: Storage | undefined
 try {
   storage = localStorage
 } catch {}
+const workspaces = createWorkspaces(localWorkspaces(storage))
 const schemas = createSchemas(storage, (files) =>
   import("../decoders/proto-schema").then((m) => m.parseProto(files)),
 )
@@ -73,6 +75,7 @@ render(
       setPreserveLog={setPreserveLog}
       onReloadCapture={async () => reloadWithScript(await script)}
       schemas={schemas}
+      workspaces={workspaces}
     />
   ),
   document.getElementById("root") as HTMLElement,

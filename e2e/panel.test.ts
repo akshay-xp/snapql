@@ -1872,3 +1872,30 @@ test("Hide menu closes on Escape or a click outside", async () => {
     await panel.close()
   }
 })
+
+test("filters persist across panel reloads and sites", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(panel.chips).toContain("graphql")
+    await panel.toggleChip("graphql")
+    await panel.unhide("assets")
+
+    await panel.reloadPanel()
+    await panel.page.goto(`${panel.origin}/noise`)
+    await expect.poll(panel.chips).toContain("other")
+    expect(await panel.pressedChips()).toEqual(["graphql"])
+    expect(await panel.text("[data-hide] > button")).toBe("Hide (2)")
+
+    const stored = JSON.parse(
+      (await panel.storageItem("snapql.workspaces")) ?? "",
+    )
+    const active = stored.workspaces.find(
+      (w: { id: string }) => w.id === stored.active,
+    )
+    expect(active.filters.kinds).toEqual(["graphql"])
+    expect(active.hide.assets).toBe(false)
+  } finally {
+    await panel.close()
+  }
+})

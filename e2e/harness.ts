@@ -412,6 +412,9 @@ export type Panel = {
     key?: string,
   ): Promise<void>
   focused(selector: string): Promise<boolean>
+  // Reloads the panel page, as reopening DevTools would; captured entries are lost.
+  reloadPanel(): Promise<void>
+  storageItem(key: string): Promise<string | null>
   // Unchecks Hide options (all hidden by default) so their rows show.
   unhide(...values: ("preflights" | "cached" | "assets")[]): Promise<void>
   // Left edge of each match, in document order.
@@ -505,14 +508,17 @@ export async function openPanel(
     await InspectorView.InspectorView.instance().showPanel(${JSON.stringify(panelId)})
   })()`)
   const panelFrame = await connect(port, (t) => t.url.endsWith("/panel.html"))
-  await poll(() =>
-    panelFrame
-      .evaluate<boolean>(`!!document.querySelector("main")`)
-      .then((ok) => ok || undefined),
-  )
-  await panelFrame.evaluate<void>(
-    `window.__errors = []; window.addEventListener("error", (e) => window.__errors.push(e.message))`,
-  )
+  const booted = async () => {
+    await poll(() =>
+      panelFrame
+        .evaluate<boolean>(`!!document.querySelector("main")`)
+        .then((ok) => ok || undefined),
+    )
+    await panelFrame.evaluate<void>(
+      `window.__errors = []; window.addEventListener("error", (e) => window.__errors.push(e.message))`,
+    )
+  }
+  await booted()
 
   return {
     dock: (side: "right" | "bottom") =>
@@ -565,6 +571,14 @@ export async function openPanel(
           document.querySelector(\`[data-hide-menu] input[value="\${value}"]\`).click()
         document.querySelector("[data-hide] > button").click()
       })()`),
+    reloadPanel: async () => {
+      await panelFrame.evaluate<void>("location.reload()")
+      await booted()
+    },
+    storageItem: (key) =>
+      panelFrame.evaluate<string | null>(
+        `localStorage.getItem(${JSON.stringify(key)})`,
+      ),
     focused: (selector) =>
       panelFrame.evaluate<boolean>(
         `document.activeElement === document.querySelector(${JSON.stringify(selector)})`,
