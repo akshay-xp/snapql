@@ -8,8 +8,11 @@ const GECKO_ID = "snapql@akshay-xp"
 
 const base = {
   manifest_version: 3,
-  name: "SnapQL",
-  description: "Inspect GraphQL requests and responses in DevTools",
+  // The Web Store's title (max 75) and summary (max 132), weighted most in its
+  // search. The DevTools tab title is set separately in src/devtools.ts.
+  name: "SnapQL: GraphQL, REST, gRPC & WebSocket Inspector",
+  description:
+    "Human-readable network traffic in DevTools: GraphQL, REST, gRPC-web, protobuf, WebSocket, SSE and LLM streams, decoded.",
   devtools_page: "devtools.html",
   icons: { "128": "128.png" },
 }
