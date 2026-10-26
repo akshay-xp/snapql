@@ -111,6 +111,13 @@ export type Hide = { preflights: boolean; cached: boolean; assets: boolean }
 
 export const noHide: Hide = { preflights: false, cached: false, assets: false }
 
+// Noise is off until asked for: most sessions target the app's own calls.
+export const defaultHide: Hide = {
+  preflights: true,
+  cached: true,
+  assets: true,
+}
+
 const ASSET_PREFIXES = ["image/", "font/", "video/", "audio/"]
 const ASSET_MIMES = new Set([
   "text/css",

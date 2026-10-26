@@ -412,6 +412,8 @@ export type Panel = {
     key?: string,
   ): Promise<void>
   focused(selector: string): Promise<boolean>
+  // Unchecks Hide options (all hidden by default) so their rows show.
+  unhide(...values: ("preflights" | "cached" | "assets")[]): Promise<void>
   // Left edge of each match, in document order.
   lefts(selector: string): Promise<number[]>
   // Uncaught errors in the panel since it opened.
@@ -555,6 +557,13 @@ export async function openPanel(
       panelFrame.evaluate<void>(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)})
         el.dispatchEvent(${type === "keydown" ? `new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true })` : `new PointerEvent("pointerdown", { bubbles: true })`})
+      })()`),
+    unhide: (...values) =>
+      panelFrame.evaluate<void>(`(() => {
+        document.querySelector("[data-hide] > button").click()
+        for (const value of ${JSON.stringify(values)})
+          document.querySelector(\`[data-hide-menu] input[value="\${value}"]\`).click()
+        document.querySelector("[data-hide] > button").click()
       })()`),
     focused: (selector) =>
       panelFrame.evaluate<boolean>(

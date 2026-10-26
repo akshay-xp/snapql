@@ -549,6 +549,8 @@ test("a response without a body opens cleanly in Body and Raw", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/empty`)
+    await expect.poll(panel.rows).toContain("/empty GET")
+    await panel.unhide("preflights")
     const row = "/api/empty OPTIONS"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
 
@@ -1319,6 +1321,8 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/media`)
+    await expect.poll(panel.rows).toContain("/media GET")
+    await panel.unhide("assets")
     const rows = ["png", "svg", "font", "badfont", "bin"].map(
       (r) => `/api/${r} GET`,
     )
@@ -1793,50 +1797,49 @@ test("Export HAR redacts secrets unless unchecked", async () => {
   }
 })
 
-test("Hide menu drops preflights, cached responses and static assets", async () => {
+test("Hide menu drops preflights, cached responses and static assets by default", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/noise`)
-    const all = [
+    const noise = [
       "/api/preflight OPTIONS",
       "/api/etag GET",
       "/static/dot.png GET",
       "/static/site.css GET",
-      "/api/one GET",
     ]
-    await expect.poll(panel.rows).toEqual(expect.arrayContaining(all))
     const cached = async () =>
       (await panel.rows()).filter((r) => r === "/api/cached GET").length
-    await expect.poll(cached).toBe(2)
+    await expect.poll(panel.rows).toContain("/api/one GET")
+    await expect.poll(cached).toBe(1)
+    for (const row of noise) expect(await panel.rows()).not.toContain(row)
 
     const button = "[data-hide] > button"
-    expect(await panel.text(button)).toBe("Hide")
+    expect(await panel.text(button)).toBe("Hide (3)")
     expect(await panel.attr(button, "aria-expanded")).toBe("false")
+    expect(await panel.text("footer [data-count]")).toMatch(/^\d+ of \d+$/)
     await panel.click(button)
     expect(await panel.text("[data-hide-menu]")).toBe(
       "Preflights Cached Static assets",
     )
-    const check = (value: string) =>
+    const toggle = (value: string) =>
       panel.click(`[data-hide-menu] input[value="${value}"]`)
 
-    await check("preflights")
-    expect(await panel.rows()).not.toContain("/api/preflight OPTIONS")
-    expect(await panel.text(button)).toBe("Hide (1)")
-    expect(await panel.text("footer [data-count]")).toMatch(/^\d+ of \d+$/)
+    await toggle("preflights")
+    expect(await panel.rows()).toContain("/api/preflight OPTIONS")
+    expect(await panel.text(button)).toBe("Hide (2)")
 
-    await check("cached")
-    expect(await panel.rows()).not.toContain("/api/etag GET")
-    expect(await cached()).toBe(1)
+    await toggle("cached")
+    expect(await panel.rows()).toContain("/api/etag GET")
+    expect(await cached()).toBe(2)
 
-    await check("assets")
-    expect(await panel.rows()).not.toContain("/static/dot.png GET")
-    expect(await panel.rows()).not.toContain("/static/site.css GET")
-    expect(await panel.rows()).toContain("/api/one GET")
-    expect(await panel.text(button)).toBe("Hide (3)")
-
-    for (const value of ["preflights", "cached", "assets"]) await check(value)
-    expect(await panel.rows()).toEqual(expect.arrayContaining(all))
+    await toggle("assets")
+    expect(await panel.rows()).toEqual(expect.arrayContaining(noise))
+    expect(await panel.text(button)).toBe("Hide")
     expect(await panel.text("footer [data-count]")).toMatch(/^\d+ requests$/)
+
+    await toggle("preflights")
+    expect(await panel.rows()).not.toContain("/api/preflight OPTIONS")
+    expect(await panel.rows()).toContain("/api/one GET")
   } finally {
     await panel.close()
   }
