@@ -1628,6 +1628,7 @@ test("Summary titles a plain request by its full URL and wraps it", async () => 
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/deep`)
+    await expect.poll(panel.rows).toContain(`${longQuery} GET`)
     await panel.select(`${longQuery} GET`)
     const header = '[role="tabpanel"] header'
     expect(await panel.text(`${header} p`)).toBe(
@@ -1661,6 +1662,7 @@ test("a long URL clips its query, then its leading path, keeping the last segmen
 
     // A long query clips before the path does.
     await panel.search("")
+    await expect.poll(panel.rows).toContain(`${longQuery} GET`)
     await panel.select(`${longQuery} GET`)
     expect(await panel.overflowing(`${title} [data-end]`)).toHaveLength(1)
     expect(
