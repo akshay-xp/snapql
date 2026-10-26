@@ -6,9 +6,10 @@ describe("manifestFor", () => {
   it("builds the Chrome manifest", () => {
     expect(manifestFor("chrome", "0.2.0")).toStrictEqual({
       manifest_version: 3,
-      name: "SnapQL",
+      name: "SnapQL: GraphQL, REST, gRPC & WebSocket Inspector",
       version: "0.2.0",
-      description: "Inspect GraphQL requests and responses in DevTools",
+      description:
+        "Human-readable network traffic in DevTools: GraphQL, REST, gRPC-web, protobuf, WebSocket, SSE and LLM streams, decoded.",
       devtools_page: "devtools.html",
       icons: { "128": "128.png" },
     })
@@ -29,6 +30,17 @@ describe("manifestFor", () => {
     })
     expect(chrome).not.toHaveProperty("browser_specific_settings")
   })
+})
+
+describe("store listing limits", () => {
+  it.each(["chrome", "firefox"] as const)(
+    "keeps the %s title and summary within the store's limits",
+    (target) => {
+      const { name, description } = manifestFor(target, "1.0.0")
+      expect(name.length).toBeLessThanOrEqual(75)
+      expect(description.length).toBeLessThanOrEqual(132)
+    },
+  )
 })
 
 describe("probePlugin", () => {
