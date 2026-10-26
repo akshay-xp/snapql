@@ -55,6 +55,15 @@ describe("toFinishedRequest", () => {
     })
   })
 
+  it("records when Chrome served the response from cache", () => {
+    const cached = Object.assign(chromeRequest(), { _fromCache: "disk" })
+
+    expect(toFinishedRequest(cached).exchange.fromCache).toBe("disk")
+    expect(
+      toFinishedRequest(chromeRequest()).exchange.fromCache,
+    ).toBeUndefined()
+  })
+
   it("passes the request body through", () => {
     const postData = { mimeType: "application/json", text: "{}" }
 

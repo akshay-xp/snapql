@@ -31,6 +31,7 @@ export type Exchange = {
   statusText: string
   size: number
   timings: Timings
+  fromCache?: "memory" | "disk"
 }
 
 export const emptyExchange: Exchange = {
