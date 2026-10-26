@@ -255,6 +255,22 @@ export const bodiesToggle = 'button[title^="Also match text"]'
 export const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAEElEQVR4nGP4z8AAQQxwFgBB0gX7h/C5SAAAAABJRU5ErkJggg=="
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="5"/>'
+// Noise the Hide menu drops: a preflight, a cache hit, a 304 and static
+// assets, around one real call.
+const noisePage = `<!doctype html>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/site.css">
+<img src="/static/dot.png">
+<script>
+  ;(async () => {
+    await fetch("/api/preflight", { method: "OPTIONS" })
+    await fetch("/api/cached")
+    await fetch("/api/cached")
+    await fetch("/api/etag", { headers: { "if-none-match": '"v1"' } })
+    await fetch("/api/one")
+  })()
+</script>`
+
 const media: Record<string, [string, () => Promise<Buffer> | Buffer]> = {
   "/api/png": ["image/png", () => Buffer.from(PNG_BASE64, "base64")],
   "/api/svg": ["image/svg+xml", () => Buffer.from(SVG)],
@@ -263,6 +279,8 @@ const media: Record<string, [string, () => Promise<Buffer> | Buffer]> = {
     () => readFile(new URL("./fixtures/glyph.ttf", import.meta.url)),
   ],
   "/api/badfont": ["font/woff2", () => Buffer.from([0, 1, 2, 3])],
+  "/static/dot.png": ["image/png", () => Buffer.from(PNG_BASE64, "base64")],
+  "/static/site.css": ["text/css", () => Buffer.from("body {}")],
   "/api/bin": [
     "application/octet-stream",
     () => Buffer.from([0, 0xff, 0x10, 0x41]),
@@ -907,6 +925,17 @@ async function startServer(): Promise<Server> {
           "content-type": "application/json",
         })
         .end('{"data":null}')
+    if (req.url === "/noise")
+      return res.writeHead(200, { "content-type": "text/html" }).end(noisePage)
+    if (req.url === "/api/preflight") return res.writeHead(204).end()
+    if (req.url === "/api/cached")
+      return res
+        .writeHead(200, { "cache-control": "max-age=600" })
+        .end("cached")
+    if (req.url === "/api/etag")
+      return req.headers["if-none-match"] === '"v1"'
+        ? res.writeHead(304).end()
+        : res.writeHead(200, { etag: '"v1"' }).end("etag")
     if (req.url === "/media")
       return res.writeHead(200, { "content-type": "text/html" }).end(mediaPage)
     const asset = media[req.url ?? ""]

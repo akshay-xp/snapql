@@ -18,8 +18,10 @@ import {
   bodyHit,
   chipsFor,
   type Filters,
+  isHidden,
   matchesFilters,
   matchesQuery,
+  noHide,
   prune,
   toggle,
 } from "./filter"
@@ -48,11 +50,15 @@ export function App(props: {
   const [query, setQuery] = createSignal("")
   const noFilters: Filters = { kinds: [], statuses: [] }
   const [filters, setFilters] = createSignal(noFilters)
+  const [hide, setHide] = createSignal(noHide)
   const chips = createMemo(() => chipsFor(entries()))
   // Pruned on read: a chip whose entries are gone stops filtering with it.
   const active = createMemo(() => prune(filters(), chips()))
   const filtered = () =>
-    !!query() || !!active().kinds.length || !!active().statuses.length
+    !!query() ||
+    !!active().kinds.length ||
+    !!active().statuses.length ||
+    Object.values(hide()).some(Boolean)
   const clearFilters = () => {
     setQuery("")
     setFilters(noFilters)
@@ -70,7 +76,8 @@ export function App(props: {
     const shown = entries().filter(
       (e) =>
         matchesQuery(e, query(), searchBodies() ? bodyText(e) : undefined) &&
-        matchesFilters(e, active()),
+        matchesFilters(e, active()) &&
+        !isHidden(e, hide()),
     )
     return newestFirst() ? shown.reverse() : shown
   })
@@ -149,6 +156,8 @@ export function App(props: {
               onToggle={(group, value) =>
                 setFilters(toggle(active(), group, value))
               }
+              hide={hide()}
+              onHide={setHide}
             />
           </Show>
           <Show
