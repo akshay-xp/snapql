@@ -90,6 +90,14 @@ export function createWorkspaces(storage: WorkspaceStorage) {
       })
       return id
     },
+    rename: (name: string) => {
+      const trimmed = name.trim()
+      if (trimmed) update({ name: trimmed })
+    },
+    remove: () => {
+      const rest = stored().workspaces.filter((w) => w.id !== stored().active)
+      if (rest.length) commit({ active: rest[0].id, workspaces: rest })
+    },
     name: () => active().name,
     filters: () => active().filters,
     hide: () => active().hide,
