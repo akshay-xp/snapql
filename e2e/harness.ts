@@ -508,6 +508,9 @@ export async function openPanel(
     // DevTools area in CSS px, docked at the bottom (store screenshots).
     // Default: the window's default size, docked right.
     size?: { width: number; height: number }
+    // Renders the whole browser at this pixel density, so screenshots are
+    // `size` times this and sharp (CDP's clip.scale only stretches). Default 1.
+    deviceScaleFactor?: number
   } = {},
 ): Promise<Panel> {
   const server =
@@ -557,6 +560,9 @@ export async function openPanel(
       "--auto-open-devtools-for-tabs",
       "--remote-debugging-port=0",
       ...(size ? [`--window-size=${size.width},${size.height}`] : []),
+      ...(options.deviceScaleFactor
+        ? [`--force-device-scale-factor=${options.deviceScaleFactor}`]
+        : []),
     ],
   })
   const page = context.pages()[0] ?? (await context.newPage())
@@ -618,13 +624,17 @@ export async function openPanel(
     const cdp = await context.newCDPSession(page)
     await poll(async () => {
       const rect = await inspectorRect()
-      if (rect.width === size.width && rect.height === size.height) return true
+      // With a deviceScaleFactor the rect moves in fractions of a px, so it
+      // may only land within 1px over; screenshot() clips to `size` exactly.
+      const fits = (got: number, want: number) => got >= want && got < want + 1
+      if (fits(rect.width, size.width) && fits(rect.height, size.height))
+        return true
       const { windowId, bounds } = await cdp.send("Browser.getWindowForTarget")
       await cdp.send("Browser.setWindowBounds", {
         windowId,
         bounds: {
-          width: (bounds.width ?? 0) + size.width - rect.width,
-          height: (bounds.height ?? 0) + size.height - rect.height,
+          width: (bounds.width ?? 0) + Math.ceil(size.width - rect.width),
+          height: (bounds.height ?? 0) + Math.ceil(size.height - rect.height),
         },
       })
     })
@@ -649,10 +659,23 @@ export async function openPanel(
         return scrolled
       })()`),
     screenshot: async (file: string) => {
-      // Only DevTools: the page strip above a bottom dock is blank.
+      // Only DevTools: the page strip above a bottom dock is blank. The clip
+      // starts on a whole device pixel; a half-pixel offset blurs the capture.
+      const rect = await inspectorRect()
+      const dpr = options.deviceScaleFactor ?? 1
+      const snap = (v: number) => Math.ceil(v * dpr - 0.01) / dpr
       const { data } = await devtools.send<{ data: string }>(
         "Page.captureScreenshot",
-        { format: "png", clip: { ...(await inspectorRect()), scale: 1 } },
+        {
+          format: "png",
+          clip: {
+            x: snap(rect.x),
+            y: snap(rect.y),
+            width: size?.width ?? rect.width,
+            height: size?.height ?? rect.height,
+            scale: 1,
+          },
+        },
       )
       await writeFile(file, Buffer.from(data, "base64"))
     },

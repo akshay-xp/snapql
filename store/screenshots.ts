@@ -8,27 +8,36 @@ import { CATALOG_PROTO, demoServer } from "./demo"
 // `pnpm screenshots`; each shot waits for its content, so a failed render
 // fails the run instead of writing a blank image.
 
-const out = resolve(import.meta.dirname, "screenshots")
 const size = { width: 1280, height: 800 }
+// Each shot twice: 1x for the README, and rendered at the density
+// `store/listing-images.ts` shows it, so its crops are drawn 1:1; any
+// resampling blurs the panel text.
+const runs = [
+  { dir: resolve(import.meta.dirname, "screenshots"), deviceScaleFactor: 1 },
+  { dir: resolve(import.meta.dirname, "captures"), deviceScaleFactor: 1.25 },
+]
 
 async function shoot(name: string, setup: (panel: Panel) => Promise<void>) {
-  await mkdir(out, { recursive: true })
-  const panel = await openPanel({
-    server: demoServer(),
-    size,
-    devtoolsTheme: "dark",
-  })
-  try {
-    await setup(panel)
-    const file = join(out, `${name}.png`)
-    await panel.screenshot(file)
-    const png = await readFile(file)
-    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([
-      size.width,
-      size.height,
-    ])
-  } finally {
-    await panel.close()
+  for (const { dir, deviceScaleFactor } of runs) {
+    await mkdir(dir, { recursive: true })
+    const panel = await openPanel({
+      server: demoServer(),
+      size,
+      devtoolsTheme: "dark",
+      deviceScaleFactor,
+    })
+    try {
+      await setup(panel)
+      const file = join(dir, `${name}.png`)
+      await panel.screenshot(file)
+      const png = await readFile(file)
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([
+        size.width * deviceScaleFactor,
+        size.height * deviceScaleFactor,
+      ])
+    } finally {
+      await panel.close()
+    }
   }
 }
 

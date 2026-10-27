@@ -35,4 +35,5 @@ GitHub milestones M0 (foundation) to M7 (1.0 release).
 
 ## Store
 
-- `store/`: Chrome Web Store material, never bundled: `listing.txt` (long description), `screenshots/` (scripted shots), `demo.ts` and `screenshots.ts` (how they are made). See `docs/build.md`.
+- `store/`: Chrome Web Store material, never bundled: `listing.txt` (long description), `privacy.txt` (privacy practices answers), `test-instructions.txt` (for store reviewers), `screenshots/` and `captures/` (scripted shots, 1x and 1.25x), `listing-images/` (the captioned images the store shows), `promo/` (small and marquee tiles), `demo.ts`, `screenshots.ts`, `listing-images.ts`, `listing-image.html` and `promo-tile.html` (how they are made). See `docs/build.md`.
+- `design/` (gitignored, local only): visual references, social card direction and the icon's SVG sources (`design/icon/`), from which `public/128.png` is exported.

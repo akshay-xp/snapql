@@ -48,9 +48,10 @@
 - `openPanel({ size: { width, height } })` (store screenshots): DevTools docked at the bottom with its area exactly `size` CSS px.
   - Presets `currentDockState: "bottom"` and `inspector-view.split-view-state` (horizontal size twice the height) in the profile's DevTools preferences, merged with `devtoolsTheme`'s `ui-theme`. Asking for exactly the height gives 1px less (the resizer).
   - Launches with Playwright `viewport: null` (else the window is pinned to the default viewport) and `--window-size`.
-  - Chrome keeps a ~151px page strip above a bottom dock, and it rounds, so the harness measures `InspectorView` and grows the window with `Browser.setWindowBounds` until the area matches. The Browser domain needs `context.newCDPSession(page)`: the DevTools target's own socket refuses it.
+  - Chrome keeps a ~151px page strip above a bottom dock, and it rounds, so the harness measures `InspectorView` and grows the window with `Browser.setWindowBounds` (integer bounds, deficits rounded up) until the area is `size` to under 1px over. The Browser domain needs `context.newCDPSession(page)`: the DevTools target's own socket refuses it.
+  - `deviceScaleFactor` (listing captures): adds `--force-device-scale-factor`, so DevTools renders natively at that density. The rect then moves in fractions (one window step is 0.8 CSS px at 1.25), which is why the loop accepts under 1px over instead of exact.
   - Without `size`, DevTools stays docked right at the default window size, as every test expects.
-- `screenshot(file)` captures the DevTools window clipped to the `InspectorView` rect, so a bottom dock's blank page strip is left out.
+- `screenshot(file)` captures the DevTools window clipped to the `InspectorView` rect, so a bottom dock's blank page strip is left out. With `size` the clip is exactly `size` and its origin is snapped to a whole device pixel (a half-pixel origin blurs the capture), so the image is `size × deviceScaleFactor`.
 - `e2e/fixtures/glyph.ttf`: made for this repo with fontTools `FontBuilder` (`.notdef` and a square `A`, 1000 upm, family `SnapQL Glyph`); a font the Body preview can load, since CI has no system fonts to borrow. Regenerate the same way if it ever needs to change.
 - Rows include the document and favicon requests, so assert with `arrayContaining` unless the panel was just cleared.
 
@@ -64,19 +65,27 @@
   4. `gh release create v<version> release/snapql-chrome-<version>.zip --title v<version> --notes "<what changed>"`.
   5. Chrome Web Store developer dashboard, SnapQL item:
      - Package: upload the zip.
-     - Store listing: paste `store/listing.txt` as the description; replace the screenshots with `store/screenshots/*.png` in file order. Title and summary come from the manifest (`name`, `description`), not the dashboard.
-     - Privacy: unchanged (no permissions, no data collected).
+     - Store listing: paste `store/listing.txt` as the description; replace the screenshots with `store/listing-images/*.png` in file order; promo tiles: `store/promo/small.png` (440x280) and `store/promo/marquee.png` (1400x560). Title and summary come from the manifest (`name`, `description`), not the dashboard.
+     - Test instructions (Distribution / reviewer notes): paste `store/test-instructions.txt` (field limit 500 chars). Reviewers run no scripts: the example, countries.trevorblades.com (a public GraphiQL page), sends an introspection query on load, so a reload shows a decoded GraphQL row. Recheck it before each submission.
+     - Privacy practices: paste the sections of `store/privacy.txt` (single purpose, permission justification, remote code, data usage) into their fields.
      - Submit for review.
 - Firefox is built but not published; AMO submission is out of scope until it is.
 
 ## Store screenshots
 
-- `pnpm screenshots`: `vite build --mode chrome`, then Vitest with `vitest.store.config.ts` (include `store/screenshots.ts`, 60s timeout). Writes the Chrome Web Store shots to `store/screenshots/` (committed), in listing order: `1-graphql`, `2-grpc`, `3-websocket`, `4-llm-stream`, `5-search`. About 6s.
+- `pnpm screenshots`: `vite build --mode chrome`, then Vitest with `vitest.store.config.ts` (include `store/screenshots.ts`, 60s timeout). Writes the raw shots to `store/screenshots/` (1280x800, used by the README) and 1.25x copies to `store/captures/` (1600x1000, a second session with `openPanel({ deviceScaleFactor: 1.25 })`, which launches with `--force-device-scale-factor`; CDP's `clip.scale` only stretches a 1x render and blurs), both committed, in listing order: `1-graphql`, `2-grpc`, `3-websocket`, `4-llm-stream`, `5-search`. About 14s (each shot opens twice).
 - Not run in CI (slow to review, and the shots only change with the UI); `tsc` and lint cover `store/`. `store/screenshots.ts` is not a `*.test.ts`, so `pnpm test` skips it.
 - Each shot: `openPanel({ server: demoServer(), size: 1280x800, devtoolsTheme: "dark" })`, a setup that polls for the shot's key text (`Decoded · graphql`, `Decoded · grpc-web · OK` and `"IN_STOCK"`, `Message 7`, `Decoded · llm · tool_calls`, a body `mark`), `screenshot()`, then an IHDR check for exactly 1280x800. A render that never arrives fails the run instead of writing a blank image.
 - Shots stay on Payload, Response and Messages, never Summary, so the `127.0.0.1:<port>` origin doesn't show; rows show only paths and operation names.
 - `store/demo.ts` (`demoServer()`, an unstarted `Server` with a `WebSocketServer`): a fictional travel app, Wayfare (no real companies or people). `/` fires GraphQL operations (`SearchFlights`, `GetTrips`, a batch, a persisted query, a mutation) plus a JSON and a form request; `/grpc` calls `catalog.ProductService` (`CATALOG_PROTO`, added as a schema so fields are named; replies built by a small protobuf writer); `/chat` exposes `start()` (called once the probe is in) to open the `/chat` socket; `/assistant` streams an OpenAI-style `demo-chat-1` reply with a `search_flights` tool call and usage. Ack ids are a counter, so reshoots match.
-- Retake after UI changes: `pnpm screenshots`, look at each PNG, commit.
+- Retake after UI changes: `pnpm screenshots`, then `pnpm listing-images`, look at each PNG, commit.
+
+## Store listing images
+
+- What the store shows: `store/listing-images/*.png`, 1280x800, a headline and subline over a crop of each `store/captures/` shot drawn 1:1 (any resampling, such as shrinking a 2x capture, blurs the panel text), in the icon's style (`#dcdbd9` ground, faint 20/80px grid, `#262626` ink, orange stepped trace; design notes in the local, gitignored `design/SOCIAL.md`).
+- `pnpm listing-images`: `node store/listing-images.ts` opens `store/listing-image.html` once per shot in Playwright Chromium, passing capture, headline, subline, crop origin (1x px, multiples of 4 so the 1.25x offset is a whole pixel) and `01 / 05` index in the query string, then screenshots 1280x800. Copy and crops live in `shots` in that script. IBM Plex comes from Google Fonts, so it needs network.
+- Crops start at x 0 when the row names matter (GraphQL, gRPC, search) and x 292 when the detail pane does (WebSocket messages, LLM reply); at 1.25x only 960 source px fit.
+- Promo tiles: the same script then opens `store/promo-tile.html?kind=small|marquee` and writes `store/promo/small.png` (440x280: mark left, name and tagline right) and `store/promo/marquee.png` (1400x560: name, tagline and protocol list left, mark right). The mark is the icon's art placed by a transform (`layouts` in the HTML: scale and bracket centre), with its orange slash run past the tile's top and bottom.
 
 ## CI
 

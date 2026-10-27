@@ -1,0 +1,15 @@
+SINGLE PURPOSE
+
+SnapQL adds a panel to Chrome DevTools that shows the network requests of the page being inspected in a readable form. It decodes request and response bodies (GraphQL, REST and JSON, gRPC-web and protobuf, WebSocket and server-sent event messages, LLM streams and similar formats) so developers can inspect and debug their app's traffic. It does nothing outside DevTools and runs only while DevTools is open.
+
+PERMISSION JUSTIFICATION
+
+None requested. SnapQL declares no permissions and no host permissions. It reads traffic through the chrome.devtools APIs, which are available to every DevTools extension.
+
+REMOTE CODE
+
+No. All code ships in the package. The small script it injects into the inspected page while the panel is open, to record WebSocket and stream messages, is the bundled, unminified probe.js; it only records and changes nothing the page sees.
+
+DATA USAGE
+
+SnapQL does not collect or transmit any user data. Captured traffic stays in the DevTools panel in the user's browser and is discarded when DevTools closes. The only things it keeps are the user's own settings, saved filters and any .proto files they add, in the extension's local storage on their device. None of the data categories apply.

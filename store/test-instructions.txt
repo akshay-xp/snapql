@@ -1,0 +1,7 @@
+Works on any website. No login, setup or permissions needed.
+1. Install the extension.
+2. Open a site that makes GraphQL or API requests, e.g. https://countries.trevorblades.com
+3. Open Chrome DevTools (right-click > Inspect, or F12).
+4. Select the "SnapQL" tab in DevTools.
+5. Reload the page. That site sends a GraphQL introspection query as it loads.
+6. Requests appear in the list as they happen. Click one to see its payload and response decoded (GraphQL, REST, gRPC-web, WebSocket and more).
