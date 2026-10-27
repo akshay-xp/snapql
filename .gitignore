@@ -25,3 +25,6 @@ dist-ssr
 extension.zip
 release/
 .claude/specs/
+
+# Local design workspace: references, drafts, icon sources
+design/
