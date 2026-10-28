@@ -12,6 +12,7 @@ DevTools extension that makes network traffic human readable. v0.2.0 (live on th
 - pnpm workspace (`pnpm-workspace.yaml`: `apps/*`). Run every script from the root; see `docs/build.md`.
 - Root: shared config only: `biome.json` (lint and format for the whole repo), `tsconfig.base.json` (each app's `tsconfig.json` extends it), `docs/`, `.github/`, `README.md`, `LICENSE`.
 - `apps/extension/`: the extension (this overview, `docs/build.md`, `capture.md`, `decoders.md`, `panel.md`; their paths are relative to it).
+- `apps/site/`: the landing site at https://snapql.akxp.net (`docs/site.md`).
 
 ## Targets
 
@@ -38,6 +39,7 @@ GitHub milestones M0 (foundation) to M7 (1.0 release).
 - `docs/capture.md`: entry model, capped store, lazy bodies.
 - `docs/decoders.md`: decoder contract, registry, GraphQL rules.
 - `docs/panel.md`: layout, keyboard map, detail pane, themes.
+- `docs/site.md`: the landing site's structure, build, tests and deploy.
 
 ## Store
 
