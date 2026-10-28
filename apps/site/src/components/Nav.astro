@@ -1,0 +1,55 @@
+---
+import Mark from "./Mark.astro"
+---
+
+<header>
+  <nav class="wrap" aria-label="Main">
+    <a href="#top" class="brand">
+      <Mark />
+      <span class="label">SnapQL</span>
+    </a>
+    <div class="nav-links">
+      <a href="#workspaces">Workspaces</a>
+      <a href="#formats">Formats</a>
+      <a href="#start">Quick start</a>
+      <a href="#privacy">Privacy</a>
+      <a href="https://github.com/akshay-xp/snapql">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<style>
+  header {
+    border-bottom: 1px solid var(--rule);
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    height: 72px;
+  }
+  a {
+    text-decoration: none;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand .label {
+    font-size: 15px;
+    letter-spacing: 0.16em;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-size: 15px;
+  }
+  @media (max-width: 480px) {
+    .nav-links {
+      display: none;
+    }
+  }
+</style>

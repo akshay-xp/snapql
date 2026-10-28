@@ -1,0 +1,50 @@
+---
+import extension from "../../../extension/package.json"
+---
+
+<footer>
+  <div class="wrap">
+    <span class="label">SnapQL</span>
+    <div class="links">
+      <a href="https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm"
+        >Chrome Web Store</a
+      >
+      <a href="https://github.com/akshay-xp/snapql">GitHub</a>
+      <a href="https://github.com/akshay-xp/snapql/issues">Report an issue</a>
+    </div>
+    <span class="mono meta">v{extension.version} · by akshay-xp</span>
+  </div>
+</footer>
+
+<style>
+  footer {
+    background: var(--ink);
+    color: var(--ground);
+  }
+  .wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  .label {
+    letter-spacing: 0.16em;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    font-size: 15px;
+  }
+  a,
+  a:hover {
+    color: var(--ground);
+  }
+  .meta {
+    font-size: 13px;
+    color: #b5b4b1;
+  }
+</style>

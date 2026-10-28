@@ -49,6 +49,47 @@ async function openSite(): Promise<{
   return { page, offsite, close: () => browser.close() }
 }
 
+const links = (page: Page, selector: string) =>
+  page.$$eval(`${selector} a`, (as) =>
+    as.map((a) => [a.textContent?.trim(), a.getAttribute("href")]),
+  )
+
+test("nav and footer link where the design says, with no licence", async () => {
+  const { version } = JSON.parse(
+    await readFile(
+      resolve(import.meta.dirname, "../../extension/package.json"),
+      "utf8",
+    ),
+  )
+  const { page, close } = await openSite()
+  try {
+    expect(await links(page, "nav .nav-links")).toEqual([
+      ["Workspaces", "#workspaces"],
+      ["Formats", "#formats"],
+      ["Quick start", "#start"],
+      ["Privacy", "#privacy"],
+      ["GitHub", "https://github.com/akshay-xp/snapql"],
+    ])
+    expect(await page.getAttribute("nav > a", "href")).toBe("#top")
+    expect(await links(page, "footer")).toEqual([
+      [
+        "Chrome Web Store",
+        "https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm",
+      ],
+      ["GitHub", "https://github.com/akshay-xp/snapql"],
+      ["Report an issue", "https://github.com/akshay-xp/snapql/issues"],
+    ])
+    expect(await page.textContent("footer")).toContain(
+      `v${version} · by akshay-xp`,
+    )
+    const text = await page.textContent("body")
+    expect(text).not.toMatch(/GPL/)
+    expect(text).not.toMatch(/licen[cs]e/i)
+  } finally {
+    await close()
+  }
+})
+
 test("the page has its title and language", async () => {
   const { page, close } = await openSite()
   try {
