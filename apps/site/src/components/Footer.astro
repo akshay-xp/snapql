@@ -1,16 +1,17 @@
 ---
 import extension from "../../../extension/package.json"
+import { REPO_URL, STORE_URL } from "../links"
 ---
 
 <footer>
   <div class="wrap">
     <span class="label">SnapQL</span>
     <div class="links">
-      <a href="https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm"
+      <a href={STORE_URL}
         >Chrome Web Store</a
       >
-      <a href="https://github.com/akshay-xp/snapql">GitHub</a>
-      <a href="https://github.com/akshay-xp/snapql/issues">Report an issue</a>
+      <a href={REPO_URL}>GitHub</a>
+      <a href={`${REPO_URL}/issues`}>Report an issue</a>
     </div>
     <span class="mono meta">v{extension.version} · by akshay-xp</span>
   </div>

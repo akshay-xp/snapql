@@ -49,18 +49,21 @@ async function openSite(): Promise<{
   return { page, offsite, close: () => browser.close() }
 }
 
+const extensionVersion = async (): Promise<string> =>
+  JSON.parse(
+    await readFile(
+      resolve(import.meta.dirname, "../../extension/package.json"),
+      "utf8",
+    ),
+  ).version
+
 const links = (page: Page, selector: string) =>
   page.$$eval(`${selector} a`, (as) =>
     as.map((a) => [a.textContent?.trim(), a.getAttribute("href")]),
   )
 
 test("nav and footer link where the design says, with no licence", async () => {
-  const { version } = JSON.parse(
-    await readFile(
-      resolve(import.meta.dirname, "../../extension/package.json"),
-      "utf8",
-    ),
-  )
+  const version = await extensionVersion()
   const { page, close } = await openSite()
   try {
     expect(await links(page, "nav .nav-links")).toEqual([
@@ -115,6 +118,36 @@ test("the page has its title and language", async () => {
       "SnapQL: network traffic in DevTools, made readable",
     )
     expect(await page.getAttribute("html", "lang")).toBe("en")
+  } finally {
+    await close()
+  }
+})
+
+test("the hero says what SnapQL is and links to the store", async () => {
+  const version = await extensionVersion()
+  const { page, close } = await openSite()
+  try {
+    const text = (selector: string) =>
+      page.$eval(selector, (e) => e.textContent?.trim())
+    expect(await text(".hero h1")).toBe(
+      "Network traffic in DevTools, made readable.",
+    )
+    expect(await text(".hero .label")).toBe(
+      `Chrome DevTools extension · v${version}`,
+    )
+    expect(await text(".hero .subtitle")).toBe(
+      "A DevTools tab that names each request by what it does and decodes what it carries.",
+    )
+    expect(await links(page, ".hero .actions")).toEqual([
+      [
+        "Add to Chrome, it's free",
+        "https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm",
+      ],
+      ["View source on GitHub", "https://github.com/akshay-xp/snapql"],
+    ])
+    expect(await text(".hero .meta")).toBe(
+      "No permissions needed · Your traffic stays in your browser · Free and open source",
+    )
   } finally {
     await close()
   }
