@@ -567,3 +567,35 @@ test("the binary samples decode to what their cards show", async () => {
     await close()
   }
 })
+
+test("at phone width the decode cards stack in one column", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 390, height: 844 },
+  })
+  try {
+    const content = await page.$eval("#formats .wrap", (e) => {
+      const style = getComputedStyle(e)
+      return {
+        left:
+          e.getBoundingClientRect().left + Number.parseFloat(style.paddingLeft),
+        width:
+          e.clientWidth -
+          Number.parseFloat(style.paddingLeft) -
+          Number.parseFloat(style.paddingRight),
+      }
+    })
+    const cards = await page.$$eval("#formats .fmt", (els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect()
+        return { left: r.left, width: r.width }
+      }),
+    )
+    for (const card of cards) {
+      expect(Math.abs(card.left - content.left)).toBeLessThanOrEqual(1)
+      expect(Math.abs(card.width - content.width)).toBeLessThanOrEqual(1)
+    }
+    expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
+  } finally {
+    await close()
+  }
+})
