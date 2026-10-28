@@ -30,7 +30,7 @@ jobs:
         run: pnpm build
       - name: Playwright version
         id: playwright
-        run: echo "version=$(pnpm exec playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(pnpm --filter extension exec playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
       # Browsers only: the runner image ships Google Chrome, so the system
       # libraries --with-deps would apt-install are already present.
       - uses: actions/cache@v6
@@ -40,7 +40,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Chromium
         if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install chromium
+        run: pnpm --filter extension exec playwright install chromium
       - name: Check Chromium libraries
         run: |
           missing=$(ldd ~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome ~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell | grep "not found" | sort -u)
