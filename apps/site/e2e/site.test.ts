@@ -18,13 +18,18 @@ const types: Record<string, string> = {
 
 // Serves dist/ at a made-up origin; any other request is aborted and kept in
 // `offsite`, so tests can prove the page never leaves its own origin.
-async function openSite(): Promise<{
+async function openSite(
+  options: {
+    viewport?: { width: number; height: number }
+    javaScriptEnabled?: boolean
+  } = {},
+): Promise<{
   page: Page
   offsite: string[]
   close(): Promise<void>
 }> {
   const browser = await chromium.launch()
-  const page = await browser.newPage()
+  const page = await (await browser.newContext(options)).newPage()
   const offsite: string[] = []
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url())
@@ -148,6 +153,76 @@ test("the hero says what SnapQL is and links to the store", async () => {
     expect(await text(".hero .meta")).toBe(
       "No permissions needed · Your traffic stays in your browser · Free and open source",
     )
+  } finally {
+    await close()
+  }
+})
+
+const tabs = [
+  [
+    "GraphQL",
+    "Operations by name, with query and variables decoded",
+    "SnapQL listing GraphQL",
+  ],
+  ["gRPC-web", "Messages decoded, fields named from your .proto", "A gRPC-web"],
+  [
+    "WebSocket",
+    "Every frame of a connection, listed and decoded",
+    "A WebSocket",
+  ],
+  [
+    "LLM stream",
+    "Reply, tool calls and token usage, reassembled",
+    "An LLM chat stream",
+  ],
+  [
+    "Search",
+    "Find a request by name, URL or body text",
+    "Searching request bodies",
+  ],
+]
+
+// Alt text of every shot the visitor can see.
+const visibleShots = (page: Page) =>
+  page.$$eval(".shots img", (imgs) =>
+    imgs
+      .filter((img) => (img as HTMLElement).offsetParent !== null)
+      .map((img) => img.getAttribute("alt") ?? ""),
+  )
+
+test("each hero tab shows its own screenshot", async () => {
+  const { page, close } = await openSite()
+  try {
+    expect(
+      await page.$$eval(".tabs button", (bs) =>
+        bs.map((b) => [
+          b.querySelector(".tab-label")?.textContent?.trim(),
+          b.querySelector(".tab-caption")?.textContent?.trim(),
+        ]),
+      ),
+    ).toEqual(tabs.map(([label, caption]) => [label, caption]))
+    for (const i of [0, 1, 2, 3, 4, 0]) {
+      await page.click(`.tabs button:nth-child(${i + 1})`)
+      const shown = await visibleShots(page)
+      expect(shown).toHaveLength(1)
+      expect(shown[0]).toMatch(new RegExp(`^${tabs[i][2]}`))
+      expect(
+        await page.$$eval(".tabs button", (bs) =>
+          bs.map((b) => b.getAttribute("aria-pressed")),
+        ),
+      ).toEqual(tabs.map((_, j) => String(j === i)))
+    }
+  } finally {
+    await close()
+  }
+})
+
+test("without JavaScript the hero shows the GraphQL screenshot", async () => {
+  const { page, close } = await openSite({ javaScriptEnabled: false })
+  try {
+    const shown = await visibleShots(page)
+    expect(shown).toHaveLength(1)
+    expect(shown[0]).toMatch(/^SnapQL listing GraphQL/)
   } finally {
     await close()
   }
