@@ -90,6 +90,24 @@ test("nav and footer link where the design says, with no licence", async () => {
   }
 })
 
+test("IBM Plex loads from the site itself", async () => {
+  const { page, offsite, close } = await openSite()
+  try {
+    // load() resolves to the faces it loaded: none when no @font-face matches.
+    const loaded = await page.evaluate(async () =>
+      Promise.all(
+        ['600 16px "IBM Plex Sans"', '500 13px "IBM Plex Mono"'].map(
+          async (font) => (await document.fonts.load(font)).length,
+        ),
+      ),
+    )
+    expect(loaded).toEqual([1, 1])
+    expect(offsite).toEqual([])
+  } finally {
+    await close()
+  }
+})
+
 test("the page has its title and language", async () => {
   const { page, close } = await openSite()
   try {
