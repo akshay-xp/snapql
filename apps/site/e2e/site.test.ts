@@ -22,6 +22,7 @@ async function openSite(
   options: {
     viewport?: { width: number; height: number }
     javaScriptEnabled?: boolean
+    path?: string
   } = {},
 ): Promise<{
   page: Page
@@ -29,7 +30,8 @@ async function openSite(
   close(): Promise<void>
 }> {
   const browser = await chromium.launch()
-  const page = await (await browser.newContext(options)).newPage()
+  const { path: _, ...context } = options
+  const page = await (await browser.newContext(context)).newPage()
   const offsite: string[] = []
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url())
@@ -50,7 +52,7 @@ async function openSite(
       await route.fulfill({ status: 404 })
     }
   })
-  await page.goto(`${origin}/`)
+  await page.goto(`${origin}${options.path ?? "/"}`)
   return { page, offsite, close: () => browser.close() }
 }
 
@@ -738,5 +740,72 @@ test("quick start ends with three tips, stacked on phones", async () => {
     )
   } finally {
     await phone.close()
+  }
+})
+
+// A jump landed on the section: its top reached the viewport top, or the page
+// is scrolled to the bottom (a short last section can't reach the top) with
+// the whole section in view.
+const landedOn = (page: Page, id: string) =>
+  page.$eval(`#${id}`, (e) => {
+    const r = e.getBoundingClientRect()
+    const atBottom =
+      Math.ceil(window.scrollY + window.innerHeight) >=
+      document.documentElement.scrollHeight
+    return (
+      window.scrollY > 0 &&
+      (Math.abs(r.top) <= 1 ||
+        (atBottom && r.top >= 0 && r.bottom <= window.innerHeight + 1))
+    )
+  })
+
+test("privacy says what SnapQL keeps, and links land on it", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    expect(await textOf(page, "#privacy .label")).toBe("Privacy")
+    expect(await textOf(page, "#privacy h2")).toBe(
+      "Your traffic never leaves your browser.",
+    )
+    expect(
+      await page.$$eval("#privacy .copy p", (els) =>
+        els.map((e) => e.textContent?.replace(/\s+/g, " ").trim()),
+      ),
+    ).toEqual([
+      "SnapQL requests no permissions. It reads traffic through the DevTools APIs every extension has, and only while DevTools is open.",
+      "It collects nothing and sends nothing anywhere. Captured requests are discarded when you close DevTools. The only things it keeps are your workspaces and any .proto files you add, in the extension's local storage on your device.",
+      "The code is open source, so you can check all of this yourself.",
+    ])
+    await page.click('nav a[href="#privacy"]')
+    await page.waitForFunction(() => window.scrollY > 0)
+    expect(await landedOn(page, "privacy")).toBe(true)
+    expect(await navLandsOn(page, "start")).toBeLessThanOrEqual(1)
+  } finally {
+    await close()
+  }
+  const linked = await openSite({
+    viewport: { width: 1440, height: 900 },
+    path: "/#privacy",
+  })
+  try {
+    await linked.page.waitForFunction(() => window.scrollY > 0)
+    expect(await landedOn(linked.page, "privacy")).toBe(true)
+  } finally {
+    await linked.close()
+  }
+})
+
+test("at phone width privacy stacks its copy below the heading", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 390, height: 844 },
+  })
+  try {
+    const heading = await box(page, "#privacy h2")
+    const copy = await box(page, "#privacy .copy")
+    expect(copy.top).toBeGreaterThan(heading.bottom)
+    expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
+  } finally {
+    await close()
   }
 })

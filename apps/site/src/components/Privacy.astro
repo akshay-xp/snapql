@@ -1,0 +1,59 @@
+<section id="privacy">
+  <div class="wrap">
+    <div class="head">
+      <p class="label">Privacy</p>
+      <h2>Your traffic never leaves your browser.</h2>
+    </div>
+    <div class="copy">
+      <p>
+        SnapQL requests no permissions. It reads traffic through the DevTools
+        APIs every extension has, and only while DevTools is open.
+      </p>
+      <p>
+        It collects nothing and sends nothing anywhere. Captured requests are
+        discarded when you close DevTools. The only things it keeps are your
+        workspaces and any .proto files you add, in the extension's local
+        storage on your device.
+      </p>
+      <p>The code is open source, so you can check all of this yourself.</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  section {
+    border-top: 1px solid var(--rule);
+  }
+  .wrap {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 64px;
+    padding-top: 120px;
+    padding-bottom: 120px;
+  }
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  p,
+  h2 {
+    margin: 0;
+  }
+  .label {
+    color: var(--muted);
+  }
+  .copy {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  @media (max-width: 900px) {
+    .wrap {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
