@@ -227,3 +227,52 @@ test("without JavaScript the hero shows the GraphQL screenshot", async () => {
     await close()
   }
 })
+
+test("the hero trace lands on the SnapQL tab of the shot", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    const { traceBottom, endX, shots } = await page.$eval(".trace", (svg) => {
+      const path = svg.querySelector("path") as SVGPathElement
+      const end = path.getPointAtLength(path.getTotalLength())
+      const ctm = path.getScreenCTM() as DOMMatrix
+      const box = (
+        document.querySelector(".shots") as HTMLElement
+      ).getBoundingClientRect()
+      return {
+        traceBottom: svg.getBoundingClientRect().bottom,
+        endX: end.x * ctm.a + ctm.e,
+        shots: { top: box.top, left: box.left, width: box.width },
+      }
+    })
+    expect(Math.abs(traceBottom - shots.top)).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(endX - (shots.left + 0.68 * shots.width)),
+    ).toBeLessThanOrEqual(2)
+  } finally {
+    await close()
+  }
+})
+
+test("at phone width the hero drops the trace and fits the screen", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 390, height: 844 },
+  })
+  try {
+    expect(await page.$eval(".trace", (e) => getComputedStyle(e).display)).toBe(
+      "none",
+    )
+    expect(
+      await page.$eval(
+        ".tabs",
+        (e) => getComputedStyle(e).gridTemplateColumns.split(" ").length,
+      ),
+    ).toBe(2)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390)
+  } finally {
+    await close()
+  }
+})

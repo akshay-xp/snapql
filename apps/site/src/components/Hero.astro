@@ -65,6 +65,20 @@ const shots = [
   </div>
   <div class="wrap showcase">
     <div class="shots">
+      <!-- Runs down from the nav and plugs into the SnapQL tab, 68% across the shot. -->
+      <svg
+        class="trace"
+        aria-hidden="true"
+        width="200"
+        height="900"
+        viewBox="0 0 200 900"
+      >
+        <path
+          d="M140 0V670L110 700V900"
+          fill="none"
+          stroke="#ff4419"
+          stroke-width="3"></path>
+      </svg>
       {
         shots.map((shot, i) => (
           <Image
@@ -174,6 +188,14 @@ const shots = [
   .showcase {
     padding-bottom: 120px;
   }
+  .shots {
+    position: relative;
+  }
+  .trace {
+    position: absolute;
+    bottom: 100%;
+    left: calc(68% - 110px);
+  }
   .shots img {
     display: block;
     width: 100%;
@@ -220,6 +242,12 @@ const shots = [
   @media (max-width: 900px) {
     h1 {
       font-size: 44px;
+    }
+    .trace {
+      display: none;
+    }
+    .tabs {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>
