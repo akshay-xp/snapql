@@ -3,7 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "biome check ."
+    "lint": "biome check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "e2e": "pnpm --filter extension e2e",
+    "screenshots": "pnpm --filter extension screenshots",
+    "listing-images": "pnpm --filter extension listing-images",
+    "release": "pnpm --filter extension release"
   },
   "engines": {
     "node": ">=22",
