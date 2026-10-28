@@ -64,6 +64,11 @@ h2 {
   box-sizing: border-box;
 }
 
+/* The one orange: lines and traces in SVG take it from here. */
+.signal {
+  stroke: var(--signal);
+}
+
 .mono {
   font-family: var(--mono);
 }
