@@ -62,6 +62,10 @@ const extensionVersion = async (): Promise<string> =>
     ),
   ).version
 
+// Text as a visitor reads it: whitespace from source formatting collapsed.
+const textOf = (page: Page, selector: string) =>
+  page.$eval(selector, (e) => e.textContent?.replace(/\s+/g, " ").trim())
+
 const links = (page: Page, selector: string) =>
   page.$$eval(`${selector} a`, (as) =>
     as.map((a) => [a.textContent?.trim(), a.getAttribute("href")]),
@@ -132,8 +136,7 @@ test("the hero says what SnapQL is and links to the store", async () => {
   const version = await extensionVersion()
   const { page, close } = await openSite()
   try {
-    const text = (selector: string) =>
-      page.$eval(selector, (e) => e.textContent?.trim())
+    const text = (selector: string) => textOf(page, selector)
     expect(await text(".hero h1")).toBe(
       "Network traffic in DevTools, made readable.",
     )
@@ -272,6 +275,53 @@ test("at phone width the hero drops the trace and fits the screen", async () => 
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390)
+  } finally {
+    await close()
+  }
+})
+
+test("workspaces says what they do and the nav reaches it", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    const text = (selector: string) => textOf(page, selector)
+    expect(await text("#workspaces .label")).toBe("Workspaces")
+    expect(await text("#workspaces h2")).toBe(
+      "A saved view for every project you debug.",
+    )
+    expect(await text("#workspaces .intro")).toBe(
+      "Pick the protocols and status codes you care about, hide the rest, and give it a name. Every change saves as you make it, and your workspaces are there each time you open DevTools.",
+    )
+    expect(
+      await page.$$eval("#workspaces .rows li", (lis) =>
+        lis.map((li) =>
+          [".row-title", ".row-text"].map((s) =>
+            li.querySelector(s)?.textContent?.replace(/\s+/g, " ").trim(),
+          ),
+        ),
+      ),
+    ).toEqual([
+      [
+        "Filter what matters",
+        "Show only the protocols (graphql, grpc-web, websocket, llm…) and statuses (2xx, 4xx, failed) you're working on.",
+      ],
+      [
+        "Hide the noise",
+        "Preflights, cached responses, service worker copies and static assets stay out of the list, out of the box.",
+      ],
+      [
+        "Switch in one click",
+        "Jump between projects from the first button in the filter row. Nothing to save, nothing to set up again.",
+      ],
+    ])
+    await page.click('nav a[href="#workspaces"]')
+    await page.waitForFunction(() => window.scrollY > 0)
+    const top = await page.$eval(
+      "#workspaces",
+      (e) => e.getBoundingClientRect().top,
+    )
+    expect(Math.abs(top)).toBeLessThanOrEqual(1)
   } finally {
     await close()
   }
