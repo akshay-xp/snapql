@@ -77,7 +77,7 @@ const everyday = [
             </div>
             <div>
               <p class="fmt-tag">On the wire</p>
-              <pre class="wire">{card.wire}</pre>
+              <pre class="wire"><span>{card.wire}</span></pre>
             </div>
             <svg
               class="trace"
@@ -190,6 +190,9 @@ const everyday = [
   .wire {
     color: var(--muted);
     border: 1px dashed #a3a29f;
+  }
+  /* Clamped inside the padding, so a fourth line can't show through it. */
+  .wire span {
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
