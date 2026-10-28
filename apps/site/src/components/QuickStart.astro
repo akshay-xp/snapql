@@ -1,0 +1,310 @@
+---
+import Mark from "./Mark.astro"
+---
+
+<section id="start">
+  <div class="wrap">
+    <div class="head">
+      <p class="label">Quick start</p>
+      <h2>Running in under a minute.</h2>
+    </div>
+    <ol class="steps">
+      <li>
+        <div class="ill" aria-hidden="true">
+          <div class="store-card">
+            <div class="store-name">
+              <Mark size={36} />
+              <div>
+                <span class="store-title">SnapQL</span>
+                <span class="store-sub">No permissions</span>
+              </div>
+            </div>
+            <span class="store-add">Add to Chrome</span>
+          </div>
+        </div>
+        <span class="mono step-number">1</span>
+        <h3>Install</h3>
+        <p class="step-text">
+          Add SnapQL from the Chrome Web Store. It asks for no permissions.
+        </p>
+      </li>
+      <li>
+        <div class="ill" aria-hidden="true">
+          <div class="rows keys">
+            <div class="keyrow">
+              <span>Mac</span>
+              <span class="kbds"><kbd>⌘</kbd> <kbd>⌥</kbd> <kbd>I</kbd></span>
+            </div>
+            <div class="keyrow">
+              <span>Windows</span>
+              <span class="kbds"><kbd>F12</kbd></span>
+            </div>
+          </div>
+        </div>
+        <span class="mono step-number">2</span>
+        <h3>Open DevTools</h3>
+        <p class="step-text">
+          On your app, right-click and choose Inspect, or press F12.
+        </p>
+      </li>
+      <li>
+        <div class="ill tab-tile" aria-hidden="true">
+          <div class="dt-tabs">
+            <span>Console</span>
+            <span>Network</span>
+            <span class="on">
+              <svg width="58" height="120" viewBox="0 0 58 120">
+                <path
+                  d="M45 0V70L29 86V120"
+                  fill="none"
+                  stroke="#ff4419"
+                  stroke-width="2"></path>
+              </svg>
+              SnapQL
+            </span>
+            <span class="overflow">»</span>
+          </div>
+        </div>
+        <span class="mono step-number">3</span>
+        <h3>Pick the SnapQL tab</h3>
+        <p class="step-text">
+          It sits beside Network. If it's hidden, find it under the » menu.
+        </p>
+      </li>
+      <li class="last">
+        <div class="ill" aria-hidden="true">
+          <div class="rows">
+            <div><span>SearchFlights</span><i>graphql</i></div>
+            <div><span>GetProduct</span><i>grpc-web</i></div>
+            <div class="new"><span>/chat · 10 msgs</span><i>websocket</i></div>
+          </div>
+        </div>
+        <span class="mono step-number">4</span>
+        <h3>Use your app</h3>
+        <p class="step-text">
+          Requests appear as they happen. Reload to catch the ones sent on load.
+        </p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<style>
+  section {
+    border-top: 1px solid var(--rule);
+  }
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    padding-top: 120px;
+    padding-bottom: 120px;
+  }
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 720px;
+  }
+  p,
+  h2,
+  h3 {
+    margin: 0;
+  }
+  .label {
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 48px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .steps li {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 20px;
+    border-top: 2px solid var(--ink);
+  }
+  .steps li.last {
+    border-top-color: var(--signal);
+  }
+  .step-number {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .step-text {
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  /* Drawn tiles: dark like the panel, decoration only. */
+  .ill {
+    height: 176px;
+    box-sizing: border-box;
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    color: var(--night-text);
+    font-size: 13px;
+  }
+  .store-card {
+    width: calc(100% - 36px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    background: var(--ground);
+    color: var(--ink);
+  }
+  .store-name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .store-name div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .store-title {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .store-sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .store-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    background: var(--ink);
+    color: var(--ground);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .rows {
+    width: 100%;
+    padding: 0 18px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font: 400 12px/1 var(--mono);
+  }
+  .rows > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: #2f2f2f;
+    color: #c9c8c5;
+  }
+  .rows i {
+    font-style: normal;
+    color: var(--night-muted);
+  }
+  .rows .new {
+    background: #3a3a3a;
+    color: #fff;
+  }
+  .rows .new i {
+    color: #ff6a47;
+  }
+  .keys {
+    gap: 8px;
+  }
+  .rows > .keyrow {
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  .keyrow > span:first-child {
+    font: 500 11px/1 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--night-muted);
+  }
+  .kbds {
+    display: flex;
+    gap: 6px;
+  }
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    font: 500 14px/1 var(--mono);
+    color: var(--night-text);
+    background: #333;
+    border: 1px solid var(--muted);
+    border-bottom-width: 3px;
+  }
+  .tab-tile {
+    justify-content: flex-end;
+    padding-bottom: 36px;
+  }
+  .dt-tabs {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 18px;
+    background: #2f2f2f;
+    border-top: 1px solid #3a3a3a;
+    border-bottom: 1px solid #3a3a3a;
+    color: var(--night-muted);
+  }
+  .dt-tabs span {
+    padding: 12px 0;
+  }
+  .dt-tabs .on {
+    position: relative;
+    color: #fff;
+    box-shadow: inset 0 -2px 0 var(--signal);
+  }
+  /* The trace drops into the SnapQL tab, as in the hero. */
+  .dt-tabs .on svg {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -29px;
+  }
+  .overflow {
+    margin-left: auto;
+  }
+
+  @media (max-width: 900px) {
+    .steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 480px) {
+    .steps {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

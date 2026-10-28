@@ -80,6 +80,47 @@ const navLandsOn = async (page: Page, id: string) => {
   )
 }
 
+// Each match's children read in order, space-separated: flex items have no
+// whitespace between them in textContent.
+const partsOf = (page: Page, selector: string) =>
+  page.$$eval(selector, (els) =>
+    els.map((e) =>
+      [...e.children]
+        .map((c) => c.textContent?.replace(/\s+/g, " ").trim())
+        .join(" "),
+    ),
+  )
+
+// Content box of a container: its left edge and width inside the padding.
+const contentBox = (page: Page, selector: string) =>
+  page.$eval(selector, (e) => {
+    const style = getComputedStyle(e)
+    const left = Number.parseFloat(style.paddingLeft)
+    return {
+      left: e.getBoundingClientRect().left + left,
+      width: e.clientWidth - left - Number.parseFloat(style.paddingRight),
+    }
+  })
+
+// Every match spans the container's full content width.
+const fillsContent = async (page: Page, items: string, container: string) => {
+  const content = await contentBox(page, container)
+  const boxes = await page.$$eval(items, (els) =>
+    els.map((e) => {
+      const r = e.getBoundingClientRect()
+      return { left: r.left, width: r.width }
+    }),
+  )
+  return (
+    boxes.length > 0 &&
+    boxes.every(
+      (b) =>
+        Math.abs(b.left - content.left) <= 1 &&
+        Math.abs(b.width - content.width) <= 1,
+    )
+  )
+}
+
 const links = (page: Page, selector: string) =>
   page.$$eval(`${selector} a`, (as) =>
     as.map((a) => [a.textContent?.trim(), a.getAttribute("href")]),
@@ -380,16 +421,10 @@ test("at phone width the workspace shot stacks below the copy", async () => {
   try {
     const shot = await box(page, "#workspaces img")
     const rows = await box(page, "#workspaces .rows")
-    const content = await page.$eval("#workspaces .wrap", (e) => {
-      const style = getComputedStyle(e)
-      return (
-        e.clientWidth -
-        Number.parseFloat(style.paddingLeft) -
-        Number.parseFloat(style.paddingRight)
-      )
-    })
     expect(shot.top).toBeGreaterThan(rows.bottom)
-    expect(Math.abs(shot.width - content)).toBeLessThanOrEqual(1)
+    expect(
+      await fillsContent(page, "#workspaces img", "#workspaces .wrap"),
+    ).toBe(true)
     expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
   } finally {
     await close()
@@ -573,27 +608,99 @@ test("at phone width the decode cards stack in one column", async () => {
     viewport: { width: 390, height: 844 },
   })
   try {
-    const content = await page.$eval("#formats .wrap", (e) => {
-      const style = getComputedStyle(e)
-      return {
-        left:
-          e.getBoundingClientRect().left + Number.parseFloat(style.paddingLeft),
-        width:
-          e.clientWidth -
-          Number.parseFloat(style.paddingLeft) -
-          Number.parseFloat(style.paddingRight),
-      }
-    })
-    const cards = await page.$$eval("#formats .fmt", (els) =>
-      els.map((e) => {
-        const r = e.getBoundingClientRect()
-        return { left: r.left, width: r.width }
-      }),
+    expect(await fillsContent(page, "#formats .fmt", "#formats .wrap")).toBe(
+      true,
     )
-    for (const card of cards) {
-      expect(Math.abs(card.left - content.left)).toBeLessThanOrEqual(1)
-      expect(Math.abs(card.width - content.width)).toBeLessThanOrEqual(1)
-    }
+    expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
+  } finally {
+    await close()
+  }
+})
+
+test("quick start walks through four steps with drawn tiles", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    expect(await textOf(page, "#start .label")).toBe("Quick start")
+    expect(await textOf(page, "#start h2")).toBe("Running in under a minute.")
+    expect(
+      await page.$$eval("#start .steps li", (lis) =>
+        lis.map((li) =>
+          [".step-number", "h3", ".step-text"].map((s) =>
+            li.querySelector(s)?.textContent?.replace(/\s+/g, " ").trim(),
+          ),
+        ),
+      ),
+    ).toEqual([
+      [
+        "1",
+        "Install",
+        "Add SnapQL from the Chrome Web Store. It asks for no permissions.",
+      ],
+      [
+        "2",
+        "Open DevTools",
+        "On your app, right-click and choose Inspect, or press F12.",
+      ],
+      [
+        "3",
+        "Pick the SnapQL tab",
+        "It sits beside Network. If it's hidden, find it under the » menu.",
+      ],
+      [
+        "4",
+        "Use your app",
+        "Requests appear as they happen. Reload to catch the ones sent on load.",
+      ],
+    ])
+    expect(
+      await page.$$eval("#start .ill", (els) =>
+        els.map((e) => e.getAttribute("aria-hidden")),
+      ),
+    ).toEqual(["true", "true", "true", "true"])
+    expect(await partsOf(page, "#start .keyrow")).toEqual([
+      "Mac ⌘ ⌥ I",
+      "Windows F12",
+    ])
+    expect(await partsOf(page, "#start .dt-tabs")).toEqual([
+      "Console Network SnapQL »",
+    ])
+    expect(await partsOf(page, "#start .rows > div:not(.keyrow)")).toEqual([
+      "SearchFlights graphql",
+      "GetProduct grpc-web",
+      "/chat · 10 msgs websocket",
+    ])
+    const { endX, traceBottom, tab } = await page.$eval(
+      "#start .dt-tabs .on",
+      (on) => {
+        const svg = on.querySelector("svg") as SVGSVGElement
+        const path = svg.querySelector("path") as SVGPathElement
+        const end = path.getPointAtLength(path.getTotalLength())
+        const ctm = path.getScreenCTM() as DOMMatrix
+        const r = on.getBoundingClientRect()
+        return {
+          endX: end.x * ctm.a + ctm.e,
+          traceBottom: svg.getBoundingClientRect().bottom,
+          tab: { top: r.top, centre: r.left + r.width / 2 },
+        }
+      },
+    )
+    expect(Math.abs(endX - tab.centre)).toBeLessThanOrEqual(2)
+    expect(Math.abs(traceBottom - tab.top)).toBeLessThanOrEqual(1)
+  } finally {
+    await close()
+  }
+})
+
+test("at phone width the quick start steps stack", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 390, height: 844 },
+  })
+  try {
+    expect(await fillsContent(page, "#start .steps li", "#start .wrap")).toBe(
+      true,
+    )
     expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
   } finally {
     await close()
