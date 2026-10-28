@@ -459,3 +459,111 @@ test("what it decodes shows seven cards in the design's grid", async () => {
     await close()
   }
 })
+
+// `key: value` lines of a decoded block; quoted strings and numbers parsed.
+const decodedPairs = (decoded: string) =>
+  Object.fromEntries(
+    decoded
+      .split("\n")
+      .map((line) => line.match(/^(\w+): (.+)$/))
+      .filter((m) => m !== null)
+      .map(([, key, value]) => {
+        try {
+          return [key, JSON.parse(value)]
+        } catch {
+          return [key, value]
+        }
+      }),
+  )
+
+const varint = (bytes: Uint8Array, at: number): [number, number] => {
+  let value = 0
+  let shift = 0
+  for (;;) {
+    const byte = bytes[at++]
+    value += (byte & 0x7f) * 2 ** shift
+    if (byte < 0x80) return [value, at]
+    shift += 7
+  }
+}
+
+// Field number → string or varint; enough for the card's message.
+const protobuf = (bytes: Uint8Array) => {
+  const fields: Record<number, string | number> = {}
+  let at = 0
+  while (at < bytes.length) {
+    const [tag, next] = varint(bytes, at)
+    if ((tag & 7) === 2) {
+      const [length, start] = varint(bytes, next)
+      fields[tag >> 3] = new TextDecoder().decode(
+        bytes.subarray(start, start + length),
+      )
+      at = start + length
+    } else {
+      ;[fields[tag >> 3], at] = varint(bytes, next)
+    }
+  }
+  return fields
+}
+
+// fixmap of fixstr keys to fixstr or positive fixint values.
+const msgpack = (bytes: Uint8Array) => {
+  const map: Record<string, string | number> = {}
+  let at = 1
+  const read = () => {
+    const byte = bytes[at++]
+    if (byte < 0x80) return byte
+    const text = new TextDecoder().decode(
+      bytes.subarray(at, at + (byte & 0x1f)),
+    )
+    at += byte & 0x1f
+    return text
+  }
+  for (let i = 0; i < (bytes[0] & 0x0f); i++) map[read()] = read()
+  return map
+}
+
+test("the binary samples decode to what their cards show", async () => {
+  const { page, close } = await openSite()
+  try {
+    const card = (name: string) =>
+      page.$$eval(
+        "#formats .fmt",
+        (els, n) => {
+          const el = els.find(
+            (e) => e.querySelector(".fmt-name")?.textContent?.trim() === n,
+          )
+          return {
+            wire: el?.querySelector(".wire")?.textContent ?? "",
+            decoded: el?.querySelector(".decoded")?.textContent ?? "",
+          }
+        },
+        name,
+      )
+
+    const grpc = await card("gRPC-web")
+    const frame = Buffer.from(grpc.wire, "base64")
+    expect(frame[0]).toBe(0)
+    expect(frame.readUInt32BE(1)).toBe(frame.length - 5)
+    const fields = protobuf(frame.subarray(5))
+    const shown = decodedPairs(grpc.decoded)
+    expect(fields[1]).toBe(shown.sku)
+    expect(fields[2]).toBe(shown.name)
+    expect(fields[3]).toBe(2)
+    expect(shown.status).toBe("IN_STOCK")
+
+    const jwt = await card("JWTs")
+    const payload = jwt.wire.split(" ").at(-1)?.split(".")[1] ?? ""
+    expect(JSON.parse(Buffer.from(payload, "base64url").toString())).toEqual(
+      decodedPairs(jwt.decoded),
+    )
+
+    const mp = await card("MessagePack")
+    const bytes = Uint8Array.from(
+      mp.wire.split(" ").map((h) => Number.parseInt(h, 16)),
+    )
+    expect(msgpack(bytes)).toEqual(decodedPairs(mp.decoded))
+  } finally {
+    await close()
+  }
+})
