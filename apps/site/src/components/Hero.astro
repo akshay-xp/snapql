@@ -1,6 +1,45 @@
 ---
+import { Image } from "astro:assets"
 import extension from "../../../extension/package.json"
+import graphql from "../../../extension/store/captures/1-graphql.png"
+import grpc from "../../../extension/store/captures/2-grpc.png"
+import websocket from "../../../extension/store/captures/3-websocket.png"
+import llm from "../../../extension/store/captures/4-llm-stream.png"
+import search from "../../../extension/store/captures/5-search.png"
 import { REPO_URL, STORE_URL } from "../links"
+
+const shots = [
+  {
+    label: "GraphQL",
+    caption: "Operations by name, with query and variables decoded",
+    src: graphql,
+    alt: "SnapQL listing GraphQL operations by name, with the SearchFlights query and its variables decoded.",
+  },
+  {
+    label: "gRPC-web",
+    caption: "Messages decoded, fields named from your .proto",
+    src: grpc,
+    alt: "A gRPC-web GetProduct response decoded with field names from catalog.proto.",
+  },
+  {
+    label: "WebSocket",
+    caption: "Every frame of a connection, listed and decoded",
+    src: websocket,
+    alt: "A WebSocket connection's messages listed, with message 7 decoded.",
+  },
+  {
+    label: "LLM stream",
+    caption: "Reply, tool calls and token usage, reassembled",
+    src: llm,
+    alt: "An LLM chat stream reassembled into a reply, a tool call and token usage.",
+  },
+  {
+    label: "Search",
+    caption: "Find a request by name, URL or body text",
+    src: search,
+    alt: "Searching request bodies for JFK, with the matches highlighted.",
+  },
+]
 ---
 
 <section class="hero">
@@ -24,7 +63,49 @@ import { REPO_URL, STORE_URL } from "../links"
       source
     </p>
   </div>
+  <div class="wrap showcase">
+    <div class="shots">
+      {
+        shots.map((shot, i) => (
+          <Image
+            src={shot.src}
+            alt={shot.alt}
+            width={1600}
+            format="webp"
+            loading={i === 0 ? "eager" : "lazy"}
+            hidden={i > 0}
+          />
+        ))
+      }
+    </div>
+    <div class="tabs" role="group" aria-label="Show SnapQL with">
+      {
+        shots.map((shot, i) => (
+          <button type="button" aria-pressed={String(i === 0)}>
+            <span class="mono tab-label">{shot.label}</span>
+            <span class="tab-caption">{shot.caption}</span>
+          </button>
+        ))
+      }
+    </div>
+  </div>
 </section>
+
+<script>
+  // Show the shot whose tab was pressed; without JS the first one stays.
+  const shots = document.querySelectorAll<HTMLImageElement>(".shots img")
+  const tabs = document.querySelectorAll<HTMLButtonElement>(".tabs button")
+  tabs.forEach((tab, i) =>
+    tab.addEventListener("click", () => {
+      shots.forEach((shot, j) => {
+        shot.hidden = j !== i
+      })
+      tabs.forEach((t, j) => {
+        t.setAttribute("aria-pressed", String(j === i))
+      })
+    }),
+  )
+</script>
 
 <style>
   .hero {
@@ -89,6 +170,52 @@ import { REPO_URL, STORE_URL } from "../links"
   .meta {
     font-size: 14px;
     color: var(--muted);
+  }
+  .showcase {
+    padding-bottom: 120px;
+  }
+  .shots img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--ink);
+    background: #282828;
+  }
+  .shots img[hidden] {
+    display: none;
+  }
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 20px;
+  }
+  .tabs button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 44px;
+    padding: 16px 0 0;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-top: 2px solid var(--rule);
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+  }
+  .tabs button[aria-pressed="true"] {
+    border-top-color: var(--signal);
+    color: var(--ink);
+  }
+  .tab-label {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .tab-caption {
+    font-size: 15px;
+    line-height: 1.45;
   }
   @media (max-width: 900px) {
     h1 {
