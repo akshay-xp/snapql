@@ -854,3 +854,40 @@ test("the whole page loads from its own origin and fits phones", async () => {
     await phone.close()
   }
 })
+
+test("every orange on the page is the one signal orange", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    // Any computed colour that reads as orange (strong red, mid green, little
+    // blue) must be exactly --signal, #ff4419.
+    const strays = await page.evaluate(() => {
+      const orange = /^rgba?\((\d+), (\d+), (\d+)/
+      const found = new Set<string>()
+      for (const el of document.querySelectorAll("*")) {
+        const style = getComputedStyle(el)
+        for (const value of [
+          style.color,
+          style.backgroundColor,
+          style.borderTopColor,
+          style.stroke,
+          style.fill,
+          style.boxShadow,
+        ]) {
+          for (const part of value.match(/rgba?\([^)]*\)/g) ?? []) {
+            const m = part.match(orange)
+            if (!m) continue
+            const [r, g, b] = m.slice(1).map(Number)
+            const isOrange = r > 200 && g > 40 && g < 160 && b < 110
+            if (isOrange && part !== "rgb(255, 68, 25)") found.add(part)
+          }
+        }
+      }
+      return [...found]
+    })
+    expect(strays).toEqual([])
+  } finally {
+    await close()
+  }
+})

@@ -57,7 +57,7 @@ import Mark from "./Mark.astro"
                 <path
                   d="M45 0V70L29 86V120"
                   fill="none"
-                  stroke="#ff4419"
+                  class="signal"
                   stroke-width="2"></path>
               </svg>
               SnapQL
@@ -253,7 +253,18 @@ import Mark from "./Mark.astro"
     color: #fff;
   }
   .rows .new i {
-    color: #ff6a47;
+    color: #fff;
+  }
+  /* The new row is marked in orange; orange text would be too faint on
+     this grey. */
+  .rows .new > span::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 8px;
+    vertical-align: 1px;
+    background: var(--signal);
   }
   .keys {
     gap: 8px;
