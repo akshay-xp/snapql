@@ -1,4 +1,8 @@
 ---
+import "../styles/global.css"
+import Footer from "../components/Footer.astro"
+import Nav from "../components/Nav.astro"
+
 const title = "SnapQL: network traffic in DevTools, made readable"
 const description =
   "A DevTools tab that names each request by what it does and decodes what it carries: GraphQL, gRPC-web, WebSocket, LLM streams and more."
@@ -14,6 +18,10 @@ const description =
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body>
-    <slot />
+    <Nav />
+    <main id="top">
+      <slot />
+    </main>
+    <Footer />
   </body>
 </html>

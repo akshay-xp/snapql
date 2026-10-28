@@ -1,0 +1,74 @@
+/* The canvas's tokens: ground, ink, muted, rule and signal orange on a
+   faint 20/80px grid; IBM Plex Sans for text, Plex Mono for labels. */
+:root {
+  --ground: #dcdbd9;
+  --ink: #262626;
+  --muted: #4d4d4b;
+  --rule: #bebdba;
+  --signal: #ff4419;
+  --night: #1f1f1f;
+  --night-text: #e6e5e2;
+  --night-muted: #a9a8a5;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background-color: var(--ground);
+  background-image:
+    linear-gradient(#cbcac7 1px, transparent 1px),
+    linear-gradient(90deg, #cbcac7 1px, transparent 1px),
+    linear-gradient(#d4d3d0 1px, transparent 1px),
+    linear-gradient(90deg, #d4d3d0 1px, transparent 1px);
+  background-size:
+    80px 80px,
+    80px 80px,
+    20px 20px,
+    20px 20px;
+}
+
+a {
+  color: var(--ink);
+}
+a:hover {
+  color: #000;
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    padding: 0 20px;
+  }
+}
