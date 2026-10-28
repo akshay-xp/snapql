@@ -11,14 +11,14 @@ A DevTools panel that makes your app's network traffic readable, from GraphQL op
 
 SnapQL adds a tab to Chrome DevTools that lists the page's traffic by what it means: GraphQL operations by name, gRPC calls by method, WebSockets by their messages, LLM streams by their reassembled reply. Pick a request and read its payload and response decoded, instead of raw bytes and escaped JSON.
 
-![A GraphQL operation with its query and variables decoded](store/screenshots/1-graphql.png)
+![A GraphQL operation with its query and variables decoded](apps/extension/store/screenshots/1-graphql.png)
 
-|                                                                                          |                                                                          |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| ![gRPC-web response with named fields](store/screenshots/2-grpc.png)                     | ![WebSocket chat messages](store/screenshots/3-websocket.png)            |
-| gRPC-web decoded with field names from your `.proto` files                               | WebSocket frames, each decoded on its own                                |
-| ![LLM stream reassembled into a reply and tool call](store/screenshots/4-llm-stream.png) | ![Searching request and response bodies](store/screenshots/5-search.png) |
-| LLM streams put back together: reply, tool calls, usage                                  | Search inside request and response bodies                                |
+|                                                                                                         |                                                                                         |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| ![gRPC-web response with named fields](apps/extension/store/screenshots/2-grpc.png)                     | ![WebSocket chat messages](apps/extension/store/screenshots/3-websocket.png)            |
+| gRPC-web decoded with field names from your `.proto` files                                              | WebSocket frames, each decoded on its own                                               |
+| ![LLM stream reassembled into a reply and tool call](apps/extension/store/screenshots/4-llm-stream.png) | ![Searching request and response bodies](apps/extension/store/screenshots/5-search.png) |
+| LLM streams put back together: reply, tool calls, usage                                                 | Search inside request and response bodies                                               |
 
 ---
 

@@ -7,6 +7,12 @@ DevTools extension that makes network traffic human readable. v0.2.0 (live on th
 - Solid (only runtime dependency) + Tailwind v4, built with Vite.
 - Biome for lint/format, Vitest for tests, TypeScript strict.
 
+## Layout
+
+- pnpm workspace (`pnpm-workspace.yaml`: `apps/*`). Run every script from the root; see `docs/build.md`.
+- Root: shared config only: `biome.json` (lint and format for the whole repo), `tsconfig.base.json` (each app's `tsconfig.json` extends it), `docs/`, `.github/`, `README.md`, `LICENSE`.
+- `apps/extension/`: the extension (this overview, `docs/build.md`, `capture.md`, `decoders.md`, `panel.md`; their paths are relative to it).
+
 ## Targets
 
 - Chrome: built and published.
@@ -35,5 +41,5 @@ GitHub milestones M0 (foundation) to M7 (1.0 release).
 
 ## Store
 
-- `store/`: Chrome Web Store material, never bundled: `listing.txt` (long description), `privacy.txt` (privacy practices answers), `test-instructions.txt` (for store reviewers), `screenshots/` and `captures/` (scripted shots, 1x and 1.25x), `listing-images/` (the captioned images the store shows), `promo/` (small and marquee tiles), `demo.ts`, `screenshots.ts`, `listing-images.ts`, `listing-image.html` and `promo-tile.html` (how they are made). See `docs/build.md`.
+- `apps/extension/store/`: Chrome Web Store material, never bundled: `listing.txt` (long description), `privacy.txt` (privacy practices answers), `test-instructions.txt` (for store reviewers), `screenshots/` and `captures/` (scripted shots, 1x and 1.25x), `listing-images/` (the captioned images the store shows), `promo/` (small and marquee tiles), `demo.ts`, `screenshots.ts`, `listing-images.ts`, `listing-image.html` and `promo-tile.html` (how they are made). See `docs/build.md`.
 - `design/` (gitignored, local only): visual references, social card direction and the icon's SVG sources (`design/icon/`), from which `public/128.png` is exported.
