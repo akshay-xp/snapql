@@ -706,3 +706,37 @@ test("at phone width the quick start steps stack", async () => {
     await close()
   }
 })
+
+test("quick start ends with three tips, stacked on phones", async () => {
+  const tips = [
+    "Search bodies. Turn on Include bodies to match text inside requests and responses, then step through the hits.",
+    "Name gRPC fields. Add your .proto files under Schemas. They stay on your machine.",
+    "Share a request. Copy it as cURL or fetch, or export a HAR with tokens, cookies and passwords redacted.",
+  ]
+  const desktop = await openSite({ viewport: { width: 1440, height: 900 } })
+  try {
+    expect(await textOf(desktop.page, "#start h3.tips-title")).toBe(
+      "Good to know",
+    )
+    expect(
+      await desktop.page.$$eval("#start .tip", (els) =>
+        els.map((e) => e.textContent?.replace(/\s+/g, " ").trim()),
+      ),
+    ).toEqual(tips)
+    expect(
+      await desktop.page.$$eval("#start .tip svg", (els) =>
+        els.map((e) => e.getAttribute("aria-hidden")),
+      ),
+    ).toEqual(["true", "true", "true"])
+  } finally {
+    await desktop.close()
+  }
+  const phone = await openSite({ viewport: { width: 390, height: 844 } })
+  try {
+    expect(await fillsContent(phone.page, "#start .tip", "#start .wrap")).toBe(
+      true,
+    )
+  } finally {
+    await phone.close()
+  }
+})

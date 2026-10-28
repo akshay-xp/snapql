@@ -86,6 +86,36 @@ import Mark from "./Mark.astro"
         </p>
       </li>
     </ol>
+    <div class="tips">
+      <h3 class="tips-title">Good to know</h3>
+      <div class="tip-grid">
+        <p class="tip">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5"></circle>
+            <path d="M15.5 15.5L21 21" class="accent"></path>
+          </svg>
+          <strong>Search bodies.</strong> Turn on Include bodies to match text inside
+          requests and responses, then step through the hits.
+        </p>
+        <p class="tip">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 3H14L19 8V21H6Z"></path>
+            <path d="M14 3V8H19"></path>
+            <path d="M9 13H16M9 17H13" class="accent"></path>
+          </svg>
+          <strong>Name gRPC fields.</strong> Add your .proto files under Schemas. They
+          stay on your machine.
+        </p>
+        <p class="tip">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 14V20H20V14"></path>
+            <path d="M12 15V3M7 8L12 3L17 8" class="accent"></path>
+          </svg>
+          <strong>Share a request.</strong> Copy it as cURL or fetch, or export a HAR
+          with tokens, cookies and passwords redacted.
+        </p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -297,9 +327,44 @@ import Mark from "./Mark.astro"
     margin-left: auto;
   }
 
+  .tips {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .tip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px 32px;
+  }
+  .tip {
+    padding: 24px;
+    line-height: 1.55;
+    color: var(--muted);
+    background: #e4e3e1;
+    border: 1px solid var(--rule);
+  }
+  .tip strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .tip svg {
+    display: block;
+    margin-bottom: 16px;
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.6;
+  }
+  .tip svg .accent {
+    stroke: var(--signal);
+  }
+
   @media (max-width: 900px) {
     .steps {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .tip-grid {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
   @media (max-width: 480px) {
