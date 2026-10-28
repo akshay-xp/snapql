@@ -809,3 +809,48 @@ test("at phone width privacy stacks its copy below the heading", async () => {
     await close()
   }
 })
+
+// Images a visitor can see have finished loading. Hidden hero shots are lazy
+// and never load until their tab is shown.
+const shownImagesLoaded = (page: Page) =>
+  page.waitForFunction(() =>
+    [...document.images]
+      .filter((img) => img.offsetParent !== null)
+      .every((img) => img.complete && img.naturalWidth > 0),
+  )
+
+// Scrolls a viewport at a time to the bottom, so lazy images load, then waits
+// for the shown ones to finish.
+const scrollThrough = async (page: Page) => {
+  await page.evaluate(async () => {
+    const atBottom = () =>
+      Math.ceil(window.scrollY + window.innerHeight) >=
+      document.documentElement.scrollHeight
+    while (!atBottom()) {
+      window.scrollBy(0, window.innerHeight)
+      await new Promise((r) => setTimeout(r, 50))
+    }
+  })
+  await shownImagesLoaded(page)
+}
+
+test("the whole page loads from its own origin and fits phones", async () => {
+  const desktop = await openSite({ viewport: { width: 1440, height: 900 } })
+  try {
+    for (const tab of await desktop.page.$$(".tabs button")) {
+      await tab.click()
+      await shownImagesLoaded(desktop.page)
+    }
+    await scrollThrough(desktop.page)
+    expect(desktop.offsite).toEqual([])
+  } finally {
+    await desktop.close()
+  }
+  const phone = await openSite({ viewport: { width: 390, height: 844 } })
+  try {
+    await scrollThrough(phone.page)
+    expect(await scrollWidth(phone.page)).toBeLessThanOrEqual(390)
+  } finally {
+    await phone.close()
+  }
+})
