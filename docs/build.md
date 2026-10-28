@@ -10,7 +10,7 @@ The extension lives in `apps/extension/`; paths in this doc are relative to it, 
 - `pnpm lint`: `biome check .` (respects `.gitignore`).
 - `pnpm typecheck`: `tsc --noEmit`, with `tsconfig.json` extending the root `tsconfig.base.json`.
 - `pnpm test`: `vitest run`. Unit tests only; `e2e/**` excluded in `vitest.config.ts`.
-- `pnpm e2e`: `vite build --mode chrome`, then Vitest with `vitest.e2e.config.ts` (`e2e/**/*.test.ts`, 30s timeout).
+- `pnpm e2e`: runs every app's `e2e` from the root (the site's is in `docs/site.md`). The extension's: `vite build --mode chrome`, then Vitest with `vitest.e2e.config.ts` (`e2e/**/*.test.ts`, 30s timeout).
 
 ## Targets
 
@@ -69,7 +69,7 @@ The extension lives in `apps/extension/`; paths in this doc are relative to it, 
   4. `gh release create v<version> apps/extension/release/snapql-chrome-<version>.zip --title v<version> --notes "<what changed>"`.
   5. Chrome Web Store developer dashboard, SnapQL item:
      - Package: upload the zip.
-     - Store listing: paste `store/listing.txt` as the description; replace the screenshots with `store/listing-images/*.png` in file order; promo tiles: `store/promo/small.png` (440x280) and `store/promo/marquee.png` (1400x560). Title and summary come from the manifest (`name`, `description`), not the dashboard.
+     - Store listing: paste `store/listing.txt` as the description; replace the screenshots with `store/listing-images/*.png` in file order; promo tiles: `store/promo/small.png` (440x280) and `store/promo/marquee.png` (1400x560). Title and summary come from the manifest (`name`, `description`), not the dashboard. Set the website to `https://snapql.akxp.net` and the privacy policy URL to `https://snapql.akxp.net/#privacy`.
      - Test instructions (Distribution / reviewer notes): paste `store/test-instructions.txt` (field limit 500 chars). Reviewers run no scripts: the example, countries.trevorblades.com (a public GraphiQL page), sends an introspection query on load, so a reload shows a decoded GraphQL row. Recheck it before each submission.
      - Privacy practices: paste the sections of `store/privacy.txt` (single purpose, permission justification, remote code, data usage) into their fields.
      - Submit for review.
