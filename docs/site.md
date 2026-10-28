@@ -11,6 +11,8 @@ Landing page at https://snapql.akxp.net, in `apps/site/` (paths below are relati
 - `src/styles/global.css`: the canvas tokens (`--ground`, `--ink`, `--muted`, `--rule`, `--signal`, `--night*`, `--sans`, `--mono`), the 20/80px grid background on `body`, `.wrap` (1280px max, 40px gutters, 20px under 480px), `.mono`, `.label`, focus outline in `--signal`.
 - `src/components/`: `Mark` (the icon's brackets and orange slash, `size` prop), `Nav` (links hidden under 480px), `Footer` (version read from `apps/extension/package.json`). Section components keep their styles scoped.
 - No licence anywhere on the site (design decision).
+- One orange, `--signal` (`#ff4419`), on light and dark alike: SVG lines take it through the global `.signal` class; it passes as text on the dark band (4.8:1), and where it wouldn't (orange text on `#3a3a3a`) an orange mark is used instead. The e2e test fails on any other orange.
+- Hero carousel (`Hero.astro`): autoplays one slide per `--slide` (6s), looping. The active tab's `.tab-fill` animates `scaleX(0 → 1)`; its `animationend` advances the slide, so the bar and the timer can't drift. Paused (`animation-play-state`) on hover, keyboard focus (`:focus-visible`, so a mouse click doesn't stop it) and while off screen (`data-paused`, IntersectionObserver). The pause rule uses the animation's own selector: the `animation` shorthand resets the play state, so a less specific rule loses. No autoplay with `prefers-reduced-motion` (the active bar shows full) or without JS (the GraphQL shot stays).
 
 ## Build
 
@@ -28,6 +30,7 @@ Landing page at https://snapql.akxp.net, in `apps/site/` (paths below are relati
 - Helpers: `textOf` (text with source whitespace collapsed), `partsOf` (an element's children joined with spaces; flex items have none between them in `textContent`), `links` (text and href pairs), `box`, `contentBox` and `fillsContent` (an item spans its container's content width, the phone stacking check), `scrollWidth` (sideways scroll), `navLandsOn` (a nav link scrolls its section to the top), `landedOn` (top reached, or scrolled to the bottom with the whole section in view: Privacy is too short to reach the top), `scrollThrough` (scrolls the page so lazy images load, then waits for the shown ones).
 - Every section checks its copy, its layout at 1440x900 and its stacking at 390x844. The last test scrolls the whole page and opens every hero tab, then asserts `offsite` is empty.
 - The binary samples on the decode cards (gRPC-web, JWT, MessagePack) are decoded by small inline decoders in the test and compared with what each card shows, so a copy edit can't make a card wrong.
+- Carousel tests shorten `--slide` with `setSlide()`. Shrinking it below the time already played ends the fill at once, paused or not, so pause tests keep the slide longer than their setup.
 - Fonts are checked with `document.fonts.load()` (resolves to the faces it loaded), not `document.fonts.check()`, which is true when no `@font-face` matches at all.
 
 ## Deploy
