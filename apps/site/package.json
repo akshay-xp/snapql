@@ -12,8 +12,7 @@
     "astro": "7.3.8",
     "playwright": "^1.64.1",
     "sharp": "0.35.5",
-    "vitest": "^5.0.5",
-    "wrangler": "4.151.0"
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",
