@@ -48,6 +48,15 @@ h3 {
   text-wrap: balance;
 }
 
+/* Every h2 on the page is a section title. */
+h2 {
+  margin: 0;
+  font-size: 48px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
 .wrap {
   max-width: 1280px;
   margin: 0 auto;
