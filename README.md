@@ -1,6 +1,6 @@
 # SnapQL
 
-Human-readable network traffic in DevTools: GraphQL, REST, gRPC-web, protobuf, WebSocket, SSE and LLM streams, decoded.
+A DevTools panel that makes your app's network traffic readable, from GraphQL operations to WebSocket messages and LLM streams.
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/bopfjlgmfhmpnceeknaddfgeanchkbmm?label=Chrome%20Web%20Store&logo=googlechrome&color=blue)](https://chrome.google.com/webstore/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm)
 ![Made with Solid](https://img.shields.io/badge/Made%20with-Solid-2C4F7C?logo=solid&logoColor=white)

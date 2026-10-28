@@ -12,7 +12,7 @@ const base = {
   // search. The DevTools tab title is set separately in src/devtools.ts.
   name: "SnapQL: GraphQL, REST, gRPC & WebSocket Inspector",
   description:
-    "Human-readable network traffic in DevTools: GraphQL, REST, gRPC-web, protobuf, WebSocket, SSE and LLM streams, decoded.",
+    "A DevTools panel that makes your app's network traffic readable, from GraphQL operations to WebSocket messages and LLM streams.",
   devtools_page: "devtools.html",
   icons: { "128": "128.png" },
 }
