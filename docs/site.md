@@ -18,7 +18,7 @@ Landing page at https://snapql.akxp.net, in `apps/site/` (paths below are relati
 
 - `pnpm --filter site build` (also run by the root `pnpm build`) writes `dist/`.
 - Fonts: IBM Plex Sans 400/500/600 and Mono 400/500 from `@fontsource`, bundled into `dist/_astro/`; the page makes no third-party requests.
-- Versions pinned exactly (`astro`, `wrangler`, `@fontsource/*`), each at least two weeks old when added.
+- Versions pinned exactly (`astro`, `sharp`, `@fontsource/*`), each at least two weeks old when added. Wrangler is not a dependency: the deploy job pins it (below).
 - `pnpm typecheck` runs `tsc --noEmit` over `e2e/` and the configs: `astro check` refuses TypeScript 7, which the repo uses. `.astro` files are covered by the build and the e2e test.
 - Lint: the root Biome config has an override for `**/*.astro` turning off `noUnusedVariables` and `noUnusedImports` (it doesn't see frontmatter used by the template). `.astro/` (generated types) is gitignored.
 
@@ -35,6 +35,10 @@ Landing page at https://snapql.akxp.net, in `apps/site/` (paths below are relati
 
 ## Deploy
 
-- `.github/workflows/site.yml`: on push to `master` touching `apps/site/**`, `apps/extension/store/captures/**`, `apps/extension/package.json`, `pnpm-lock.yaml` or the workflow, and on manual dispatch. Installs, `pnpm --filter site build`, then `wrangler pages deploy dist --project-name snapql --branch master`.
+- `.github/workflows/site.yml`, the same shape as distillate's `docs.yml`: on push to `master` touching `apps/site/**`, `apps/extension/store/captures/**`, `apps/extension/package.json`, `pnpm-lock.yaml` or the workflow, and on manual dispatch. Not on pull requests: CI's root build and e2e already cover the site.
+  - `build`: install, `pnpm --filter site build`, upload `apps/site/dist/` as the `site-dist` artifact.
+  - `deploy` (needs `build`, only on `refs/heads/master`): downloads the artifact and runs `cloudflare/wrangler-action` with `wranglerVersion` `4.151.0` and `packageManager: npm`, command `pages deploy apps/site/dist --project-name=snapql --branch=master`. No checkout, so wrangler-action can't infer pnpm from the lockfile. It deploys exactly what `build` produced.
+  - `concurrency` per workflow and ref, `cancel-in-progress`: a newer push supersedes an older deploy.
+  - Every action is pinned to a commit SHA (version in a comment), as in `ci.yml`, since this workflow holds a token that can publish the site.
 - Secrets: `CLOUDFLARE_API_TOKEN` (Cloudflare Pages edit permission) and `CLOUDFLARE_ACCOUNT_ID`, as GitHub repository secrets.
-- One-time setup, by hand: create the Pages project `snapql` (`pnpm --filter site exec wrangler pages project create snapql --production-branch master`, or in the dashboard), add the two secrets, then attach the custom domain `snapql.akxp.net` to the project in the Cloudflare dashboard.
+- One-time setup, by hand: create the Pages project `snapql` (`pnpm dlx wrangler@4.151.0 pages project create snapql --production-branch master`, or in the dashboard), add the two secrets, then attach the custom domain `snapql.akxp.net` to the project in the Cloudflare dashboard.
