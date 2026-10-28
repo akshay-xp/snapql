@@ -1,10 +1,14 @@
 # Build
 
+The extension lives in `apps/extension/`; paths in this doc are relative to it, except `docs/`, `.github/` and the root files named as such.
+
 ## Scripts
+
+- Run from the repo root. The root `package.json` delegates: `lint` runs Biome over the whole repo; `typecheck`, `test` and `build` run in every app (`pnpm -r --if-present`); `e2e`, `screenshots`, `listing-images` and `release` run in the extension (`pnpm --filter extension`), whose own `package.json` holds the commands below.
 
 - `pnpm build`: `vite build --mode chrome && vite build --mode firefox`. Outputs `dist/chrome/` and `dist/firefox/`.
 - `pnpm lint`: `biome check .` (respects `.gitignore`).
-- `pnpm typecheck`: `tsc --noEmit`.
+- `pnpm typecheck`: `tsc --noEmit`, with `tsconfig.json` extending the root `tsconfig.base.json`.
 - `pnpm test`: `vitest run`. Unit tests only; `e2e/**` excluded in `vitest.config.ts`.
 - `pnpm e2e`: `vite build --mode chrome`, then Vitest with `vitest.e2e.config.ts` (`e2e/**/*.test.ts`, 30s timeout).
 
@@ -57,12 +61,12 @@
 
 ## Release
 
-- `pnpm release`: `vite build --mode chrome`, then `node scripts/release.ts` (Node runs the `.ts` directly; 22.18+ strips types unflagged). Exits 1 with `<file> is <n> bytes gzipped, over the 40960 budget` when the panel is too big; otherwise writes `release/snapql-chrome-<version>.zip` (gitignored, replaced on rerun) by running `zip -qrX` inside `dist/chrome`, so `manifest.json` is at the zip root as the store requires. Vite empties `dist/chrome` per build, so no stale files ship.
+- `pnpm release`: `vite build --mode chrome`, then `node scripts/release.ts` (Node runs the `.ts` directly; 22.18+ strips types unflagged; cwd is `apps/extension`). Exits 1 with `<file> is <n> bytes gzipped, over the 40960 budget` when the panel is too big; otherwise writes `release/snapql-chrome-<version>.zip` (gitignored, replaced on rerun) by running `zip -qrX` inside `dist/chrome`, so `manifest.json` is at the zip root as the store requires. Vite empties `dist/chrome` per build, so no stale files ship.
 - Steps:
-  1. Set `version` in `package.json` (the manifests take it from there).
+  1. Set `version` in `apps/extension/package.json` (the manifests take it from there).
   2. `pnpm release`.
   3. Merge to `master`, then tag it: `git tag v<version> && git push origin v<version>`.
-  4. `gh release create v<version> release/snapql-chrome-<version>.zip --title v<version> --notes "<what changed>"`.
+  4. `gh release create v<version> apps/extension/release/snapql-chrome-<version>.zip --title v<version> --notes "<what changed>"`.
   5. Chrome Web Store developer dashboard, SnapQL item:
      - Package: upload the zip.
      - Store listing: paste `store/listing.txt` as the description; replace the screenshots with `store/listing-images/*.png` in file order; promo tiles: `store/promo/small.png` (440x280) and `store/promo/marquee.png` (1400x560). Title and summary come from the manifest (`name`, `description`), not the dashboard.
@@ -93,7 +97,7 @@
 - Steps: `pnpm install --frozen-lockfile`, then `lint`, `typecheck`, `test`, `build`, Chromium, `e2e` as separate steps; first failure fails the job.
 - Chromium: `~/.cache/ms-playwright` cached by `actions/cache`, keyed on `playwright --version`; `playwright install chromium` only on a miss. No `--with-deps`: its apt step took 9+ min on a slow mirror (PR #64) while the browser download takes seconds, and the runner image already ships Chrome's system libraries. `Check Chromium libraries` runs `ldd` on both binaries and fails listing any `not found`, so a runner image change shows up as a clear error rather than a browser launch failure.
 - Node 22: the `engines` minimum, so CI catches use of newer Node APIs.
-- pnpm version comes from `packageManager` in `package.json` (read by `pnpm/action-setup`); not repeated in the workflow.
+- pnpm version comes from `packageManager` in the root `package.json` (read by `pnpm/action-setup`); not repeated in the workflow.
 - Validate locally: `pnpm dlx @action-validator/cli .github/workflows/ci.yml`.
 
 ## Key files
