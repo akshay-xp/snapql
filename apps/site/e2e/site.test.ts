@@ -66,6 +66,10 @@ const extensionVersion = async (): Promise<string> =>
 const textOf = (page: Page, selector: string) =>
   page.$eval(selector, (e) => e.textContent?.replace(/\s+/g, " ").trim())
 
+// Wider than the viewport means the page scrolls sideways.
+const scrollWidth = (page: Page) =>
+  page.evaluate(() => document.documentElement.scrollWidth)
+
 const links = (page: Page, selector: string) =>
   page.$$eval(`${selector} a`, (as) =>
     as.map((a) => [a.textContent?.trim(), a.getAttribute("href")]),
@@ -272,9 +276,7 @@ test("at phone width the hero drops the trace and fits the screen", async () => 
         (e) => getComputedStyle(e).gridTemplateColumns.split(" ").length,
       ),
     ).toBe(2)
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
-    ).toBeLessThanOrEqual(390)
+    expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
   } finally {
     await close()
   }
@@ -322,6 +324,69 @@ test("workspaces says what they do and the nav reaches it", async () => {
       (e) => e.getBoundingClientRect().top,
     )
     expect(Math.abs(top)).toBeLessThanOrEqual(1)
+  } finally {
+    await close()
+  }
+})
+
+const box = (page: Page, selector: string) =>
+  page.$eval(selector, (e) => {
+    const r = e.getBoundingClientRect()
+    return {
+      top: r.top,
+      bottom: r.bottom,
+      left: r.left,
+      right: r.right,
+      width: r.width,
+    }
+  })
+
+test("the workspace shot runs off the right edge on desktop", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    const img = "#workspaces img"
+    expect(await page.$eval(img, (e) => e.getAttribute("alt"))).toMatch(
+      /^The workspace menu open in SnapQL/,
+    )
+    await page.$eval(img, (e) => e.scrollIntoView())
+    await page.waitForFunction(
+      (s) => (document.querySelector(s) as HTMLImageElement).complete,
+      img,
+    )
+    expect(
+      await page.$eval(img, (e) => (e as HTMLImageElement).currentSrc),
+    ).toContain("6-workspaces")
+    const shot = await box(page, img)
+    const rows = await box(page, "#workspaces .rows")
+    expect(shot.width).toBe(1120)
+    expect(shot.right).toBeGreaterThan(1440)
+    expect(shot.left).toBeGreaterThan(rows.right)
+    expect(await scrollWidth(page)).toBeLessThanOrEqual(1440)
+  } finally {
+    await close()
+  }
+})
+
+test("at phone width the workspace shot stacks below the copy", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 390, height: 844 },
+  })
+  try {
+    const shot = await box(page, "#workspaces img")
+    const rows = await box(page, "#workspaces .rows")
+    const content = await page.$eval("#workspaces .wrap", (e) => {
+      const style = getComputedStyle(e)
+      return (
+        e.clientWidth -
+        Number.parseFloat(style.paddingLeft) -
+        Number.parseFloat(style.paddingRight)
+      )
+    })
+    expect(shot.top).toBeGreaterThan(rows.bottom)
+    expect(Math.abs(shot.width - content)).toBeLessThanOrEqual(1)
+    expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
   } finally {
     await close()
   }

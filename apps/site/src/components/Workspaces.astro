@@ -1,4 +1,7 @@
 ---
+import { Image } from "astro:assets"
+import shot from "../../../extension/store/captures/6-workspaces.png"
+
 const rows = [
   {
     title: "Filter what matters",
@@ -36,6 +39,15 @@ const rows = [
         }
       </ul>
     </div>
+    <div class="shot">
+      <Image
+        src={shot}
+        alt="The workspace menu open in SnapQL, listing Everything, Payments gRPC, Chat sockets and Flights GraphQL, with Flights GraphQL active and only graphql requests shown."
+        width={1600}
+        format="webp"
+        loading="lazy"
+      />
+    </div>
   </div>
 </section>
 
@@ -43,7 +55,9 @@ const rows = [
   section {
     background: var(--night);
     color: var(--night-text);
-    overflow: hidden;
+    /* clip, not hidden: a hidden box can still be scrolled sideways by
+       scrollIntoView or focus, shifting the shot. */
+    overflow: clip;
   }
   .wrap {
     display: grid;
@@ -100,9 +114,32 @@ const rows = [
     line-height: 1.6;
     color: var(--night-muted);
   }
+  /* Runs off the page's right edge; the section clips it. */
+  .shot {
+    position: relative;
+    height: 700px;
+  }
+  .shot img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1120px;
+    height: 700px;
+    display: block;
+    box-sizing: border-box;
+    border: 1px solid #3a3a3a;
+  }
   @media (max-width: 900px) {
     .wrap {
       grid-template-columns: minmax(0, 1fr);
+    }
+    .shot {
+      height: auto;
+    }
+    .shot img {
+      position: static;
+      width: 100%;
+      height: auto;
     }
   }
 </style>
