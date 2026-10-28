@@ -1,0 +1,108 @@
+---
+const rows = [
+  {
+    title: "Filter what matters",
+    text: "Show only the protocols (graphql, grpc-web, websocket, llm…) and statuses (2xx, 4xx, failed) you're working on.",
+  },
+  {
+    title: "Hide the noise",
+    text: "Preflights, cached responses, service worker copies and static assets stay out of the list, out of the box.",
+  },
+  {
+    title: "Switch in one click",
+    text: "Jump between projects from the first button in the filter row. Nothing to save, nothing to set up again.",
+  },
+]
+---
+
+<section id="workspaces">
+  <div class="wrap">
+    <div class="copy">
+      <p class="label">Workspaces</p>
+      <h2>A saved view for every project you debug.</h2>
+      <p class="intro">
+        Pick the protocols and status codes you care about, hide the rest, and
+        give it a name. Every change saves as you make it, and your workspaces
+        are there each time you open DevTools.
+      </p>
+      <ul class="rows">
+        {
+          rows.map((row) => (
+            <li>
+              <span class="row-title">{row.title}</span>
+              <span class="row-text">{row.text}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  section {
+    background: var(--night);
+    color: var(--night-text);
+    overflow: hidden;
+  }
+  .wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 72px;
+    align-items: center;
+    padding-top: 128px;
+    padding-bottom: 128px;
+  }
+  .copy {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  p,
+  h2 {
+    margin: 0;
+  }
+  .label {
+    color: #ff6a47;
+  }
+  h2 {
+    font-size: 48px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .intro {
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--night-muted);
+  }
+  .rows {
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid #3a3a3a;
+  }
+  .rows li {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 28px 0;
+    border-bottom: 1px solid #3a3a3a;
+  }
+  .row-title {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .row-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--night-muted);
+  }
+  @media (max-width: 900px) {
+    .wrap {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
