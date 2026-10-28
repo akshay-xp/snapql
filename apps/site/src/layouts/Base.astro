@@ -1,0 +1,19 @@
+---
+const title = "SnapQL: network traffic in DevTools, made readable"
+const description =
+  "A DevTools tab that names each request by what it does and decodes what it carries: GraphQL, gRPC-web, WebSocket, LLM streams and more."
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
