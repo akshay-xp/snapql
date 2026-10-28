@@ -1,0 +1,242 @@
+---
+// Each card shows a body as it travels, then as SnapQL shows it. `decoded`
+// is HTML: <b> for the name SnapQL lists, <i> for muted labels.
+const cards = [
+  {
+    name: "GraphQL",
+    sub: "Operations by name, with variables, batches, persisted queries and @defer.",
+    wide: true,
+    wire: 'POST /graphql\n{"operationName":"SearchFlights","query":"query SearchFlights($from: String!, $to: String!, $date: Date!) { flights(from: $from, to: $to, date: $date) { id carrier fare { amount currency } } }","variables":{"from":"SFO","to":"JFK","date":"2026-11-14"}}',
+    decoded:
+      '<b>SearchFlights</b>  <i>query</i>\nfrom: "SFO"   to: "JFK"   date: "2026-11-14"',
+  },
+  {
+    name: "gRPC-web",
+    sub: "Readable with no schema, and fully named once you add your .proto files.",
+    wire: "AAAAABkKBnNrdS00MhINVHJhaWwgcnVubmVycxgC",
+    decoded:
+      '<b>GetProduct</b>  <i>catalog.ProductService</i>\nsku: "sku-42"\nname: "Trail runners"\nstatus: IN_STOCK',
+  },
+  {
+    name: "WebSocket",
+    sub: "Every frame of a connection, including Socket.IO and graphql-ws.",
+    wire: '42["message",{"room":"ops","text":"Deploy done"}]',
+    decoded:
+      '<b>message</b>  <i>Socket.IO</i>\nroom: "ops"\ntext: "Deploy done"',
+  },
+  {
+    name: "LLM streams",
+    sub: "OpenAI and Anthropic streams, put back together into the reply, thinking, tool calls and usage.",
+    wide: true,
+    wire: 'data: {"choices":[{"delta":{"content":"Two"}}]}\ndata: {"choices":[{"delta":{"content":" nonstop flights"}}]}\ndata: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"search_flights","arguments":"{\\"fr"}}]}}]}',
+    decoded:
+      '<i>Reply</i>      Two nonstop flights leave SFO on Nov 14.\n<i>Tool call</i>  <b>search_flights</b>({"from": "SFO", "to": "JFK"})\n<i>Usage</i>      412 in · 38 out',
+  },
+  {
+    name: "JWTs",
+    sub: "Tokens in headers and cookies, opened up.",
+    wire: "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1XzQyIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNzk4NzYxNjAwfQ",
+    decoded: 'sub: "u_42"\nrole: "admin"\nexp: 1798761600',
+  },
+  {
+    name: "MessagePack",
+    sub: "Binary bodies in MessagePack and CBOR.",
+    wire: "82 a3 73 6b 75 a6 73 6b 75 2d 34 32 a3 71 74 79 02",
+    decoded: 'sku: "sku-42"\nqty: 2',
+  },
+]
+const everyday = [
+  "REST and JSON",
+  "Form data",
+  "Multipart",
+  "XML",
+  "SOAP",
+  "JSON-RPC",
+  "tRPC",
+  "CBOR",
+  "Server-sent events",
+  "NDJSON",
+  "Images",
+  "Fonts",
+]
+---
+
+<section id="formats">
+  <div class="wrap">
+    <div class="head">
+      <p class="label">What it decodes</p>
+      <h2>From what's on the wire to what you meant.</h2>
+    </div>
+    <div class="bento">
+      {
+        cards.map((card) => (
+          <article class:list={["fmt", { "span-2": card.wide }]}>
+            <div class="fmt-head">
+              <h3 class="fmt-name">{card.name}</h3>
+              <p class="fmt-sub">{card.sub}</p>
+            </div>
+            <div>
+              <p class="fmt-tag">On the wire</p>
+              <pre class="wire">{card.wire}</pre>
+            </div>
+            <svg
+              class="trace"
+              aria-hidden="true"
+              width="40"
+              height="36"
+              viewBox="0 0 40 36"
+            >
+              <path
+                d="M28 0V12L12 28V36"
+                fill="none"
+                stroke="#ff4419"
+                stroke-width="2"
+              />
+            </svg>
+            <div>
+              <p class="fmt-tag">In SnapQL</p>
+              <pre class="decoded" set:html={card.decoded} />
+            </div>
+          </article>
+        ))
+      }
+      <article class="fmt everyday">
+        <div class="fmt-head">
+          <h3 class="fmt-name">And the everyday ones</h3>
+          <p class="fmt-sub">Formatted, searchable and copyable.</p>
+        </div>
+        <ul class="more">{everyday.map((tag) => <li>{tag}</li>)}</ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+    padding-top: 128px;
+    padding-bottom: 128px;
+  }
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 720px;
+  }
+  p,
+  h2,
+  h3 {
+    margin: 0;
+  }
+  .label {
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 48px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .fmt {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 28px;
+    background: #e4e3e1;
+    border: 1px solid var(--ink);
+    min-width: 0;
+  }
+  .span-2 {
+    grid-column: span 2;
+  }
+  .fmt-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .fmt-name {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .fmt-sub {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .fmt-tag {
+    margin: 0 0 8px;
+    font: 500 11px/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .wire,
+  .decoded {
+    margin: 0;
+    padding: 14px 16px;
+    font: 400 13px/1.6 var(--mono);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .wire {
+    color: var(--muted);
+    border: 1px dashed #a3a29f;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .decoded {
+    background: var(--ink);
+    color: var(--night-text);
+  }
+  .decoded :global(b) {
+    color: #fff;
+    font-weight: 500;
+  }
+  .decoded :global(i) {
+    font-style: normal;
+    color: var(--night-muted);
+  }
+  .trace {
+    display: block;
+    margin: -2px 0 -2px 12px;
+  }
+  .everyday {
+    background: var(--ink);
+    color: var(--ground);
+  }
+  .everyday .fmt-sub {
+    color: #b5b4b1;
+  }
+  .more {
+    margin: auto 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .more li {
+    font: 500 13px/1 var(--mono);
+    padding: 9px 12px;
+    border: 1px solid var(--muted);
+  }
+  @media (max-width: 900px) {
+    .bento {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .span-2 {
+      grid-column: auto;
+    }
+  }
+</style>

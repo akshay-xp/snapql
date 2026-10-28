@@ -70,6 +70,16 @@ const textOf = (page: Page, selector: string) =>
 const scrollWidth = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth)
 
+// Clicks the nav link to a section; resolves to how far its top ends up from
+// the top of the viewport.
+const navLandsOn = async (page: Page, id: string) => {
+  await page.click(`nav a[href="#${id}"]`)
+  await page.waitForFunction(() => window.scrollY > 0)
+  return Math.abs(
+    await page.$eval(`#${id}`, (e) => e.getBoundingClientRect().top),
+  )
+}
+
 const links = (page: Page, selector: string) =>
   page.$$eval(`${selector} a`, (as) =>
     as.map((a) => [a.textContent?.trim(), a.getAttribute("href")]),
@@ -317,13 +327,7 @@ test("workspaces says what they do and the nav reaches it", async () => {
         "Jump between projects from the first button in the filter row. Nothing to save, nothing to set up again.",
       ],
     ])
-    await page.click('nav a[href="#workspaces"]')
-    await page.waitForFunction(() => window.scrollY > 0)
-    const top = await page.$eval(
-      "#workspaces",
-      (e) => e.getBoundingClientRect().top,
-    )
-    expect(Math.abs(top)).toBeLessThanOrEqual(1)
+    expect(await navLandsOn(page, "workspaces")).toBeLessThanOrEqual(1)
   } finally {
     await close()
   }
@@ -387,6 +391,70 @@ test("at phone width the workspace shot stacks below the copy", async () => {
     expect(shot.top).toBeGreaterThan(rows.bottom)
     expect(Math.abs(shot.width - content)).toBeLessThanOrEqual(1)
     expect(await scrollWidth(page)).toBeLessThanOrEqual(390)
+  } finally {
+    await close()
+  }
+})
+
+test("what it decodes shows seven cards in the design's grid", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    expect(await textOf(page, "#formats .label")).toBe("What it decodes")
+    expect(await textOf(page, "#formats h2")).toBe(
+      "From what's on the wire to what you meant.",
+    )
+    const cards = await page.$$eval("#formats .fmt", (els) =>
+      els.map((e) => ({
+        name: e.querySelector(".fmt-name")?.textContent?.trim(),
+        wire: e.querySelector(".wire")?.textContent?.trim() ?? "",
+        decoded: e.querySelector(".decoded")?.textContent?.trim() ?? "",
+        width: e.getBoundingClientRect().width,
+      })),
+    )
+    expect(cards.map((c) => c.name)).toEqual([
+      "GraphQL",
+      "gRPC-web",
+      "WebSocket",
+      "LLM streams",
+      "JWTs",
+      "MessagePack",
+      "And the everyday ones",
+    ])
+    for (const card of cards.slice(0, 6)) {
+      expect(card.wire).not.toBe("")
+      expect(card.decoded).not.toBe("")
+    }
+    expect(cards[6].wire + cards[6].decoded).toBe("")
+    const single = cards[1].width
+    for (const i of [0, 3]) {
+      expect(Math.abs(cards[i].width - (2 * single + 24))).toBeLessThanOrEqual(
+        1,
+      )
+    }
+    for (const i of [2, 4, 5, 6]) {
+      expect(Math.abs(cards[i].width - single)).toBeLessThanOrEqual(1)
+    }
+    expect(
+      await page.$$eval("#formats .more li", (lis) =>
+        lis.map((li) => li.textContent?.trim()),
+      ),
+    ).toEqual([
+      "REST and JSON",
+      "Form data",
+      "Multipart",
+      "XML",
+      "SOAP",
+      "JSON-RPC",
+      "tRPC",
+      "CBOR",
+      "Server-sent events",
+      "NDJSON",
+      "Images",
+      "Fonts",
+    ])
+    expect(await navLandsOn(page, "formats")).toBeLessThanOrEqual(1)
   } finally {
     await close()
   }
