@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": ["chrome", "vite/client", "node"]
+  },
+  "include": ["src", "scripts", "e2e", "store", "*.config.ts"]
+}
