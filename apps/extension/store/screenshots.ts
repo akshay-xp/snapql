@@ -104,3 +104,41 @@ test("search", () =>
       .poll(async () => (await panel.marks()).length)
       .toBeGreaterThan(0)
   }))
+
+// For the site, not the store listing.
+test("workspaces", () =>
+  shoot("6-workspaces", async (panel) => {
+    await panel.page.goto(panel.origin)
+    await expect.poll(panel.chips).toContain("graphql")
+    const button = "[data-workspace] > button"
+    const input = "[data-workspace-name]"
+    const name = async (value: string) => {
+      await panel.fill(input, value)
+      await panel.dispatch(input, "keydown", "Enter")
+    }
+    await panel.click(button)
+    await panel.clickButton("Rename")
+    await name("Everything")
+    for (const value of ["Payments gRPC", "Chat sockets", "Flights GraphQL"]) {
+      await panel.click(button)
+      await panel.clickButton("New workspace")
+      await name(value)
+    }
+    await panel.toggleChip("graphql")
+    await panel.selectStarting("SearchFlights")
+    await panel.openTab("Payload")
+    await expect.poll(panel.detail).toContain("Decoded · graphql")
+    await panel.click(button)
+    const menu = "[data-workspace-menu]"
+    for (const value of [
+      "Everything",
+      "Payments gRPC",
+      "Chat sockets",
+      "Flights GraphQL",
+    ]) {
+      await expect.poll(() => panel.text(menu)).toContain(value)
+    }
+    expect(
+      await panel.text(`${menu} [role="menuitemradio"][aria-checked="true"]`),
+    ).toBe("Flights GraphQL")
+  }))
