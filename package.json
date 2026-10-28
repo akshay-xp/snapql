@@ -7,7 +7,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
-    "e2e": "pnpm --filter extension e2e",
+    "e2e": "pnpm -r --if-present e2e",
     "screenshots": "pnpm --filter extension screenshots",
     "listing-images": "pnpm --filter extension listing-images",
     "release": "pnpm --filter extension release"
