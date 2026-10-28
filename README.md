@@ -2,6 +2,8 @@
 
 A DevTools panel that makes your app's network traffic readable, from GraphQL operations to WebSocket messages and LLM streams.
 
+**Website:** [snapql.akxp.net](https://snapql.akxp.net)
+
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/bopfjlgmfhmpnceeknaddfgeanchkbmm?label=Chrome%20Web%20Store&logo=googlechrome&color=blue)](https://chrome.google.com/webstore/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm)
 ![Made with Solid](https://img.shields.io/badge/Made%20with-Solid-2C4F7C?logo=solid&logoColor=white)
 ![Built with Vite](https://img.shields.io/badge/Built%20with-Vite-646CFF?logo=vite&logoColor=white)
@@ -51,7 +53,7 @@ SnapQL needs no permissions and runs only while DevTools is open. It collects no
 
 ### Install
 
-[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm), then open DevTools and pick the **SnapQL** tab.
+[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/bopfjlgmfhmpnceeknaddfgeanchkbmm), then open DevTools and pick the **SnapQL** tab. The [website](https://snapql.akxp.net) has a quick start and what each format looks like decoded.
 
 Firefox builds work when loaded unpacked (below) but are not published yet.
 

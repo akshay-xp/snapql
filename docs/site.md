@@ -22,8 +22,12 @@ Landing page at https://snapql.akxp.net, in `apps/site/` (paths below are relati
 
 ## Tests
 
-- `pnpm --filter site e2e`: `astro build`, then Vitest with `vitest.e2e.config.ts` (`e2e/**/*.test.ts`, 30s timeout).
+- `pnpm --filter site e2e`: `astro build`, then Vitest with `vitest.e2e.config.ts` (`e2e/**/*.test.ts`, 30s timeout). The root `pnpm e2e` runs it alongside the extension's, so CI's E2E step covers the site.
 - `openSite()` in `e2e/site.test.ts` returns `{ page, offsite, close() }`: Playwright Chromium opens `https://snapql.test/`, and `page.route("**/*")` serves `dist/` for that origin (`/` and directory paths as `index.html`) and aborts every other request, recording its URL in `offsite`.
+- `openSite()` options: `viewport`, `javaScriptEnabled` (the no-JS switcher check) and `path` (e.g. `/#privacy`).
+- Helpers: `textOf` (text with source whitespace collapsed), `partsOf` (an element's children joined with spaces; flex items have none between them in `textContent`), `links` (text and href pairs), `box`, `contentBox` and `fillsContent` (an item spans its container's content width, the phone stacking check), `scrollWidth` (sideways scroll), `navLandsOn` (a nav link scrolls its section to the top), `landedOn` (top reached, or scrolled to the bottom with the whole section in view: Privacy is too short to reach the top), `scrollThrough` (scrolls the page so lazy images load, then waits for the shown ones).
+- Every section checks its copy, its layout at 1440x900 and its stacking at 390x844. The last test scrolls the whole page and opens every hero tab, then asserts `offsite` is empty.
+- The binary samples on the decode cards (gRPC-web, JWT, MessagePack) are decoded by small inline decoders in the test and compared with what each card shows, so a copy edit can't make a card wrong.
 - Fonts are checked with `document.fonts.load()` (resolves to the faces it loaded), not `document.fonts.check()`, which is true when no `@font-face` matches at all.
 
 ## Deploy
