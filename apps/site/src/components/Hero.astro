@@ -96,6 +96,9 @@ const shots = [
       {
         shots.map((shot, i) => (
           <button type="button" aria-pressed={String(i === 0)}>
+            <span class="tab-bar">
+              <span class="tab-fill" />
+            </span>
             <span class="mono tab-label">{shot.label}</span>
             <span class="tab-caption">{shot.caption}</span>
           </button>
@@ -106,19 +109,45 @@ const shots = [
 </section>
 
 <script>
-  // Show the shot whose tab was pressed; without JS the first one stays.
+  // Without JS the first shot stays. With it, tabs switch shots, and the
+  // active tab's bar fills over one slide (a CSS animation); when it ends the
+  // next tab takes over, looping. CSS pauses the fill on hover, keyboard focus
+  // and data-paused, so the timer and the bar never drift apart.
+  const showcase = document.querySelector<HTMLElement>(".showcase")
   const shots = document.querySelectorAll<HTMLImageElement>(".shots img")
   const tabs = document.querySelectorAll<HTMLButtonElement>(".tabs button")
-  tabs.forEach((tab, i) =>
-    tab.addEventListener("click", () => {
-      shots.forEach((shot, j) => {
-        shot.hidden = j !== i
-      })
-      tabs.forEach((t, j) => {
-        t.setAttribute("aria-pressed", String(j === i))
-      })
-    }),
-  )
+  let active = 0
+
+  const select = (i: number) => {
+    active = i
+    shots.forEach((shot, j) => {
+      shot.hidden = j !== i
+    })
+    tabs.forEach((tab, j) => {
+      tab.setAttribute("aria-pressed", String(j === i))
+    })
+    // Restart the fill, even when the same tab is picked again.
+    const fill = tabs[i].querySelector<HTMLElement>(".tab-fill")
+    if (fill) {
+      fill.style.animation = "none"
+      void fill.offsetWidth
+      fill.style.animation = ""
+    }
+  }
+
+  tabs.forEach((tab, i) => tab.addEventListener("click", () => select(i)))
+
+  if (showcase && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    showcase.dataset.autoplay = ""
+    showcase.addEventListener("animationend", (event) => {
+      if (event.animationName === "tab-fill")
+        select((active + 1) % tabs.length)
+    })
+    // Hold the slide while the carousel is off screen.
+    new IntersectionObserver(([entry]) => {
+      showcase.toggleAttribute("data-paused", !entry.isIntersecting)
+    }).observe(showcase)
+  }
 </script>
 
 <style>
@@ -218,18 +247,51 @@ const shots = [
     align-items: flex-start;
     gap: 8px;
     min-height: 44px;
-    padding: 16px 0 0;
+    padding: 0;
     text-align: left;
     background: none;
     border: 0;
-    border-top: 2px solid var(--rule);
     color: var(--muted);
     cursor: pointer;
     font: inherit;
   }
   .tabs button[aria-pressed="true"] {
-    border-top-color: var(--signal);
     color: var(--ink);
+  }
+  .tab-bar {
+    align-self: stretch;
+    display: block;
+    height: 2px;
+    margin-bottom: 8px;
+    background: var(--rule);
+  }
+  .tab-fill {
+    display: block;
+    height: 100%;
+    background: var(--signal);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  .tabs button[aria-pressed="true"] .tab-fill {
+    transform: scaleX(1);
+  }
+  .showcase[data-autoplay] button[aria-pressed="true"] .tab-fill {
+    animation: tab-fill var(--slide, 6s) linear both;
+  }
+  /* Same selector as the animation: its shorthand resets the play state, so
+     a less specific pause rule would lose. */
+  .showcase[data-autoplay]:is(:hover, :has(:focus-visible), [data-paused])
+    button[aria-pressed="true"]
+    .tab-fill {
+    animation-play-state: paused;
+  }
+  @keyframes tab-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
   }
   .tab-label {
     font-size: 14px;

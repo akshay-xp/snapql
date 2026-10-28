@@ -22,6 +22,7 @@ async function openSite(
   options: {
     viewport?: { width: number; height: number }
     javaScriptEnabled?: boolean
+    reducedMotion?: "reduce" | "no-preference"
     path?: string
   } = {},
 ): Promise<{
@@ -887,6 +888,124 @@ test("every orange on the page is the one signal orange", async () => {
       return [...found]
     })
     expect(strays).toEqual([])
+  } finally {
+    await close()
+  }
+})
+
+// Index of the pressed hero tab.
+const pressedTab = (page: Page) =>
+  page.$$eval(".tabs button", (bs) =>
+    bs.findIndex((b) => b.getAttribute("aria-pressed") === "true"),
+  )
+
+// Shortens the slide so autoplay can be watched in a test.
+const setSlide = (page: Page, duration: string) =>
+  page.$eval(
+    ".showcase",
+    (e, d) => (e as HTMLElement).style.setProperty("--slide", d),
+    duration,
+  )
+
+test("the hero carousel moves on by itself and loops", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    await page.mouse.move(0, 0)
+    await setSlide(page, "250ms")
+    for (const next of [1, 2, 3, 4, 0]) {
+      await page.waitForFunction(
+        (i) =>
+          document
+            .querySelectorAll(".tabs button")
+            [i]?.getAttribute("aria-pressed") === "true",
+        next,
+      )
+      const shown = await visibleShots(page)
+      expect(shown[0]).toMatch(new RegExp(`^${tabs[next][2]}`))
+    }
+  } finally {
+    await close()
+  }
+})
+
+test("the active tab's bar fills while its slide shows", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    await page.mouse.move(0, 0)
+    await setSlide(page, "4s")
+    expect(
+      await page.$$eval(".tabs .tab-fill", (els) =>
+        els.map((e) => getComputedStyle(e).animationName),
+      ),
+    ).toEqual(["tab-fill", "none", "none", "none", "none"])
+    await page.waitForTimeout(1000)
+    const scale = await page.$eval(
+      '.tabs button[aria-pressed="true"] .tab-fill',
+      (e) => new DOMMatrix(getComputedStyle(e).transform).a,
+    )
+    expect(scale).toBeGreaterThan(0.05)
+    expect(scale).toBeLessThan(0.95)
+  } finally {
+    await close()
+  }
+})
+
+test("hovering the carousel holds the current slide", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    // Shrinking --slide below the time already played ends the fill at once,
+    // paused or not, so the slide stays longer than the setup takes.
+    await setSlide(page, "1s")
+    await page.hover(".shots")
+    await page.waitForTimeout(1500)
+    expect(await pressedTab(page)).toBe(0)
+  } finally {
+    await close()
+  }
+})
+
+test("clicking a tab restarts the loop from there", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    await page.click(".tabs button:nth-child(4)")
+    await page.mouse.move(0, 0)
+    // Mouse focus doesn't pause; only keyboard focus does.
+    await setSlide(page, "250ms")
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelectorAll(".tabs button")[4]
+          ?.getAttribute("aria-pressed") === "true",
+    )
+  } finally {
+    await close()
+  }
+})
+
+test("with reduced motion the carousel stays put, its bar full", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "reduce",
+  })
+  try {
+    await page.mouse.move(0, 0)
+    await setSlide(page, "250ms")
+    await page.waitForTimeout(800)
+    expect(await pressedTab(page)).toBe(0)
+    expect(
+      await page.$eval(
+        '.tabs button[aria-pressed="true"] .tab-fill',
+        (e) => new DOMMatrix(getComputedStyle(e).transform).a,
+      ),
+    ).toBe(1)
   } finally {
     await close()
   }
