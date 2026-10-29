@@ -1,0 +1,37 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Page not found · SnapQL">
+  <section class="wrap">
+    <p class="label">404</p>
+    <h1>This page isn't here.</h1>
+    <a href="/">Back to SnapQL</a>
+  </section>
+</Base>
+
+<style>
+  section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+    padding-top: 120px;
+    padding-bottom: 160px;
+  }
+  .label {
+    margin: 0;
+    color: var(--muted);
+  }
+  h1 {
+    margin: 0;
+    font-size: 56px;
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  a {
+    color: var(--ink);
+    font-weight: 600;
+  }
+</style>

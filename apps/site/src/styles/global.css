@@ -13,8 +13,12 @@
   --mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
+/* Short pages (the 404) keep the footer at the bottom of the window. */
 body {
   margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   font-family: var(--sans);
   color: var(--ink);
   background-color: var(--ground);
@@ -85,4 +89,8 @@ h2 {
   .wrap {
     padding: 0 20px;
   }
+}
+
+main {
+  flex: 1;
 }
