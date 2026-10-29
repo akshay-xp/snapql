@@ -10,6 +10,7 @@ import Nav from "../components/Nav.astro"
 
 const { title = "SnapQL: network traffic in DevTools, made readable" } =
   Astro.props
+const url = new URL(Astro.url.pathname, Astro.site)
 const description =
   "A DevTools tab that names each request by what it does and decodes what it carries: GraphQL, gRPC-web, WebSocket, LLM streams and more."
 ---
@@ -21,7 +22,21 @@ const description =
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="canonical" href={url} />
+    <!-- Link previews (LinkedIn, X, Slack...). og.png is the "SnapQL launch post" canvas, rendered at 1200x1200. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SnapQL" />
+    <meta property="og:url" content={url} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL("/og.png", Astro.site)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="1200" />
+    <meta
+      property="og:image:alt"
+      content="SnapQL: network traffic in DevTools, made readable. A DevTools tab listing GraphQL operations by name, with a query decoded."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body>
