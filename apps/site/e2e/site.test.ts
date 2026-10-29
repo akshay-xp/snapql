@@ -206,6 +206,45 @@ test("crawlers get robots.txt, a sitemap and one canonical URL", async () => {
   }
 })
 
+test("link previews carry the title, description and post image", async () => {
+  const site = "https://snapql.akxp.net/"
+  const png = await readFile(join(dist, "og.png"))
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 1200])
+  const { page, close } = await openSite()
+  try {
+    const meta = (key: string) =>
+      page.$eval(`meta[property="${key}"], meta[name="${key}"]`, (m) =>
+        m.getAttribute("content"),
+      )
+    const title = await page.title()
+    const description = await meta("description")
+    expect({
+      "og:type": await meta("og:type"),
+      "og:site_name": await meta("og:site_name"),
+      "og:url": await meta("og:url"),
+      "og:title": await meta("og:title"),
+      "og:description": await meta("og:description"),
+      "og:image": await meta("og:image"),
+      "og:image:width": await meta("og:image:width"),
+      "og:image:height": await meta("og:image:height"),
+      "twitter:card": await meta("twitter:card"),
+    }).toEqual({
+      "og:type": "website",
+      "og:site_name": "SnapQL",
+      "og:url": site,
+      "og:title": title,
+      "og:description": description,
+      "og:image": `${site}og.png`,
+      "og:image:width": "1200",
+      "og:image:height": "1200",
+      "twitter:card": "summary_large_image",
+    })
+    expect(await meta("og:image:alt")).toBeTruthy()
+  } finally {
+    await close()
+  }
+})
+
 test("unknown paths get a 404 page that leads home", async () => {
   const { page, close } = await openSite({
     path: "/404.html",
