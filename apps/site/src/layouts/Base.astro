@@ -8,7 +8,8 @@ import "../styles/global.css"
 import Footer from "../components/Footer.astro"
 import Nav from "../components/Nav.astro"
 
-const title = "SnapQL: network traffic in DevTools, made readable"
+const { title = "SnapQL: network traffic in DevTools, made readable" } =
+  Astro.props
 const description =
   "A DevTools tab that names each request by what it does and decodes what it carries: GraphQL, gRPC-web, WebSocket, LLM streams and more."
 ---
@@ -20,6 +21,7 @@ const description =
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body>

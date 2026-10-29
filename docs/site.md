@@ -7,8 +7,10 @@ Landing page at https://snapql.akxp.net, in `apps/site/` (paths below are relati
 - Astro, static output, no UI framework, no Tailwind (one page; the canvas is plain CSS).
 - `astro.config.mjs`: `site: "https://snapql.akxp.net"`.
 - `src/pages/index.astro`: the page, composed from section components.
-- `src/layouts/Base.astro`: `<html lang="en">`, title `SnapQL: network traffic in DevTools, made readable`, meta description, favicon (`public/favicon.png`, a copy of the extension's `128.png`), fonts, `global.css`, then `Nav`, `<main id="top">`, `Footer`.
-- `src/styles/global.css`: the canvas tokens (`--ground`, `--ink`, `--muted`, `--rule`, `--signal`, `--night*`, `--sans`, `--mono`), the 20/80px grid background on `body`, `.wrap` (1280px max, 40px gutters, 20px under 480px), `.mono`, `.label`, focus outline in `--signal`.
+- `src/pages/404.astro`: the not-found page. Cloudflare Pages serves `404.html` with a 404 status for unknown paths; without it Pages falls back to `index.html` with a 200 (soft 404s; `/robots.txt`, `/llms.txt` and `/.well-known/ard.json` served as HTML, which fails Lighthouse's SEO and agentic checks instead of skipping them). Nav links are root-relative (`/#workspaces`) so they work from it.
+- `public/robots.txt` and `public/sitemap.xml` (one URL, hand-written: a single page needs no sitemap integration). Search consoles take the sitemap URL.
+- `src/layouts/Base.astro`: `<html lang="en">`, title (default `SnapQL: network traffic in DevTools, made readable`, `title` prop for the 404), meta description, canonical link from `site` (snapql.pages.dev serves a duplicate copy), favicon (`public/favicon.png`, a copy of the extension's `128.png`), fonts, `global.css`, then `Nav`, `<main id="top">`, `Footer`.
+- `src/styles/global.css`: the canvas tokens (`--ground`, `--ink`, `--muted`, `--rule`, `--signal`, `--night*`, `--sans`, `--mono`), the 20/80px grid background on `body` (a flex column at least the window's height, `main` grows, so short pages keep the footer at the bottom), `.wrap` (1280px max, 40px gutters, 20px under 480px), `.mono`, `.label`, focus outline in `--signal`.
 - `src/components/`: `Mark` (the icon's brackets and orange slash, `size` prop), `Nav` (links hidden under 480px), `Footer` (version read from `apps/extension/package.json`). Section components keep their styles scoped.
 - No licence anywhere on the site (design decision).
 - One orange, `--signal` (`#ff4419`), on light and dark alike: SVG lines take it through the global `.signal` class; it passes as text on the dark band (4.8:1), and where it wouldn't (orange text on `#3a3a3a`) an orange mark is used instead. The e2e test fails on any other orange.
@@ -17,7 +19,9 @@ Landing page at https://snapql.akxp.net, in `apps/site/` (paths below are relati
 ## Build
 
 - `pnpm --filter site build` (also run by the root `pnpm build`) writes `dist/`.
-- Fonts: IBM Plex Sans 400/500/600 and Mono 400/500 from `@fontsource`, bundled into `dist/_astro/`; the page makes no third-party requests.
+- `build.inlineStylesheets: "always"`: the one small stylesheet goes inline, so it doesn't block the first paint.
+- Screenshots: `widths={[800, 1200, 1600]}` with `sizes` for their rendered width, so phones get the 800px file.
+- Fonts: IBM Plex Sans 400/500/600 and Mono 400/500 from `@fontsource`, bundled into `dist/_astro/`; the page makes no third-party requests. (On snapql.akxp.net, Cloudflare's Web Analytics beacon is injected by the akxp.net zone, not the build.)
 - Versions pinned exactly (`astro`, `sharp`, `@fontsource/*`), each at least two weeks old when added. Wrangler is not a dependency: the deploy job pins it (below).
 - `pnpm typecheck` runs `tsc --noEmit` over `e2e/` and the configs: `astro check` refuses TypeScript 7, which the repo uses. `.astro` files are covered by the build and the e2e test.
 - Lint: the root Biome config has an override for `**/*.astro` turning off `noUnusedVariables` and `noUnusedImports` (it doesn't see frontmatter used by the template). `.astro/` (generated types) is gitignored.

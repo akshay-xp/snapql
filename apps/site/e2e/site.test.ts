@@ -76,7 +76,7 @@ const scrollWidth = (page: Page) =>
 // Clicks the nav link to a section; resolves to how far its top ends up from
 // the top of the viewport.
 const navLandsOn = async (page: Page, id: string) => {
-  await page.click(`nav a[href="#${id}"]`)
+  await page.click(`nav a[href="/#${id}"]`)
   await page.waitForFunction(() => window.scrollY > 0)
   return Math.abs(
     await page.$eval(`#${id}`, (e) => e.getBoundingClientRect().top),
@@ -134,13 +134,13 @@ test("nav and footer link where the design says, with no licence", async () => {
   const { page, close } = await openSite()
   try {
     expect(await links(page, "nav .nav-links")).toEqual([
-      ["Workspaces", "#workspaces"],
-      ["Formats", "#formats"],
-      ["Quick start", "#start"],
-      ["Privacy", "#privacy"],
+      ["Workspaces", "/#workspaces"],
+      ["Formats", "/#formats"],
+      ["Quick start", "/#start"],
+      ["Privacy", "/#privacy"],
       ["GitHub", "https://github.com/akshay-xp/snapql"],
     ])
-    expect(await page.getAttribute("nav > a", "href")).toBe("#top")
+    expect(await page.getAttribute("nav > a", "href")).toBe("/#top")
     expect(await links(page, "footer")).toEqual([
       [
         "Chrome Web Store",
@@ -185,6 +185,65 @@ test("the page has its title and language", async () => {
       "SnapQL: network traffic in DevTools, made readable",
     )
     expect(await page.getAttribute("html", "lang")).toBe("en")
+  } finally {
+    await close()
+  }
+})
+
+test("crawlers get robots.txt, a sitemap and one canonical URL", async () => {
+  const site = "https://snapql.akxp.net/"
+  expect(await readFile(join(dist, "robots.txt"), "utf8")).toContain(
+    `Sitemap: ${site}sitemap.xml`,
+  )
+  expect(await readFile(join(dist, "sitemap.xml"), "utf8")).toContain(
+    `<loc>${site}</loc>`,
+  )
+  const { page, close } = await openSite()
+  try {
+    expect(await page.getAttribute('link[rel="canonical"]', "href")).toBe(site)
+  } finally {
+    await close()
+  }
+})
+
+test("unknown paths get a 404 page that leads home", async () => {
+  const { page, close } = await openSite({
+    path: "/404.html",
+    viewport: { width: 1440, height: 900 },
+  })
+  try {
+    expect(await page.title()).toContain("not found")
+    expect(await page.getAttribute("main a", "href")).toBe("/")
+    // A short page still keeps the footer at the bottom of the window.
+    expect((await box(page, "footer")).bottom).toBe(900)
+  } finally {
+    await close()
+  }
+})
+
+test("the page paints with no stylesheet request", async () => {
+  const { page, close } = await openSite()
+  try {
+    expect(await page.$$('link[rel="stylesheet"]')).toHaveLength(0)
+  } finally {
+    await close()
+  }
+})
+
+test("phones download smaller screenshots", async () => {
+  const { page, close } = await openSite({
+    viewport: { width: 390, height: 844 },
+  })
+  try {
+    await scrollThrough(page)
+    for (const selector of [".shots img:not([hidden])", "#workspaces img"]) {
+      expect(
+        await page.$eval(selector, (img: HTMLImageElement) => [
+          img.currentSrc === new URL(img.src, location.href).href,
+          img.naturalWidth < 1600,
+        ]),
+      ).toEqual([false, true])
+    }
   } finally {
     await close()
   }
@@ -778,7 +837,7 @@ test("privacy says what SnapQL keeps, and links land on it", async () => {
       "It collects nothing and sends nothing anywhere. Captured requests are discarded when you close DevTools. The only things it keeps are your workspaces and any .proto files you add, in the extension's local storage on your device.",
       "The code is open source, so you can check all of this yourself.",
     ])
-    await page.click('nav a[href="#privacy"]')
+    await page.click('nav a[href="/#privacy"]')
     await page.waitForFunction(() => window.scrollY > 0)
     expect(await landedOn(page, "privacy")).toBe(true)
     expect(await navLandsOn(page, "start")).toBeLessThanOrEqual(1)
