@@ -85,6 +85,8 @@ const shots = [
             src={shot.src}
             alt={shot.alt}
             width={1600}
+            widths={[800, 1200, 1600]}
+            sizes="(max-width: 1280px) calc(100vw - 40px), 1200px"
             format="webp"
             loading={i === 0 ? "eager" : "lazy"}
             hidden={i > 0}
