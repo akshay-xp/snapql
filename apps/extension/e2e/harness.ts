@@ -269,6 +269,14 @@ export const PNG_BASE64 =
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="5"/>'
 // Noise the Hide menu drops: a preflight, a cache hit, a 304 and static
 // assets, around one real call.
+// localhost is another origin than the 127.0.0.1 the page loads from, and
+// /api/cors sends no Access-Control-Allow-Origin, so Chrome blocks it.
+const corsPage = `<!doctype html>
+<link rel="icon" href="data:,">
+<script>
+  fetch("http://localhost:" + location.port + "/api/cors").catch(() => {})
+</script>`
+
 const noisePage = `<!doctype html>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/static/site.css">
@@ -1134,6 +1142,12 @@ async function startServer(): Promise<Server> {
           "content-type": "application/json",
         })
         .end('{"data":null}')
+    if (req.url === "/cors")
+      return res.writeHead(200, { "content-type": "text/html" }).end(corsPage)
+    if (req.url === "/api/cors")
+      return res
+        .writeHead(200, { "content-type": "application/json" })
+        .end("{}")
     if (req.url === "/noise")
       return res.writeHead(200, { "content-type": "text/html" }).end(noisePage)
     if (req.url === "/api/preflight") return res.writeHead(204).end()
