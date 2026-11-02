@@ -220,6 +220,7 @@ describe("isHidden", () => {
     mimeType?: string
     fromCache?: "memory" | "disk"
     serviceWorker?: true
+    resourceType?: string
   }) => ({
     method: over.method ?? "GET",
     status: over.status ?? 200,
@@ -228,6 +229,7 @@ describe("isHidden", () => {
       ...emptyExchange,
       fromCache: over.fromCache,
       serviceWorker: over.serviceWorker,
+      resourceType: over.resourceType,
     },
   })
 
@@ -274,5 +276,16 @@ describe("isHidden", () => {
       expect(isHidden(entry({ mimeType }), hide), mimeType).toBe(true)
     for (const mimeType of ["application/json", "text/html", ""])
       expect(isHidden(entry({ mimeType }), hide), mimeType).toBe(false)
+  })
+
+  it("hides blocked assets by request type", () => {
+    const hide = { ...noHide, assets: true }
+    const blocked = { mimeType: "x-unknown" }
+    expect(isHidden(entry({ ...blocked, resourceType: "font" }), hide)).toBe(
+      true,
+    )
+    expect(isHidden(entry({ ...blocked, resourceType: "fetch" }), hide)).toBe(
+      false,
+    )
   })
 })
