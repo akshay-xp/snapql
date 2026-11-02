@@ -53,6 +53,7 @@ export function toFinishedRequest(
       fromCache: (req as { _fromCache?: "memory" | "disk" })._fromCache,
       ...((req.response as { _fetchedViaServiceWorker?: boolean })
         ._fetchedViaServiceWorker && { serviceWorker: true as const }),
+      ...(type && { resourceType: type }),
     },
     requestBody:
       postData?.text === undefined

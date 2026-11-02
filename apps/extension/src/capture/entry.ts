@@ -34,6 +34,9 @@ export type Exchange = {
   timings: Timings
   fromCache?: "memory" | "disk"
   serviceWorker?: true
+  // Chrome's request-side type (font, script, fetch, ...), set even when the
+  // response failed and has no MIME.
+  resourceType?: string
 }
 
 export const emptyExchange: Exchange = {

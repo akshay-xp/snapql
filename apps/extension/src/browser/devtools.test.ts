@@ -89,6 +89,15 @@ describe("toFinishedRequest", () => {
     ).toBeUndefined()
   })
 
+  it("records Chrome's request type", () => {
+    const font = Object.assign(chromeRequest(), { _resourceType: "font" })
+
+    expect(toFinishedRequest(font).exchange.resourceType).toBe("font")
+    expect(
+      toFinishedRequest(chromeRequest()).exchange.resourceType,
+    ).toBeUndefined()
+  })
+
   it("passes the request body through", () => {
     const postData = { mimeType: "application/json", text: "{}" }
 
