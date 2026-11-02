@@ -1,6 +1,7 @@
 import type { Entry } from "../capture/entry"
 import { count } from "../decoders/text"
 import { contentKind } from "./asset"
+import { failureOf } from "./failure"
 
 // [clips first, kept, muted]
 export type Parts = [string, string, string?]
@@ -38,9 +39,8 @@ export function rowLabel(
     | "exchange"
   >,
 ): RowLabel {
-  const { decoded, status } = entry
-  const failure =
-    status === 0 ? "failed" : status >= 400 ? String(status) : undefined
+  const { decoded } = entry
+  const failure = failureOf(entry)
   const { pathname, search } = new URL(entry.url)
   const content = !decoded && contentKind(entry)
   return {
