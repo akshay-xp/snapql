@@ -1,4 +1,5 @@
 import type { Entry } from "../capture/entry"
+import { failureOf } from "./failure"
 import { byteLabel } from "./messages"
 import { cleanClose } from "./socket"
 
@@ -98,6 +99,8 @@ export function summaryHeading(
   const { origin, pathname, search } = new URL(entry.url)
   const started = new Date(entry.startedAt)
   const reason = exchange.statusText || reasons[status]
+  const http =
+    status === 0 ? undefined : reason ? `${status} ${reason}` : String(status)
   return {
     ...(decoded && {
       ...(decoded.title !== pathname && { title: decoded.title }),
@@ -108,17 +111,14 @@ export function summaryHeading(
     method: entry.method,
     url: origin + pathname,
     query: search,
-    ...(closeCode === undefined
-      ? {
-          status:
-            status === 0
-              ? "failed"
-              : reason
-                ? `${status} ${reason}`
-                : String(status),
-          ok: status > 0 && status < 400,
-        }
-      : { status: `closed ${closeCode}`, ok: cleanClose(closeCode) }),
+    ...(closeCode !== undefined
+      ? { status: `closed ${closeCode}`, ok: cleanClose(closeCode) }
+      : exchange.error
+        ? {
+            status: [http, failureOf(entry)].filter(Boolean).join(" · "),
+            ok: false,
+          }
+        : { status: http ?? "failed", ok: status > 0 && status < 400 }),
     time: `${Math.round(entry.time)} ms`,
     ...(exchange.size > 0 && { size: byteLabel(exchange.size) }),
     ...(exchange.httpVersion && { protocol: exchange.httpVersion }),

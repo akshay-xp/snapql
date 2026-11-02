@@ -94,6 +94,32 @@ describe("summaryHeading", () => {
     })
   })
 
+  it("names a network failure, keeping the HTTP status when there is one", () => {
+    const failed = (
+      status: number,
+      responseHeaders: { name: string; value: string }[],
+    ) =>
+      entry({
+        status,
+        exchange: {
+          ...emptyExchange,
+          statusText: status ? "OK" : "",
+          error: "net::ERR_FAILED",
+          requestHeaders: [{ name: "Origin", value: "https://app.test" }],
+          responseHeaders,
+        },
+      })
+    const served = [{ name: "Content-Type", value: "application/json" }]
+    expect(summaryHeading(failed(200, served))).toMatchObject({
+      status: "200 OK · CORS error",
+      ok: false,
+    })
+    expect(summaryHeading(failed(0, []))).toMatchObject({
+      status: "probably CORS",
+      ok: false,
+    })
+  })
+
   it("describes how a socket closed", () => {
     const socket = (closeCode?: number) =>
       summaryHeading(
