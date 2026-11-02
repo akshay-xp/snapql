@@ -37,6 +37,9 @@ export type Exchange = {
   // Chrome's request-side type (font, script, fetch, ...), set even when the
   // response failed and has no MIME.
   resourceType?: string
+  // Chrome's network error (net::ERR_FAILED, ...), also set on a CORS block
+  // whose response arrived with status 200.
+  error?: string
 }
 
 export const emptyExchange: Exchange = {
