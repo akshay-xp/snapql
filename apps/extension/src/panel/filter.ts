@@ -80,9 +80,10 @@ export type Filters = { kinds: string[]; statuses: string[] }
 
 export const noFilters: Filters = { kinds: [], statuses: [] }
 
-type Filterable = Pick<Entry, "status" | "decoded">
+type Filterable = Pick<Entry, "status" | "decoded" | "mimeType" | "exchange">
 
-export const kindOf = (entry: Filterable) => entry.decoded?.kind ?? "other"
+export const kindOf = (entry: Filterable) =>
+  entry.decoded?.kind ?? assetKind(entry) ?? "other"
 
 export const statusGroup = (status: number) =>
   status === 0 ? "failed" : `${Math.floor(status / 100)}xx`

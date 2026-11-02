@@ -15,13 +15,20 @@ import {
   toggle,
 } from "./filter"
 
+const plain = { mimeType: "", exchange: emptyExchange }
 const graphql = {
+  ...plain,
   method: "POST",
   url: "https://x.test/graphql",
   status: 200,
   decoded: { kind: "graphql", title: "GetUser", detail: "query", data: {} },
 }
-const two = { method: "POST", url: "https://x.test/api/two", status: 201 }
+const two = {
+  ...plain,
+  method: "POST",
+  url: "https://x.test/api/two",
+  status: 201,
+}
 
 describe("matchesQuery", () => {
   it("matches title, detail, kind and URL, ignoring case", () => {
@@ -90,11 +97,38 @@ describe("highlight", () => {
 })
 
 const decoded = (kind: string) => ({ kind, title: "t", data: undefined })
+const at = (status: number, over: object = {}) => ({
+  ...plain,
+  status,
+  ...over,
+})
 
 describe("filter chips", () => {
   it("names kinds, with other for undecoded entries", () => {
     expect(kindOf(graphql)).toBe("graphql")
     expect(kindOf(two)).toBe("other")
+  })
+
+  it("names static files by their asset kind", () => {
+    expect(kindOf(at(200, { mimeType: "image/png" }))).toBe("image")
+    expect(
+      kindOf(at(200, { mimeType: "text/css", decoded: decoded("json") })),
+    ).toBe("json")
+    expect(kindOf(at(200, { mimeType: "application/json" }))).toBe("other")
+    expect(
+      chipsFor([
+        at(200, { mimeType: "image/png" }),
+        at(200, { mimeType: "text/css" }),
+        at(200, { decoded: decoded("json") }),
+      ]).kinds,
+    ).toEqual(["css", "image", "json"])
+    const blockedFont = at(0, {
+      mimeType: "x-unknown",
+      exchange: { ...emptyExchange, resourceType: "font" },
+    })
+    expect(matchesFilters(blockedFont, { kinds: ["font"], statuses: [] })).toBe(
+      true,
+    )
   })
 
   it("groups statuses by hundreds, failed for 0", () => {
@@ -111,10 +145,10 @@ describe("filter chips", () => {
   it("lists present chips in order, sentinels last", () => {
     expect(
       chipsFor([
-        { status: 404 },
-        { status: 200, decoded: decoded("graphql") },
-        { status: 0, decoded: decoded("json") },
-        { status: 500, decoded: decoded("graphql") },
+        at(404),
+        at(200, { decoded: decoded("graphql") }),
+        at(0, { decoded: decoded("json") }),
+        at(500, { decoded: decoded("graphql") }),
       ]),
     ).toEqual({
       kinds: ["graphql", "json", "other"],
@@ -129,7 +163,7 @@ describe("filter chips", () => {
       statuses: ["4xx"],
     })
     expect(
-      chipsFor([{ status: 0 }, { status: 200, decoded: decoded("json") }], {
+      chipsFor([at(0), at(200, { decoded: decoded("json") })], {
         kinds: ["graphql", "json"],
         statuses: ["4xx"],
       }),
@@ -141,8 +175,8 @@ describe("filter chips", () => {
 })
 
 describe("matchesFilters", () => {
-  const gql = (status: number) => ({ status, decoded: decoded("graphql") })
-  const json = (status: number) => ({ status, decoded: decoded("json") })
+  const gql = (status: number) => at(status, { decoded: decoded("graphql") })
+  const json = (status: number) => at(status, { decoded: decoded("json") })
   const none = { kinds: [], statuses: [] }
 
   it("matches everything with nothing selected", () => {
@@ -249,7 +283,7 @@ describe("isHidden", () => {
     const hide = { ...noHide, cached: true }
     expect(isHidden(entry({ fromCache: "memory" }), hide)).toBe(true)
     expect(isHidden(entry({ fromCache: "disk" }), hide)).toBe(true)
-    expect(isHidden(entry({ status: 304 }), hide)).toBe(true)
+    expect(isHidden(entry(at(304)), hide)).toBe(true)
     expect(isHidden(entry({}), hide)).toBe(false)
   })
 
