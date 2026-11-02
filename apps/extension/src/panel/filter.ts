@@ -6,7 +6,10 @@ import { rowLabel } from "./row"
 export type Segment = { text: string; hit: boolean }
 
 export function matchesQuery(
-  entry: Pick<Entry, "method" | "url" | "status" | "decoded">,
+  entry: Pick<
+    Entry,
+    "method" | "url" | "status" | "decoded" | "mimeType" | "exchange"
+  >,
   query: string,
   bodyText?: string,
 ): boolean {

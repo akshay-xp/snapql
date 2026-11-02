@@ -1,5 +1,6 @@
 import type { Entry } from "../capture/entry"
 import { count } from "../decoders/text"
+import { assetKind } from "./asset"
 
 // [clips first, kept, muted]
 export type Parts = [string, string, string?]
@@ -26,13 +27,22 @@ export function splitPath(pathname: string): [string, string] {
 export function rowLabel(
   entry: Pick<
     Entry,
-    "method" | "url" | "status" | "decoded" | "messages" | "open" | "socket"
+    | "method"
+    | "url"
+    | "status"
+    | "decoded"
+    | "messages"
+    | "open"
+    | "socket"
+    | "mimeType"
+    | "exchange"
   >,
 ): RowLabel {
   const { decoded, status } = entry
   const failure =
     status === 0 ? "failed" : status >= 400 ? String(status) : undefined
   const { pathname, search } = new URL(entry.url)
+  const asset = !decoded && assetKind(entry)
   return {
     ...(decoded
       ? {
@@ -45,6 +55,7 @@ export function rowLabel(
           title: pathname + search,
           parts: [...splitPath(pathname), search],
           detail: entry.method,
+          ...(asset && { kind: asset }),
         }),
     ...(failure && { failure }),
     ...(entry.open && { live: true as const }),
