@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { emptyExchange, type NameValue } from "../capture/entry"
-import { failureOf } from "./failure"
+import { failureOf, networkError } from "./failure"
 
 const h = (name: string, value: string): NameValue => ({ name, value })
 const served = [h("Content-Type", "application/json")]
@@ -66,6 +66,15 @@ describe("failureOf", () => {
     expect(blocked({ status: 0, error: "net::ERR_CONNECTION_REFUSED" })).toBe(
       "ERR_CONNECTION_REFUSED",
     )
+  })
+
+  it("ignores an aborted read of a response that arrived", () => {
+    const aborted = (status: number) =>
+      entry({ status, error: "net::ERR_ABORTED" })
+    expect(failureOf(aborted(204))).toBeUndefined()
+    expect(networkError(aborted(204))).toBeUndefined()
+    expect(failureOf(aborted(0))).toBe("ERR_ABORTED")
+    expect(networkError(aborted(0))).toBe("net::ERR_ABORTED")
   })
 
   it("falls back to the status without an error", () => {

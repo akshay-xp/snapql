@@ -1,5 +1,5 @@
 import type { Entry } from "../capture/entry"
-import { failureOf } from "./failure"
+import { failureOf, networkError } from "./failure"
 import { byteLabel } from "./messages"
 import { cleanClose } from "./socket"
 
@@ -113,7 +113,7 @@ export function summaryHeading(
     query: search,
     ...(closeCode !== undefined
       ? { status: `closed ${closeCode}`, ok: cleanClose(closeCode) }
-      : exchange.error
+      : networkError(entry)
         ? {
             status: [http, failureOf(entry)].filter(Boolean).join(" · "),
             ok: false,
