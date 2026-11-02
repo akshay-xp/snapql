@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { emptyExchange } from "../capture/entry"
-import { assetKind } from "./asset"
+import { assetKind, contentKind } from "./asset"
 
 const entry = (mimeType: string, resourceType?: string) => ({
   mimeType,
@@ -43,5 +43,16 @@ describe("assetKind", () => {
     expect(assetKind(entry("text/html", "document"))).toBeUndefined()
     expect(assetKind(entry("application/json"))).toBeUndefined()
     expect(assetKind(entry(""))).toBeUndefined()
+  })
+})
+
+describe("contentKind", () => {
+  it("is the asset kind, else html for HTML, which no Hide option drops", () => {
+    expect(contentKind(entry("font/woff2"))).toBe("font")
+    expect(contentKind(entry("text/html; charset=utf-8", "document"))).toBe(
+      "html",
+    )
+    expect(contentKind(entry("text/html", "fetch"))).toBe("html")
+    expect(contentKind(entry("application/json"))).toBeUndefined()
   })
 })
