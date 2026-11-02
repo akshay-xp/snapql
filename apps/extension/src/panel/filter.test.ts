@@ -12,6 +12,7 @@ import {
   matchesQuery,
   noHide,
   statusGroup,
+  statusGroupOf,
   toggle,
 } from "./filter"
 
@@ -140,6 +141,18 @@ describe("filter chips", () => {
       "4xx",
       "5xx",
     ])
+  })
+
+  it("groups a request with a network error as failed, whatever its status", () => {
+    const blocked = at(200, {
+      exchange: { ...emptyExchange, error: "net::ERR_FAILED" },
+    })
+    expect(statusGroupOf(blocked)).toBe("failed")
+    expect(statusGroupOf(at(200))).toBe("2xx")
+    expect(chipsFor([blocked]).statuses).toEqual(["failed"])
+    expect(matchesFilters(blocked, { kinds: [], statuses: ["failed"] })).toBe(
+      true,
+    )
   })
 
   it("lists present chips in order, sentinels last", () => {
