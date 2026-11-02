@@ -91,6 +91,10 @@ export const kindOf = (entry: Filterable) =>
 export const statusGroup = (status: number) =>
   status === 0 ? "failed" : `${Math.floor(status / 100)}xx`
 
+// A CORS block can carry status 200; Chrome's error is what says it failed.
+export const statusGroupOf = (entry: Filterable) =>
+  entry.exchange.error ? "failed" : statusGroup(entry.status)
+
 const sorted = (values: Iterable<string>, last: string) =>
   [...new Set(values)].sort((a, b) =>
     a === last ? 1 : b === last ? -1 : a.localeCompare(b),
@@ -104,7 +108,7 @@ export function chipsFor(
   return {
     kinds: sorted([...entries.map(kindOf), ...selected.kinds], "other"),
     statuses: sorted(
-      [...entries.map((e) => statusGroup(e.status)), ...selected.statuses],
+      [...entries.map(statusGroupOf), ...selected.statuses],
       "failed",
     ),
   }
@@ -115,7 +119,7 @@ const allows = (selected: string[], value: string) =>
 
 export const matchesFilters = (entry: Filterable, filters: Filters) =>
   allows(filters.kinds, kindOf(entry)) &&
-  allows(filters.statuses, statusGroup(entry.status))
+  allows(filters.statuses, statusGroupOf(entry))
 
 export function toggle(
   filters: Filters,
