@@ -1,6 +1,7 @@
 import type { Entry } from "../capture/entry"
 import { assetKind, contentKind } from "./asset"
 import type { BodyTexts } from "./body-index"
+import { networkError } from "./failure"
 import { rowLabel } from "./row"
 
 export type Segment = { text: string; hit: boolean }
@@ -93,7 +94,7 @@ export const statusGroup = (status: number) =>
 
 // A CORS block can carry status 200; Chrome's error is what says it failed.
 export const statusGroupOf = (entry: Filterable) =>
-  entry.exchange.error ? "failed" : statusGroup(entry.status)
+  networkError(entry) ? "failed" : statusGroup(entry.status)
 
 const sorted = (values: Iterable<string>, last: string) =>
   [...new Set(values)].sort((a, b) =>

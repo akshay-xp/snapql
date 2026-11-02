@@ -23,10 +23,19 @@ function corsLabel(entry: Pick<Entry, "url" | "exchange">): string | undefined {
   if (allowed !== "*" && allowed !== origin) return "CORS error"
 }
 
+// Chrome also sets ERR_ABORTED when a response arrived and only the body read
+// was cancelled (navigation, an unread body); DevTools shows those as answered.
+export function networkError(
+  entry: Pick<Entry, "status" | "exchange">,
+): string | undefined {
+  const { error } = entry.exchange
+  return error === "net::ERR_ABORTED" && entry.status > 0 ? undefined : error
+}
+
 export function failureOf(
   entry: Pick<Entry, "url" | "status" | "exchange">,
 ): string | undefined {
-  const { error } = entry.exchange
+  const error = networkError(entry)
   if (error)
     return (
       (error === "net::ERR_FAILED" && corsLabel(entry)) ||
