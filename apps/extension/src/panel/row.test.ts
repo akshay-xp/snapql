@@ -68,6 +68,18 @@ describe("rowLabel", () => {
     expect(rowLabel(entry({ status: 0 })).failure).toBe("failed")
   })
 
+  it("labels a CORS block that arrived with status 200", () => {
+    const blocked = entry({
+      exchange: {
+        ...emptyExchange,
+        error: "net::ERR_FAILED",
+        requestHeaders: [{ name: "Origin", value: "https://app.test" }],
+        responseHeaders: [{ name: "Content-Type", value: "application/json" }],
+      },
+    })
+    expect(rowLabel(blocked).failure).toBe("CORS error")
+  })
+
   it("counts messages when the entry has them", () => {
     const msg = { dir: "in" as const, time: 0, text: "" }
     expect(rowLabel(entry({ messages: [msg, msg, msg] })).count).toBe("3 msgs")
