@@ -2083,6 +2083,23 @@ test("asset kinds label static files and get chips while assets are shown", asyn
   }
 })
 
+test("a CORS-blocked request reads as a CORS failure", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/cors`)
+    const row = async () =>
+      (await panel.rows()).find((r) => r.startsWith("/api/cors GET"))
+    // Chrome's live event has the response headers or not, by timing.
+    await expect
+      .poll(row)
+      .toMatch(/^\/api\/cors GET (CORS error|probably CORS)$/)
+    await panel.toggleChip("failed")
+    expect(await row()).toMatch(/CORS/)
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Hide menu closes on Escape or a click outside", async () => {
   const panel = await openPanel()
   try {
