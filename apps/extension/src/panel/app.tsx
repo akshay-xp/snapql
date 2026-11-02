@@ -62,7 +62,13 @@ export function App(props: {
     setFilters(noFilters)
     setHide(noHide)
   }
-  const chips = createMemo(() => chipsFor(entries(), shownFilters()))
+  // Only shown entries offer chips, so hidden assets add no image or css chip.
+  const chips = createMemo(() =>
+    chipsFor(
+      entries().filter((e) => !isHidden(e, shownHide())),
+      shownFilters(),
+    ),
+  )
   const filtered = () =>
     !!query() ||
     !!shownFilters().kinds.length ||

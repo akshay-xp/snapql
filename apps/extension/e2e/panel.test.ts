@@ -1457,31 +1457,35 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
     await panel.page.goto(`${panel.origin}/media`)
     await expect.poll(panel.rows).toContain("/media GET")
     await panel.unhide("assets")
-    const rows = ["png", "svg", "font", "badfont", "bin"].map(
-      (r) => `/api/${r} GET`,
-    )
+    const rows = [
+      "/api/png GET image",
+      "/api/svg GET image",
+      "/api/font GET font",
+      "/api/badfont GET font",
+      "/api/bin GET",
+    ]
     await expect.poll(panel.rows).toEqual(expect.arrayContaining(rows))
     const body = async (row: string) => {
       await panel.select(row)
       await panel.openTab("Response")
     }
 
-    await body("/api/png GET")
+    await body("/api/png GET image")
     await expect.poll(panel.detail).toContain("3 × 2 px · 73 B")
     await panel.stubClipboard()
     await panel.clickButton("Copy")
     expect(await panel.copied()).toBe(PNG_BASE64)
 
-    await body("/api/svg GET")
+    await body("/api/svg GET image")
     await expect.poll(panel.detail).toContain("4 × 5 px")
     expect(await panel.detail()).toContain("<svg")
 
-    await body("/api/font GET")
+    await body("/api/font GET font")
     await expect
       .poll(async () => (await panel.detail())?.split("quick brown fox").length)
       .toBe(4)
 
-    await body("/api/badfont GET")
+    await body("/api/badfont GET font")
     await expect.poll(panel.detail).toContain("font failed to load")
 
     await body("/api/bin GET")
@@ -2009,8 +2013,8 @@ test("Hide menu drops preflights, cached, service worker and static assets by de
     const noise = [
       "/api/preflight OPTIONS",
       "/api/etag GET",
-      "/static/dot.png GET",
-      "/static/site.css GET",
+      "/static/dot.png GET image",
+      "/static/site.css GET css",
     ]
     const cached = async () =>
       (await panel.rows()).filter((r) => r === "/api/cached GET").length
@@ -2047,6 +2051,32 @@ test("Hide menu drops preflights, cached, service worker and static assets by de
     await toggle("preflights")
     expect(await panel.rows()).not.toContain("/api/preflight OPTIONS")
     expect(await panel.rows()).toContain("/api/one GET")
+  } finally {
+    await panel.close()
+  }
+})
+
+test("asset kinds label static files and get chips while assets are shown", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/noise`)
+    await expect.poll(panel.rows).toContain("/api/one GET")
+    expect(await panel.chips()).not.toContain("image")
+    expect(await panel.chips()).not.toContain("css")
+
+    await panel.unhide("assets")
+    await expect
+      .poll(panel.chips)
+      .toEqual(expect.arrayContaining(["image", "css"]))
+    expect(await panel.rows()).toEqual(
+      expect.arrayContaining([
+        "/static/dot.png GET image",
+        "/static/site.css GET css",
+      ]),
+    )
+
+    await panel.toggleChip("image")
+    expect(await panel.rows()).toEqual(["/static/dot.png GET image"])
   } finally {
     await panel.close()
   }
@@ -2132,7 +2162,7 @@ test("Show all bypasses the workspace until reopened", async () => {
       .toEqual(
         expect.arrayContaining([
           "/api/preflight OPTIONS",
-          "/static/dot.png GET",
+          "/static/dot.png GET image",
         ]),
       )
     expect(await panel.pressedChips()).toEqual([])
