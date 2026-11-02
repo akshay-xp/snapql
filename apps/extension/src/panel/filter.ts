@@ -1,5 +1,5 @@
 import type { Entry } from "../capture/entry"
-import { assetKind } from "./asset"
+import { assetKind, contentKind } from "./asset"
 import type { BodyTexts } from "./body-index"
 import { rowLabel } from "./row"
 
@@ -86,7 +86,7 @@ export const noFilters: Filters = { kinds: [], statuses: [] }
 type Filterable = Pick<Entry, "status" | "decoded" | "mimeType" | "exchange">
 
 export const kindOf = (entry: Filterable) =>
-  entry.decoded?.kind ?? assetKind(entry) ?? "other"
+  entry.decoded?.kind ?? contentKind(entry) ?? "other"
 
 export const statusGroup = (status: number) =>
   status === 0 ? "failed" : `${Math.floor(status / 100)}xx`

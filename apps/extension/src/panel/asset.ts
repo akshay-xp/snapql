@@ -35,3 +35,9 @@ export function assetKind(
   const mime = baseMime(entry.mimeType)
   return BY_MIME[mime] ?? BY_PREFIX.find(([p]) => mime.startsWith(p))?.[1]
 }
+
+// The label for an undecoded entry. HTML gets one but is not an asset: the
+// page or a fetched partial is often what is being debugged.
+export const contentKind = (entry: Pick<Entry, "mimeType" | "exchange">) =>
+  assetKind(entry) ??
+  (baseMime(entry.mimeType) === "text/html" ? "html" : undefined)

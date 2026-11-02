@@ -644,7 +644,7 @@ test("Timing stages follow the selected request", async () => {
   const panel = await openPanel()
   try {
     await panel.page.goto(panel.origin)
-    const rows = ["GetUser query graphql", "/api/one GET", "/ GET"]
+    const rows = ["GetUser query graphql", "/api/one GET", "/ GET html"]
     await expect.poll(panel.rows).toEqual(expect.arrayContaining(rows))
 
     await panel.select(rows[0])
@@ -665,7 +665,7 @@ test("a response without a body opens cleanly in Response and Raw", async () => 
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/empty`)
-    await expect.poll(panel.rows).toContain("/empty GET")
+    await expect.poll(panel.rows).toContain("/empty GET html")
     await panel.unhide("preflights")
     const row = "/api/empty OPTIONS"
     await expect.poll(panel.rows).toEqual(expect.arrayContaining([row]))
@@ -1455,7 +1455,7 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
   const panel = await openPanel()
   try {
     await panel.page.goto(`${panel.origin}/media`)
-    await expect.poll(panel.rows).toContain("/media GET")
+    await expect.poll(panel.rows).toContain("/media GET html")
     await panel.unhide("assets")
     const rows = [
       "/api/png GET image",
@@ -1502,6 +1502,7 @@ test("filter chips narrow by protocol and status", async () => {
     await expect.poll(async () => (await panel.rows()).length).toBe(5)
     expect(await panel.chips()).toEqual([
       "graphql",
+      "html",
       "json",
       "other",
       "2xx",
@@ -1604,7 +1605,7 @@ test("search bodies matches request and response body text", async () => {
       .poll(panel.rows)
       .toEqual([
         users,
-        '/filters response (1): …{ b }") fetch("/api/users/1") fetch("/api/missing") </script>',
+        '/filters response (1): …{ b }") fetch("/api/users/1") fetch("/api/missing") </script> html',
       ])
 
     // Quoted as JSON, so the /filters document's own script doesn't match.
