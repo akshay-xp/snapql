@@ -25,6 +25,7 @@ export function toFinishedRequest(
   // they finish; the rest (scripts, images) load only when opened.
   const type = (req as { _resourceType?: string })._resourceType
   const early = type === "xhr" || type === "fetch" ? content() : undefined
+  const error = (req.response as { _error?: string | null })._error
   return {
     method: req.request.method,
     url: req.request.url,
@@ -54,6 +55,7 @@ export function toFinishedRequest(
       ...((req.response as { _fetchedViaServiceWorker?: boolean })
         ._fetchedViaServiceWorker && { serviceWorker: true as const }),
       ...(type && { resourceType: type }),
+      ...(error && { error }),
     },
     requestBody:
       postData?.text === undefined

@@ -98,6 +98,19 @@ describe("toFinishedRequest", () => {
     ).toBeUndefined()
   })
 
+  it("records Chrome's network error", () => {
+    const failed = Object.assign(chromeRequest(), {
+      response: { status: 0, _error: "net::ERR_FAILED" },
+    })
+    const fine = Object.assign(chromeRequest(), {
+      response: { status: 200, _error: null },
+    })
+
+    expect(toFinishedRequest(failed).exchange.error).toBe("net::ERR_FAILED")
+    expect(toFinishedRequest(fine).exchange.error).toBeUndefined()
+    expect(toFinishedRequest(chromeRequest()).exchange.error).toBeUndefined()
+  })
+
   it("passes the request body through", () => {
     const postData = { mimeType: "application/json", text: "{}" }
 
