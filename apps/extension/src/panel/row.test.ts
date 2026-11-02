@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest"
+import { emptyExchange } from "../capture/entry"
 import { rowLabel } from "./row"
 
 const entry = (overrides: Partial<Parameters<typeof rowLabel>[0]> = {}) => ({
   method: "GET",
   url: "https://x.test/api/item?i=9",
   status: 200,
+  mimeType: "",
+  exchange: emptyExchange,
   ...overrides,
 })
 
@@ -35,6 +38,19 @@ describe("rowLabel", () => {
       parts: ["/api/", "item", "?i=9"],
       detail: "GET",
     })
+  })
+
+  it("labels undecoded static files with their asset kind", () => {
+    const css = entry({ url: "https://x.test/a.css", mimeType: "text/css" })
+    expect(rowLabel(css)).toEqual({
+      title: "/a.css",
+      parts: ["/", "a.css", ""],
+      detail: "GET",
+      kind: "css",
+    })
+    expect(
+      rowLabel(entry({ mimeType: "application/json" })),
+    ).not.toHaveProperty("kind")
   })
 
   it("splits the title before the last path segment, keeping a trailing slash with it", () => {
