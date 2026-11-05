@@ -2232,6 +2232,28 @@ test("a mouse wheel scrolls the filter chips sideways", async () => {
   }
 })
 
+test("focusing an off-screen filter chip scrolls it into view", async () => {
+  const panel = await openPanel()
+  try {
+    const chips = 'fieldset[aria-label="Filters"]'
+    const last = `${chips} button:last-of-type`
+    await panel.page.goto(`${panel.origin}/decoders`)
+    await expect
+      .poll(() => panel.attr(chips, "data-overflow-right"))
+      .not.toBeNull()
+    expect(await panel.scrollX(chips)).toBe(0)
+    const [rowRight] = await panel.rights(chips)
+    expect((await panel.rights(last))[0]).toBeGreaterThan(rowRight)
+
+    await panel.focus(last)
+    const [rowLeft] = await panel.lefts(chips)
+    expect((await panel.lefts(last))[0]).toBeGreaterThanOrEqual(rowLeft)
+    expect((await panel.rights(last))[0]).toBeLessThanOrEqual(rowRight)
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Hide menu closes on Escape or a click outside", async () => {
   const panel = await openPanel()
   try {

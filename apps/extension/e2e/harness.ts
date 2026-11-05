@@ -483,6 +483,8 @@ export type Panel = {
   ): Promise<void>
   // Left edge of each match, in document order.
   lefts(selector: string): Promise<number[]>
+  rights(selector: string): Promise<number[]>
+  focus(selector: string): Promise<void>
   // Uncaught errors in the panel since it opened.
   errors(): Promise<string[]>
   // Whether the element lies inside the tabpanel's visible area.
@@ -769,6 +771,14 @@ export async function openPanel(
     lefts: (selector: string) =>
       panelFrame.evaluate<number[]>(
         `[...document.querySelectorAll(${JSON.stringify(selector)})].map((el) => el.getBoundingClientRect().left)`,
+      ),
+    rights: (selector: string) =>
+      panelFrame.evaluate<number[]>(
+        `[...document.querySelectorAll(${JSON.stringify(selector)})].map((el) => el.getBoundingClientRect().right)`,
+      ),
+    focus: (selector: string) =>
+      panelFrame.evaluate<void>(
+        `document.querySelector(${JSON.stringify(selector)}).focus()`,
       ),
     scrollTo: (selector: string, top: number) =>
       panelFrame.evaluate<void>(
