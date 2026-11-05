@@ -30,7 +30,7 @@ import {
   type FormattedBody,
   loadBody,
 } from "./body"
-import { valueText } from "./copy"
+import { copyImage, valueText } from "./copy"
 import { CopyButton, createCopied } from "./copy-button"
 import { toCurl, toFetch } from "./curl"
 import { type Heading, summaryHeading } from "./heading"
@@ -552,6 +552,10 @@ function BodyView(props: {
   step?: Step
 }) {
   const json = () => treeValue(props.text)
+  const url = () => dataUrl(props.text, props.entry.mimeType)
+  // SVG copies its source; other images copy as images.
+  const rasterImage = () =>
+    props.view === "image" && baseMime(props.entry.mimeType) !== "image/svg+xml"
   const [expanded, setExpanded] = createSignal(0)
   let view!: HTMLDivElement
   const matches = createMatches(
@@ -580,18 +584,15 @@ function BodyView(props: {
           <CopyButton
             label="Copy data URL"
             caption="Data URL"
-            value={() => dataUrl(props.text, props.entry.mimeType)}
+            value={() => url()}
           />
         </Show>
         {/* A font's base64 is useless pasted; its data URL drops into @font-face. */}
         <CopyButton
           label="Copy"
           caption="Copy"
-          value={() =>
-            props.view === "font"
-              ? dataUrl(props.text, props.entry.mimeType)
-              : props.text
-          }
+          value={() => (props.view === "font" ? url() : props.text)}
+          write={rasterImage() ? () => copyImage(url()) : undefined}
         />
       </Toolbar>
       <Switch
