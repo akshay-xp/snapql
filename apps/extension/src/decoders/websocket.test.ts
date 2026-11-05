@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { decoders } from "./index"
 import { decodeRequest } from "./registry"
 import type { RequestView } from "./types"
-import { websocket } from "./websocket"
+import { isProtocolName, websocket } from "./websocket"
 
 const socket = (over: Partial<RequestView> = {}): RequestView => ({
   method: "WS",
@@ -24,5 +24,24 @@ describe("websocket", () => {
     )
     expect(websocket.decode(socket({ method: "GET" }))).toBeUndefined()
     expect(decodeRequest(socket(), decoders)?.kind).toBe("websocket")
+  })
+
+  it("details only protocol names, never token subprotocols", () => {
+    const token = "%7B%22token%22%3A%22abc%22%7D"
+    for (const name of [
+      "chat",
+      "graphql-transport-ws",
+      "v12.stomp",
+      "my_proto",
+    ])
+      expect(isProtocolName(name), name).toBe(true)
+    for (const value of [token, "a b", "abc=", "", "a".repeat(41)])
+      expect(isProtocolName(value), value).toBe(false)
+    expect(
+      websocket.decode(socket({ protocols: ["chat", token] }))?.detail,
+    ).toBe("chat")
+    expect(websocket.decode(socket({ protocols: [token] }))).not.toHaveProperty(
+      "detail",
+    )
   })
 })
