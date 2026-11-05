@@ -340,6 +340,7 @@ const socketPage = `<!doctype html>
 <button id="mp">mp</button>
 <button id="bin">bin</button>
 <button id="long">long</button>
+<button id="token">token</button>
 <script>
   const socket = (path, protocols, frames) => {
     const s = new WebSocket(location.origin.replace("http", "ws") + path, protocols)
@@ -362,6 +363,13 @@ const socketPage = `<!doctype html>
   // A URL-encoded token as the subprotocol, as some apps send.
   document.getElementById("long").onclick = () =>
     socket("/long?user_id=" + "f8c90d90d557".repeat(12), ["%7B%22token%22%3A%22" + "4eb5445d0138".repeat(10) + "%22%7D"], ["hi"])
+  // Closes itself, since Chrome reports the handshake headers only after close;
+  // not at once, or the handshake beats the probe's poll and lists as its own row.
+  document.getElementById("token").onclick = () => {
+    const s = new WebSocket(location.origin.replace("http", "ws") + "/tok?room=1", ["chat", "%7B%22token%22%3A%22abc%22%7D"])
+    s.onopen = () => s.send("hi")
+    s.onmessage = () => setTimeout(() => s.close(1000), 600)
+  }
   document.getElementById("bin").onclick = () =>
     socket("/bin", [], [new Uint8Array([0xa1, 0x61, 0x61, 0x01])])
   let ws
