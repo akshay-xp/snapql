@@ -2291,6 +2291,39 @@ test("filter chips fade the edges that hide chips", async () => {
   }
 })
 
+test("chevrons on the faded edges scroll the filter chips", async () => {
+  const panel = await openPanel()
+  try {
+    const chips = 'fieldset[aria-label="Filters"]'
+    const left = 'button[aria-label="Scroll filters left"]'
+    const right = 'button[aria-label="Scroll filters right"]'
+    const shown = async () => ({
+      left: await panel.count(left),
+      right: await panel.count(right),
+    })
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    expect(await shown()).toEqual({ left: 0, right: 0 })
+
+    await panel.page.goto(`${panel.origin}/decoders`)
+    await expect.poll(shown).toEqual({ left: 0, right: 1 })
+    expect(await panel.attr(right, "tabindex")).toBe("-1")
+
+    // Smooth scrolling takes a while in the headless panel.
+    const settled = { timeout: 3000 }
+    await panel.click(right)
+    await expect.poll(() => panel.scrollX(chips)).toBeGreaterThan(0)
+    await expect.poll(shown, settled).toEqual({ left: 1, right: 1 })
+
+    await panel.setScrollX(chips, "end")
+    await expect.poll(shown).toEqual({ left: 1, right: 0 })
+    await panel.click(left)
+    await expect.poll(shown, settled).toEqual({ left: 1, right: 1 })
+  } finally {
+    await panel.close()
+  }
+})
+
 test("a mouse wheel scrolls the filter chips sideways", async () => {
   const panel = await openPanel()
   try {
