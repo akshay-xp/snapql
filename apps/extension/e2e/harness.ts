@@ -464,12 +464,13 @@ export type Panel = {
   // Viewport y of the element's top edge.
   top(selector: string): Promise<number>
   count(selector: string): Promise<number>
-  // Dispatches a bubbling keydown (with key) or pointerdown, or a blur, on the first match.
+  // Dispatches a bubbling keydown (with key), pointerdown or wheel (key is
+  // deltaY), or a blur, on the first match; true when it was prevented.
   dispatch(
     selector: string,
-    type: "keydown" | "pointerdown" | "blur",
+    type: "keydown" | "pointerdown" | "blur" | "wheel",
     key?: string,
-  ): Promise<void>
+  ): Promise<boolean>
   // Sets an input's value and dispatches input.
   fill(selector: string, value: string): Promise<void>
   focused(selector: string): Promise<boolean>
@@ -725,13 +726,14 @@ export async function openPanel(
       })()`),
     errors: () => panelFrame.evaluate<string[]>("window.__errors"),
     dispatch: (selector, type, key) =>
-      panelFrame.evaluate<void>(`(() => {
+      panelFrame.evaluate<boolean>(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)})
-        el.dispatchEvent(${
+        return !el.dispatchEvent(${
           {
             keydown: `new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true })`,
             pointerdown: `new PointerEvent("pointerdown", { bubbles: true })`,
             blur: `new FocusEvent("blur")`,
+            wheel: `new WheelEvent("wheel", { deltaY: ${Number(key)}, bubbles: true, cancelable: true })`,
           }[type]
         })
       })()`),

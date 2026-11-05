@@ -149,6 +149,13 @@ export function FilterChips(props: {
     observer.observe(chipRow)
     onCleanup(() => observer.disconnect())
   })
+  // Mouse users rarely know shift+wheel; a row that fits keeps the wheel.
+  const scrollSideways = (e: WheelEvent) => {
+    const { left, right } = edges()
+    if (!(left || right) || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+    chipRow.scrollLeft += e.deltaY
+    e.preventDefault()
+  }
   // Chips arriving during capture change the content, not the row's size.
   createEffect(on(() => props.chips, updateEdges))
   return (
@@ -177,6 +184,7 @@ export function FilterChips(props: {
         data-overflow-right={edges().right || undefined}
         class="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2"
         onScroll={updateEdges}
+        onWheel={scrollSideways}
       >
         {group("kinds")}
         <span aria-hidden="true" class="mx-1 h-4 w-px shrink-0 bg-border" />
