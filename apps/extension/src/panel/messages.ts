@@ -27,3 +27,18 @@ export const frameLabel = (
   decoded
     ? { text: decoded.title, ...(decoded.detail && { detail: decoded.detail }) }
     : { text: messageText(m) }
+
+type Beat = Pick<Message, "text" | "bytes" | "event">
+
+const beatEvents = new Set(["ping", "heartbeat"])
+const beatTexts = new Set(["ping", "pong", "heartbeat"])
+
+// Without a protocol decoder only exact keep-alive words count, so real
+// messages are never hidden on a guess.
+export const isHeartbeat = <M extends Beat>(
+  m: M,
+  decoderSays?: (m: M) => boolean,
+) =>
+  !!decoderSays?.(m) ||
+  (m.event !== undefined && beatEvents.has(m.event)) ||
+  (m.bytes === undefined && beatTexts.has(m.text.trim().toLowerCase()))
