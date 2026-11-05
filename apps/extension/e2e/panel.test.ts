@@ -2182,6 +2182,36 @@ test("a CORS-blocked request reads as a CORS failure", async () => {
   }
 })
 
+test("filter chips fade the edges that hide chips", async () => {
+  const panel = await openPanel()
+  try {
+    const chips = 'fieldset[aria-label="Filters"]'
+    const flags = async () => ({
+      left: (await panel.attr(chips, "data-overflow-left")) !== null,
+      right: (await panel.attr(chips, "data-overflow-right")) !== null,
+    })
+    await panel.page.goto(`${panel.origin}/filters`)
+    await expect.poll(async () => (await panel.rows()).length).toBe(5)
+    expect(await panel.style(chips, "scrollbar-width")).toBe("none")
+    expect(await flags()).toEqual({ left: false, right: false })
+    expect(await panel.style(chips, "mask-image")).toBe("none")
+
+    // New chips arriving during capture make the row overflow.
+    await panel.togglePreserveLog()
+    await panel.page.goto(`${panel.origin}/decoders`)
+    await expect.poll(flags).toEqual({ left: false, right: true })
+    expect(await panel.style(chips, "mask-image")).toContain("linear-gradient")
+
+    await panel.setScrollX(chips, "middle")
+    await expect.poll(flags).toEqual({ left: true, right: true })
+    await panel.setScrollX(chips, "end")
+    await expect.poll(flags).toEqual({ left: true, right: false })
+    expect(await panel.style(chips, "mask-image")).toContain("linear-gradient")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("Hide menu closes on Escape or a click outside", async () => {
   const panel = await openPanel()
   try {

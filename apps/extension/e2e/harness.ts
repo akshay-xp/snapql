@@ -457,6 +457,9 @@ export type Panel = {
   cssVar(name: string): Promise<string>
   style(selector: string, property: string): Promise<string>
   scrollTop(selector: string): Promise<number>
+  scrollX(selector: string): Promise<number>
+  // Sets scrollLeft and fires scroll, as a user scroll would.
+  setScrollX(selector: string, x: number | "end" | "middle"): Promise<void>
   scrollTo(selector: string, top: number): Promise<void>
   // Viewport y of the element's top edge.
   top(selector: string): Promise<number>
@@ -777,6 +780,17 @@ export async function openPanel(
       panelFrame.evaluate<number>(
         `document.querySelector(${JSON.stringify(selector)}).scrollTop`,
       ),
+    scrollX: (selector: string) =>
+      panelFrame.evaluate<number>(
+        `document.querySelector(${JSON.stringify(selector)}).scrollLeft`,
+      ),
+    setScrollX: (selector, x) =>
+      panelFrame.evaluate<void>(`(() => {
+        const el = document.querySelector(${JSON.stringify(selector)})
+        const max = el.scrollWidth - el.clientWidth
+        el.scrollLeft = ${JSON.stringify(x)} === "end" ? max : ${JSON.stringify(x)} === "middle" ? max / 2 : ${JSON.stringify(x)}
+        el.dispatchEvent(new Event("scroll"))
+      })()`),
     text: (selector: string) =>
       panelFrame.evaluate<string | null>(`(() => {
         const el = document.querySelector(${JSON.stringify(selector)})
