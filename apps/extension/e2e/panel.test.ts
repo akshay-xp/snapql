@@ -932,12 +932,17 @@ test("M3 decoders summarize their requests", async () => {
     const me = await panel.detail()
     for (const text of [
       "Tokens",
-      "Authorization header · unverified",
-      "expires 2033-05-18T03:33:20.000Z",
+      "Authorization header · HS256",
       'sub: "42"',
       'alg: "HS256"',
     ])
       expect(me).toContain(text)
+    expect(me).not.toContain("unverified")
+    // The fixture expires in 2033, so the day count drifts with today.
+    expect(await panel.text("[data-expiry]")).toMatch(/^expires in \d+ d$/)
+    expect(await panel.attr("[data-expiry]", "title")).toBe(
+      "2033-05-18T03:33:20.000Z",
+    )
     await panel.click('button[aria-label="Copy Tokens"]')
     expect(await panel.copied()).toContain('"sub": "42"')
     expect(await panel.copied()).toContain('"alg": "HS256"')
