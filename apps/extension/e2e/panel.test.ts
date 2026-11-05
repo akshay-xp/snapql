@@ -876,7 +876,7 @@ test("M3 decoders summarize their requests", async () => {
           "Broken query graphql",
           "Deferred query graphql",
           "/api/me GET json",
-          "/api/missing GET 404",
+          "/api/missing 404 GET",
         ]),
       )
 
@@ -885,7 +885,7 @@ test("M3 decoders summarize their requests", async () => {
       await panel.overflowing('[role="option"] > span:last-child'),
     ).toEqual([])
 
-    await panel.select("/api/missing GET 404")
+    await panel.select("/api/missing 404 GET")
     expect(await panel.text('[role="tabpanel"] header')).toContain(
       "404 Not Found",
     )
@@ -1542,7 +1542,7 @@ test("filter chips narrow by protocol and status", async () => {
       "4xx",
     ])
     const a = "A query graphql"
-    const b = "B query 400 graphql"
+    const b = "B 400 query graphql"
     const users = "/api/users/1 GET json"
 
     const chip = 'fieldset[aria-label="Filters"] button'
@@ -1645,7 +1645,7 @@ test("search bodies matches request and response body text", async () => {
     await panel.search('"query":"query B')
     await expect
       .poll(panel.rows)
-      .toEqual(['B request (1): {"query":"query B { b }"} 400 graphql'])
+      .toEqual(['B 400 request (1): {"query":"query B { b }"} graphql'])
 
     await panel.search("geo")
     await panel.page.evaluate(() => fetch("/api/users/1"))
@@ -2121,11 +2121,11 @@ test("a CORS-blocked request reads as a CORS failure", async () => {
   try {
     await panel.page.goto(`${panel.origin}/cors`)
     const row = async () =>
-      (await panel.rows()).find((r) => r.startsWith("/api/cors GET"))
+      (await panel.rows()).find((r) => r.startsWith("/api/cors "))
     // Chrome's live event has the response headers or not, by timing.
     await expect
       .poll(row)
-      .toMatch(/^\/api\/cors GET (CORS error|probably CORS)$/)
+      .toMatch(/^\/api\/cors (CORS error|probably CORS) GET$/)
     await panel.toggleChip("failed")
     expect(await row()).toMatch(/CORS/)
   } finally {

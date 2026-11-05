@@ -33,6 +33,11 @@ export function List(props: {
               selected={selected()}
               class="flex-1"
             />
+            <Show when={label.failure}>
+              <span class="shrink-0 rounded bg-error px-1 font-semibold text-bg">
+                {label.failure}
+              </span>
+            </Show>
             <Show
               when={props.bodyHit(entry)}
               fallback={
@@ -62,11 +67,6 @@ export function List(props: {
                   <Marked text={hit().excerpt} query={props.query} />
                 </span>
               )}
-            </Show>
-            <Show when={label.failure}>
-              <span class="shrink-0 rounded bg-error px-1 font-semibold text-bg">
-                {label.failure}
-              </span>
             </Show>
             <Show when={label.live}>
               <span class="shrink-0" classList={{ "text-accent": !selected() }}>
