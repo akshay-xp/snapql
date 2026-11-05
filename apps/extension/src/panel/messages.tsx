@@ -1,16 +1,20 @@
 import { createSignal, Show } from "solid-js"
 import type { Message } from "../capture/entry"
+import { count } from "../decoders/text"
 import type { Decoded } from "../decoders/types"
+import type { ShowHeartbeats } from "./heartbeats"
 import { treeValue } from "./json"
 import { JsonTree } from "./json-tree"
 import {
   arrow,
   byteLabel,
   frameLabel,
+  isHeartbeat,
   messageBytes,
   messageText,
   offsetLabel,
 } from "./messages"
+import { Pill } from "./search"
 import { Section, Text } from "./section"
 import { VirtualListbox } from "./virtual-listbox"
 
@@ -22,8 +26,19 @@ export function Messages(props: {
   directions?: boolean
   // A socket protocol's frame decoder, run only for rendered rows.
   decode?: (m: Message) => Decoded | undefined
+  // The protocol decoder's own keep-alive test, if it has one.
+  decoderHeartbeat?: (m: Message) => boolean
+  heartbeats: ShowHeartbeats
 }) {
-  const indexes = () => props.messages.map((_, i) => i)
+  const [showHeartbeats, setShowHeartbeats] = props.heartbeats
+  const beats = () =>
+    props.messages.map((m) => isHeartbeat(m, props.decoderHeartbeat))
+  const hidden = () => (showHeartbeats() ? 0 : beats().filter(Boolean).length)
+  // Original indexes, so Message <n> keeps counting every frame.
+  const indexes = () =>
+    props.messages.flatMap((_, i) =>
+      !showHeartbeats() && beats()[i] ? [] : [i],
+    )
   const [selected, setSelected] = createSignal<number>()
   // Decoded frames show their data rather than the raw text.
   const decodedTree = (m: Message) => {
@@ -41,6 +56,22 @@ export function Messages(props: {
   }
   return (
     <>
+      <Show when={beats().some(Boolean)}>
+        <div class="flex items-center gap-2">
+          <Pill
+            pressed={showHeartbeats()}
+            title="Show heartbeats"
+            onClick={() => setShowHeartbeats(!showHeartbeats())}
+          >
+            Heartbeats
+          </Pill>
+          <Show when={hidden()}>
+            <span data-heartbeats class="text-muted">
+              {count(hidden(), "heartbeat")} hidden
+            </span>
+          </Show>
+        </div>
+      </Show>
       <div class="flex min-h-24 flex-1 flex-col rounded border border-border">
         <VirtualListbox
           items={indexes()}

@@ -19,3 +19,5 @@ export function createShowHeartbeats(
   }
   return [show, setShow] as const
 }
+
+export type ShowHeartbeats = ReturnType<typeof createShowHeartbeats>
