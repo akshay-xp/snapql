@@ -26,8 +26,8 @@ import {
 import {
   BODY_LIMIT,
   type BodyViewKind,
+  dataUrl,
   type FormattedBody,
-  imageSrc,
   loadBody,
 } from "./body"
 import { valueText } from "./copy"
@@ -621,7 +621,7 @@ function ImagePreview(props: { text: string; mimeType: string }) {
   return (
     <>
       <img
-        src={imageSrc(props.text, props.mimeType)}
+        src={dataUrl(props.text, props.mimeType)}
         alt=""
         class="max-w-full self-start"
         onLoad={(e) =>

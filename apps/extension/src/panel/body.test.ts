@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { BODY_LIMIT, formatBody, imageSrc, loadBody } from "./body"
+import { BODY_LIMIT, dataUrl, formatBody, loadBody } from "./body"
 
 const text = (content: string) => ({ content, encoding: "" })
 
@@ -192,12 +192,11 @@ describe("loadBody", () => {
   })
 })
 
-describe("imageSrc", () => {
-  it("builds data URLs, SVG from its source", () => {
-    expect(imageSrc("AAAA", "image/png; x=1")).toBe(
-      "data:image/png;base64,AAAA",
-    )
-    expect(imageSrc('<svg a="1"/>', "image/svg+xml")).toBe(
+describe("dataUrl", () => {
+  it("builds data URLs for images and fonts, SVG from its source", () => {
+    expect(dataUrl("AAAA", "font/ttf")).toBe("data:font/ttf;base64,AAAA")
+    expect(dataUrl("AAAA", "image/png; x=1")).toBe("data:image/png;base64,AAAA")
+    expect(dataUrl('<svg a="1"/>', "image/svg+xml")).toBe(
       "data:image/svg+xml;charset=utf-8,%3Csvg%20a%3D%221%22%2F%3E",
     )
   })

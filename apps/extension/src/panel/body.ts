@@ -95,8 +95,9 @@ function prettyJson(text: string): string | undefined {
 const isTextMime = (mimeType: string) =>
   /^text\/|^multipart\/mixed$|[/+]json$|xml|javascript/.test(baseMime(mimeType))
 
-// SVG arrives as source text; other images as base64.
-export function imageSrc(text: string, mimeType: string): string {
+// For previews and Copy data URL. SVG arrives as source text; other images
+// and fonts as base64.
+export function dataUrl(text: string, mimeType: string): string {
   const mime = baseMime(mimeType)
   return mime === "image/svg+xml"
     ? `data:${mime};charset=utf-8,${encodeURIComponent(text)}`
