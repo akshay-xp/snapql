@@ -51,7 +51,7 @@ import { Splitter } from "./splitter.tsx"
 import { dataSections } from "./summary"
 import { shownTab, type Tab, tabsFor } from "./tabs"
 import { type Stage, timingView } from "./timing"
-import { findTokens } from "./values"
+import { findTokens, tokenFacts } from "./values"
 
 // Binary frames decode by format; text frames by the entry's own decoder,
 // which sees the whole frame list.
@@ -851,32 +851,51 @@ function Tokens(props: { entry: Entry }) {
   return (
     <Show when={tokens().length}>
       <For each={tokens()}>
-        {(token) => (
-          <Section
-            title="Tokens"
-            copy={() =>
-              valueText({
-                header: token.jwt.header,
-                payload: token.jwt.payload,
-              })
-            }
-          >
-            <p>
-              {token.source} <span class="text-muted">· unverified</span>
-            </p>
-            <Show when={token.jwt.expires}>
-              {(expires) => (
-                <p class="text-muted">
-                  expires <span class="font-mono">{expires()}</span>
-                </p>
-              )}
-            </Show>
-            <h3 class="mt-1 text-muted">header</h3>
-            <JsonTree value={token.jwt.header} />
-            <h3 class="mt-1 text-muted">payload</h3>
-            <JsonTree value={token.jwt.payload} />
-          </Section>
-        )}
+        {(token) => {
+          const facts = tokenFacts(token.jwt, props.entry.startedAt)
+          return (
+            <Section
+              title="Tokens"
+              copy={() =>
+                valueText({
+                  header: token.jwt.header,
+                  payload: token.jwt.payload,
+                })
+              }
+            >
+              <p>
+                {token.source}{" "}
+                <span
+                  class="font-mono"
+                  classList={{
+                    "text-error": facts.unsigned,
+                    "text-muted": !facts.unsigned,
+                  }}
+                >
+                  · {facts.alg}
+                </span>
+              </p>
+              <Show when={facts.expiry}>
+                {(expiry) => (
+                  <p
+                    data-expiry
+                    title={expiry().iso}
+                    classList={{
+                      "text-error": expiry().expired,
+                      "text-muted": !expiry().expired,
+                    }}
+                  >
+                    {expiry().text}
+                  </p>
+                )}
+              </Show>
+              <h3 class="mt-1 text-muted">header</h3>
+              <JsonTree value={token.jwt.header} />
+              <h3 class="mt-1 text-muted">payload</h3>
+              <JsonTree value={token.jwt.payload} />
+            </Section>
+          )
+        }}
       </For>
     </Show>
   )

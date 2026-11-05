@@ -177,7 +177,7 @@ Solid UI in `src/panel/`: header, request list, detail pane. Reads entries from 
 - `findTokens(exchange)`: JWTs in order from `Authorization: Bearer` (case-insensitive), request cookies (`cookie <name>`), response cookies (`set-cookie <name>`), query params (`query <name>`); non-JWT values skipped.
 - `decodeValue(value)`: first match of: JWT (payload as pretty JSON); percent-decoded text (raw kept if malformed) that parses to a JSON object/array (pretty JSON); percent-decoded text when it differs from the raw value; else `undefined`.
 - `Pairs` with `decode` (Headers, Payload) shows `decodeValue` as a muted `whitespace-pre-wrap` line under the raw value; Summary rows don't decode.
-- Summary `Tokens` section (last), only when tokens exist: `<source> · unverified`, `expires <iso>` when present, `header` and `payload` as `JsonTree`s.
+- Summary `Tokens` section (last), only when tokens exist, from `tokenFacts(jwt, entry.startedAt)` (pure, `values.ts`): `<source> · <alg>` (alg mono, `text-error` when `none` in any case, else muted; never `unverified`: signatures can't be checked, so it said nothing); then `[data-expiry]` (`title` = ISO time) when `exp` is set: `expires in <n> <unit>` (muted) or `expired <n> <unit> ago` (`text-error`, `exp` <= start), measured from the request's start so it reads the same however long ago it was captured, in the largest of `d`, `h`, `min`, `s` reached, rounded; then `header` and `payload` as `JsonTree`s.
 
 ## Body (`src/panel/body.ts`)
 
