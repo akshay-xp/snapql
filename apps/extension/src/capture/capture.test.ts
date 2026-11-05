@@ -418,6 +418,40 @@ describe("live capture", () => {
       })
     })
 
+    it("adopts a handshake Chrome reported before the probe saw the socket", async () => {
+      const { store, probe, emit } = live()
+      await new Promise((r) => setTimeout(r)) // HAR read settles
+      const exchange = { ...emptyExchange, statusText: "Switching Protocols" }
+      const handshake = { ...request("ws://x/sock"), status: 101, exchange }
+      emit(handshake)
+      const [{ id }] = store.snapshot()
+
+      probe([{ ...socketOpen, time: Date.parse(handshake.startedDateTime) }])
+
+      expect(store.snapshot()).toHaveLength(1)
+      const [entry] = store.snapshot()
+      expect(entry).toMatchObject({
+        id,
+        method: "WS",
+        open: true,
+        exchange,
+        socket: { protocols: ["chat"] },
+      })
+      expect(entry.decoded?.kind).toBe("websocket")
+
+      probe([
+        { type: "frame", id: 9, time: 1002, dir: "out", text: "hi" },
+        { type: "close", id: 9, time: 1500, code: 1000, reason: "bye" },
+      ])
+      expect(store.snapshot()).toHaveLength(1)
+      expect(store.snapshot()[0]).toMatchObject({
+        id,
+        open: false,
+        socket: { closeCode: 1000 },
+      })
+      expect(store.snapshot()[0].messages).toHaveLength(1)
+    })
+
     it("merges the handshake Chrome reports after close", async () => {
       const { store, probe, emit } = live()
       await new Promise((r) => setTimeout(r)) // HAR read settles
