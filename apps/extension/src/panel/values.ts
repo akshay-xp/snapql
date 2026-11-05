@@ -36,6 +36,39 @@ function segmentObject(segment: string): Record<string, unknown> | undefined {
   }
 }
 
+const UNITS: [number, string][] = [
+  [86_400_000, "d"],
+  [3_600_000, "h"],
+  [60_000, "min"],
+  [1000, "s"],
+]
+
+const duration = (ms: number) => {
+  const [size, unit] = UNITS.find(([size]) => ms >= size) ?? UNITS[3]
+  return `${Math.round(ms / size)} ${unit}`
+}
+
+// Expiry is measured from the request, so it reads the same however long ago
+// it was captured.
+export type TokenFacts = {
+  alg: string
+  unsigned: boolean
+  expiry?: { text: string; expired: boolean; iso: string }
+}
+
+export function tokenFacts(jwt: Jwt, startedAt: number): TokenFacts {
+  const alg = String(jwt.header.alg)
+  const facts = { alg, unsigned: alg.toLowerCase() === "none" }
+  const { exp } = jwt.payload
+  if (typeof exp !== "number" || !jwt.expires) return facts
+  const gap = exp * 1000 - startedAt
+  const expired = gap <= 0
+  const text = expired
+    ? `expired ${duration(-gap)} ago`
+    : `expires in ${duration(gap)}`
+  return { ...facts, expiry: { text, expired, iso: jwt.expires } }
+}
+
 export type Token = { source: string; jwt: Jwt }
 
 export function findTokens(

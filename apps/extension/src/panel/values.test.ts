@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { decodeJwt, decodeValue, findTokens } from "./values"
+import { decodeJwt, decodeValue, findTokens, tokenFacts } from "./values"
 
 const b64url = (text: string) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(text)))
@@ -107,5 +107,35 @@ describe("decodeValue", () => {
   it("returns undefined when there is nothing to add", () => {
     for (const value of ["plain", "42", '"str"', "%E0%A4%A"])
       expect(decodeValue(value)).toBeUndefined()
+  })
+})
+
+describe("tokenFacts", () => {
+  const at = Date.UTC(2026, 10, 5, 12)
+  const token = (exp?: number, alg = "HS256") =>
+    decodeJwt(jwt({ alg }, exp === undefined ? {} : { exp })) ??
+    expect.fail("not a JWT")
+  const facts = (offsetSeconds: number) =>
+    tokenFacts(token(at / 1000 + offsetSeconds), at).expiry
+
+  it("names the algorithm and flags unsigned tokens", () => {
+    expect(tokenFacts(token(), at)).toEqual({ alg: "HS256", unsigned: false })
+    for (const alg of ["none", "None"])
+      expect(tokenFacts(token(undefined, alg), at).unsigned).toBe(true)
+  })
+
+  it("describes expiry relative to when the request started", () => {
+    expect(facts(-300)).toEqual({
+      text: "expired 5 min ago",
+      expired: true,
+      iso: new Date(at - 300_000).toISOString(),
+    })
+    expect(facts(7200)).toMatchObject({
+      text: "expires in 2 h",
+      expired: false,
+    })
+    expect(facts(0)).toMatchObject({ text: "expired 0 s ago", expired: true })
+    expect(facts(30)?.text).toBe("expires in 30 s")
+    expect(facts(3 * 86400)?.text).toBe("expires in 3 d")
   })
 })
