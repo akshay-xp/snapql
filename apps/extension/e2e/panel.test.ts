@@ -1249,6 +1249,46 @@ test("Socket.IO and graphql-ws frames are titled by their protocol", async () =>
   }
 })
 
+test("heartbeats are hidden from Messages until shown", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/socket`)
+    await expect.poll(panel.probed).toBe(true)
+    const titles = async () =>
+      (await panel.messages()).map((r) =>
+        r.replace(/^\+\S+ /, "").replace(/ \S+ k?B$/, ""),
+      )
+    const toggle = 'button[aria-pressed][title="Show heartbeats"]'
+
+    await panel.page.click("#sio")
+    await expect
+      .poll(panel.rows)
+      .toEqual(expect.arrayContaining(["/socket.io/ live 6 msgs socketio"]))
+    await panel.selectStarting("/socket.io/ ")
+    await panel.openTab("Messages")
+    await expect
+      .poll(titles)
+      .toEqual(["↑ connect", "↑ chat", "↓ connect", "↓ chat"])
+    expect(await panel.text("[data-heartbeats]")).toBe("2 heartbeats hidden")
+    expect(await panel.attr(toggle, "aria-pressed")).toBe("false")
+
+    await panel.click(toggle)
+    await expect.poll(titles).toHaveLength(6)
+    expect(await panel.count("[data-heartbeats]")).toBe(0)
+    expect(await panel.attr(toggle, "aria-pressed")).toBe("true")
+
+    await panel.openTab("Summary")
+    const socket = await panel.pairs()
+    expect(socket).toContain("frames sent = 3")
+    expect(socket).toContain("frames received = 3")
+
+    await panel.reloadPanel()
+    expect(await panel.storageItem("snapql.showHeartbeats")).toBe("true")
+  } finally {
+    await panel.close()
+  }
+})
+
 // Pins Chrome's HAR text for binary request bodies: valid UTF-8 is decoded,
 // anything else maps each byte to one code unit (Latin-1), so no byte is lost.
 test("binary request bodies reach the HAR as UTF-8 or Latin-1 text", async () => {

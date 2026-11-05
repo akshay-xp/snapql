@@ -27,6 +27,7 @@ import {
 } from "./filter"
 import { Footer } from "./footer"
 import { harFileName, toHar } from "./har"
+import type { ShowHeartbeats } from "./heartbeats"
 import { List } from "./list"
 import type { Step } from "./matches"
 import { redactHar } from "./redact"
@@ -44,6 +45,7 @@ export function App(props: {
   onReloadCapture: () => void
   schemas: Schemas
   workspaces: Workspaces
+  heartbeats: ShowHeartbeats
 }) {
   const [entries, setEntries] = createSignal(props.store.snapshot())
   onCleanup(props.store.subscribe(() => setEntries(props.store.snapshot())))
@@ -237,6 +239,7 @@ export function App(props: {
         <Show when={selected()}>
           {(entry) => (
             <Detail
+              heartbeats={props.heartbeats}
               entry={entry()}
               schemas={props.schemas}
               bodyQuery={bodyQuery()}

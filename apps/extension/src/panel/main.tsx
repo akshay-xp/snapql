@@ -15,6 +15,7 @@ import { pollProbe } from "../capture/probe-source"
 import { createStore } from "../capture/store"
 import { decoders } from "../decoders"
 import { App } from "./app"
+import { createShowHeartbeats } from "./heartbeats"
 import { createSchemas } from "./schemas"
 import { defaultTheme, type Theme, themeVars } from "./themes"
 import { createWorkspaces, localWorkspaces } from "./workspaces"
@@ -63,6 +64,7 @@ try {
   storage = localStorage
 } catch {}
 const workspaces = createWorkspaces(localWorkspaces(storage))
+const heartbeats = createShowHeartbeats(storage)
 const schemas = createSchemas(storage, (files) =>
   import("../decoders/proto-schema").then((m) => m.parseProto(files)),
 )
@@ -76,6 +78,7 @@ render(
       onReloadCapture={async () => reloadWithScript(await script)}
       schemas={schemas}
       workspaces={workspaces}
+      heartbeats={heartbeats}
     />
   ),
   document.getElementById("root") as HTMLElement,

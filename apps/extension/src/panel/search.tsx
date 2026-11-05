@@ -83,7 +83,7 @@ export function Segments(props: { segments: Segment[] }) {
   )
 }
 
-function Pill(props: {
+export function Pill(props: {
   pressed: boolean
   title?: string
   class?: string

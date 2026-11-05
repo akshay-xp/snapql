@@ -34,6 +34,7 @@ import { valueText } from "./copy"
 import { CopyButton, createCopied } from "./copy-button"
 import { toCurl, toFetch } from "./curl"
 import { type Heading, summaryHeading } from "./heading"
+import type { ShowHeartbeats } from "./heartbeats"
 import { hexDump } from "./hex-dump"
 import { OPEN_DEPTH, treeValue } from "./json"
 import { JsonTree } from "./json-tree"
@@ -94,9 +95,13 @@ function CopyAs(props: { entry: Entry }) {
   )
 }
 
-function frameDecoder(entry: Entry, format: BinaryFormat) {
+function entryDecoder(entry: Entry) {
   const kind = entry.decoded?.kind
-  const decode = kind ? decoderFor(kind, decoders)?.decodeMessage : undefined
+  return kind ? decoderFor(kind, decoders) : undefined
+}
+
+function frameDecoder(entry: Entry, format: BinaryFormat) {
+  const decode = entryDecoder(entry)?.decodeMessage
   return (m: Message) =>
     m.base64 !== undefined
       ? decodeBinaryFrame({ ...m, base64: m.base64 }, format)
@@ -123,6 +128,7 @@ export function Detail(props: {
   openTab?: { tab: Tab }
   // Enter in the search box: a fresh object per press.
   stepMatch?: Step
+  heartbeats: ShowHeartbeats
 }) {
   // Kept across selection changes: the Show around Detail is not keyed.
   const [active, setActive] = createSignal<Tab>("Summary")
@@ -264,6 +270,7 @@ export function Detail(props: {
                             props.entry.startedAt,
                           )}
                           timed={false}
+                          heartbeats={props.heartbeats}
                         />
                       </>
                     )}
@@ -300,6 +307,8 @@ export function Detail(props: {
                       timed
                       directions={!!props.entry.socket}
                       decode={frameDecoder(props.entry, format())}
+                      decoderHeartbeat={entryDecoder(props.entry)?.isHeartbeat}
+                      heartbeats={props.heartbeats}
                     />
                   </>
                 )}
