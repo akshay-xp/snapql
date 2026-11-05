@@ -36,6 +36,8 @@ export type Decoder = {
     frame: FrameView,
     frames: readonly FrameView[],
   ): Decoded | undefined
+  // Keep-alive frames the panel hides from Messages by default.
+  isHeartbeat?(frame: FrameView): boolean
 }
 
 export type DecodeResult = Decoded & { kind: string }

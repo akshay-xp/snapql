@@ -17,6 +17,8 @@ const control = new Set([
   "ka",
 ])
 
+const heartbeats = new Set(["ping", "pong", "ka"])
+
 const operation = new Set(["subscribe", "start"])
 // Frames that carry the id of an earlier subscribe/start.
 const result = new Set(["next", "data", "error", "complete", "stop"])
@@ -32,6 +34,7 @@ export const graphqlWs: Decoder = {
   ...socketDecoder("graphql-ws", (req) =>
     PROTOCOLS.some((p) => req.protocols?.includes(p)),
   ),
+  isHeartbeat: (frame) => heartbeats.has(String(parse(frame.text)?.type)),
   decodeMessage(frame, frames) {
     const message = parse(frame.text)
     const type = message?.type

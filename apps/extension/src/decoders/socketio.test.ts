@@ -92,4 +92,14 @@ describe("socketio", () => {
     })
     expect(decode('451-/admin,["up"]')?.detail).toBe("/admin, binary")
   })
+
+  it("recognises Engine.IO ping and pong as heartbeats", () => {
+    const beat = (text: string, bytes?: number) =>
+      socketio.isHeartbeat?.(frame(text, bytes))
+    expect(beat("2")).toBe(true)
+    expect(beat("3")).toBe(true)
+    for (const text of ["2probe", '42["chat"]', '0{"sid":"a"}'])
+      expect(beat(text)).toBe(false)
+    expect(beat("2", 1)).toBe(false)
+  })
 })
