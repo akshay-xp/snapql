@@ -1080,7 +1080,7 @@ async function startServer(): Promise<Server> {
       return res
         .writeHead(200, { "content-type": "text/event-stream" })
         .end(
-          'data: {"n":1}\n\nevent: ping\ndata: {"n":2}\n\ndata: line one\ndata: line two\n\n',
+          'data: {"n":1}\n\nevent: update\ndata: {"n":2}\n\ndata: line one\ndata: line two\n\n',
         )
     if (req.url === "/api/ndjson")
       return res

@@ -972,11 +972,11 @@ test("streamed responses list their messages", async () => {
 
     await panel.select("/api/sse GET sse")
     await panel.openTab("Response")
-    await expect.poll(panel.detail).toContain("event: ping")
+    await expect.poll(panel.detail).toContain("event: update")
     await panel.openTab("Messages")
     await expect
       .poll(panel.messages)
-      .toEqual(['{"n":1} 7 B', 'ping {"n":2} 7 B', "line one line two 17 B"])
+      .toEqual(['{"n":1} 7 B', 'update {"n":2} 7 B', "line one line two 17 B"])
 
     await panel.select("/api/ndjson GET ndjson")
     await expect.poll(panel.messages).toHaveLength(3)
@@ -1212,14 +1212,7 @@ test("Socket.IO and graphql-ws frames are titled by their protocol", async () =>
     await panel.openTab("Messages")
     await expect
       .poll(titles)
-      .toEqual([
-        "↑ connect",
-        "↑ chat",
-        "↑ ping",
-        "↓ connect",
-        "↓ chat",
-        "↓ ping",
-      ])
+      .toEqual(["↑ connect", "↑ chat", "↓ connect", "↓ chat"])
     await panel.click("#message-1")
     expect(
       await panel.text('[role="tabpanel"] section [data-json="key"]'),
