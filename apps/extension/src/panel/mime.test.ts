@@ -4,6 +4,7 @@ import {
   isFontMime,
   isImageMime,
   isJavaScriptMime,
+  sniffBody,
 } from "./mime"
 
 describe("MIME type groups", () => {
@@ -54,5 +55,45 @@ describe("MIME type groups", () => {
     for (const mime of ["audio/mpeg", "video/mp4", "application/ogg"])
       expect(isAudioOrVideoMime(mime), mime).toBe(true)
     expect(isAudioOrVideoMime("application/json")).toBe(false)
+  })
+})
+
+describe("sniffBody", () => {
+  const b = (...bytes: (number | string)[]) =>
+    new Uint8Array(
+      bytes.flatMap((x) =>
+        typeof x === "string" ? [...x].map((c) => c.charCodeAt(0)) : [x],
+      ),
+    )
+
+  it("recognises every image pattern in the spec", () => {
+    for (const bytes of [
+      b(0, 0, 1, 0),
+      b(0, 0, 2, 0),
+      b("BM"),
+      b("GIF87a"),
+      b("GIF89a"),
+      b("RIFF", 9, 9, 9, 9, "WEBPVP"),
+      b(0x89, "PNG", 0x0d, 0x0a, 0x1a, 0x0a),
+      b(0xff, 0xd8, 0xff),
+    ])
+      expect(sniffBody(bytes), String(bytes)).toBe("image")
+  })
+
+  it("recognises every font pattern in the spec", () => {
+    for (const bytes of [
+      b(...Array(34).fill(7), "LP"),
+      b(0, 1, 0, 0),
+      b("OTTO"),
+      b("ttcf"),
+      b("wOFF"),
+      b("wOF2"),
+    ])
+      expect(sniffBody(bytes), String(bytes)).toBe("font")
+  })
+
+  it("needs the whole pattern", () => {
+    expect(sniffBody(b(0x89, "PNG", 0x0d, 0x0a, 0x1a))).toBeUndefined()
+    expect(sniffBody(b('{"a":1}'))).toBeUndefined()
   })
 })
