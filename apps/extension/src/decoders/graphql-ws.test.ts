@@ -97,4 +97,12 @@ describe("graphql-ws", () => {
       expect(decode({ type: "next", id: "9" }, frames)?.title).toBe("9")
     })
   })
+
+  it("recognises ping, pong and keep-alive frames as heartbeats", () => {
+    const beat = (value: unknown) => graphqlWs.isHeartbeat?.(frame(value))
+    for (const type of ["ping", "pong", "ka"]) expect(beat({ type })).toBe(true)
+    for (const type of ["connection_init", "next"])
+      expect(beat({ type })).toBe(false)
+    expect(beat("ping")).toBe(false)
+  })
 })

@@ -60,6 +60,8 @@ export const socketio: Decoder = {
   ...socketDecoder("socketio", (req) =>
     new URL(req.url).pathname.includes("/socket.io/"),
   ),
+  isHeartbeat: (frame) =>
+    frame.bytes === undefined && (frame.text === "2" || frame.text === "3"),
   decodeMessage(frame) {
     if (frame.bytes !== undefined) return
     if (frame.text[0] === "4") return packet(frame.text.slice(1))
