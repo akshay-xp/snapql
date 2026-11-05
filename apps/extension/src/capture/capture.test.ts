@@ -452,6 +452,41 @@ describe("live capture", () => {
       expect(store.snapshot()[0].messages).toHaveLength(1)
     })
 
+    it("adopts only a matching handshake from the socket's own open", async () => {
+      const start = Date.parse(request("ws://x/sock").startedDateTime)
+      const exchange = { ...emptyExchange, statusText: "Switching Protocols" }
+      const handshake = (url: string) => ({
+        ...request(url),
+        status: 101,
+        exchange,
+      })
+      const setup = async () => {
+        const fake = live()
+        await new Promise((r) => setTimeout(r)) // HAR read settles
+        return fake
+      }
+
+      const other = await setup()
+      other.emit(handshake("ws://x/other"))
+      other.probe([{ ...socketOpen, time: start }])
+      expect(other.store.snapshot()).toHaveLength(2)
+
+      const old = await setup()
+      old.emit(handshake("ws://x/sock"))
+      old.probe([{ ...socketOpen, time: start + 5000 }])
+      expect(old.store.snapshot().map((e) => e.method)).toEqual(["GET", "WS"])
+
+      const twice = await setup()
+      twice.emit(handshake("ws://x/sock"))
+      twice.probe([
+        { ...socketOpen, time: start },
+        { ...socketOpen, id: 10, time: start },
+      ])
+      const sockets = twice.store.snapshot()
+      expect(sockets.map((e) => e.method)).toEqual(["WS", "WS"])
+      expect(sockets.map((e) => e.exchange)).toEqual([exchange, emptyExchange])
+    })
+
     it("merges the handshake Chrome reports after close", async () => {
       const { store, probe, emit } = live()
       await new Promise((r) => setTimeout(r)) // HAR read settles

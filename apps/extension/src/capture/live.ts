@@ -13,6 +13,8 @@ import {
 import type { Drained, ProbeEvent } from "./probe-source"
 import type { Store } from "./store"
 
+const HANDSHAKE_WINDOW_MS = 1000
+
 type Stream = {
   entryId: number
   method: string
@@ -31,15 +33,23 @@ export function createLive(
   const streams = new Map<string, Stream>()
 
   // Chrome reports a handshake only once its socket closes, which can beat the
-  // probe's next poll; the socket then takes over that row.
-  const handshakeFor = (url: string) =>
+  // probe's next poll; the socket then takes over that row. Both times mark
+  // the socket's creation, so the window only rules out an older socket's
+  // handshake on the same URL (one kept across a reload).
+  const handshakeFor = (url: string, time: number) =>
     store
       .snapshot()
-      .find((e) => e.method === "GET" && e.url === url && /^wss?:/.test(e.url))
+      .find(
+        (e) =>
+          e.method === "GET" &&
+          e.url === url &&
+          /^wss?:/.test(e.url) &&
+          Math.abs(e.startedAt - time) <= HANDSHAKE_WINDOW_MS,
+      )
 
   function open(key: string, ev: ProbeEvent & { type: "open" }) {
     const socket = ev.kind === "websocket"
-    const handshake = socket ? handshakeFor(ev.url) : undefined
+    const handshake = socket ? handshakeFor(ev.url, ev.time) : undefined
     const stream: Stream = {
       entryId: handshake?.id ?? nextId(),
       method: ev.method,
