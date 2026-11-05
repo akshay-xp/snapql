@@ -100,6 +100,19 @@ describe("formatBody", () => {
     expect(view(text("hi"), "text/plain")).toBeUndefined()
   })
 
+  it("previews by the body's bytes first, then by spec MIME group", () => {
+    const base64 = (content: string) => ({ content, encoding: "base64" })
+    const view = (content: string, mimeType: string) =>
+      formatBody(base64(content), { mimeType }).view
+    const png = "iVBORw0KGgo="
+    const ttf = "AAEAAAAKAIAAAwAg"
+    expect(view(png, "application/octet-stream")).toBe("image")
+    expect(view(ttf, "application/x-font-ttf")).toBe("font")
+    expect(view("aGk=", "image/avif")).toBe("image")
+    expect(view("aGk=", "application/font-sfnt")).toBe("font")
+    expect(view("aGk=", "application/octet-stream")).toBe("hex")
+  })
+
   it("shows SVG as an image with its source as text", () => {
     const svg = "<svg/>"
     expect(formatBody(text(svg), { mimeType: "image/svg+xml" })).toMatchObject({
