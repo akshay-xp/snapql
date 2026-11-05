@@ -2077,6 +2077,10 @@ test("token subprotocols stay out of rows and redacted exports", async () => {
     await expect
       .poll(row, { timeout: 5000 })
       .toMatch(/^\/tok\?room=1 chat closed 1000 2 msgs websocket$/)
+    // One row, though the socket closed before the probe reported it.
+    expect(
+      (await panel.rows()).filter((r) => r.startsWith("/tok")),
+    ).toHaveLength(1)
 
     await panel.selectStarting("/tok")
     await panel.openTab("Headers")
