@@ -20,3 +20,23 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
 }
+
+[data-chips] {
+  scrollbar-width: none;
+  --fade: 1.5rem;
+}
+[data-chips][data-overflow-left] {
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+}
+[data-chips][data-overflow-right] {
+  mask-image: linear-gradient(to left, transparent, #000 var(--fade));
+}
+[data-chips][data-overflow-left][data-overflow-right] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade),
+    #000 calc(100% - var(--fade)),
+    transparent
+  );
+}

@@ -1,6 +1,16 @@
-import { For, type JSX, Show } from "solid-js"
+import {
+  createEffect,
+  createSignal,
+  For,
+  type JSX,
+  on,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js"
 import { type Filters, type Hide, highlight, type Segment } from "./filter"
 import { IconButton } from "./icon-button"
+import { overflowEdges } from "./overflow"
 import { createPopover } from "./popover"
 import { WorkspaceMenu } from "./workspace-menu"
 import type { Workspaces } from "./workspaces"
@@ -130,6 +140,17 @@ export function FilterChips(props: {
       )}
     </For>
   )
+  // No scrollbar: fades on the edges that hide chips say there is more.
+  let chipRow!: HTMLFieldSetElement
+  const [edges, setEdges] = createSignal({ left: false, right: false })
+  const updateEdges = () => setEdges(overflowEdges(chipRow))
+  onMount(() => {
+    const observer = new ResizeObserver(updateEdges)
+    observer.observe(chipRow)
+    onCleanup(() => observer.disconnect())
+  })
+  // Chips arriving during capture change the content, not the row's size.
+  createEffect(on(() => props.chips, updateEdges))
   return (
     <div class="flex h-8 shrink-0 items-center border-b border-border pr-2">
       <WorkspaceMenu
@@ -149,8 +170,13 @@ export function FilterChips(props: {
         </button>
       </Show>
       <fieldset
+        ref={chipRow}
         aria-label="Filters"
+        data-chips
+        data-overflow-left={edges().left || undefined}
+        data-overflow-right={edges().right || undefined}
         class="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2"
+        onScroll={updateEdges}
       >
         {group("kinds")}
         <span aria-hidden="true" class="mx-1 h-4 w-px shrink-0 bg-border" />
