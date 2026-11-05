@@ -1581,6 +1581,33 @@ test("Copy puts images on the clipboard as PNG", async () => {
   }
 })
 
+test("a failed image copy says so", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/media`)
+    await expect.poll(panel.rows).toContain("/media GET html")
+    await panel.unhide("assets")
+    await expect.poll(panel.rows).toContain("/api/png GET image")
+    await panel.select("/api/png GET image")
+    await panel.openTab("Response")
+    await expect.poll(panel.detail).toContain("3 × 2 px")
+    await panel.stubClipboardWrite(true)
+    await panel.clickButton("Copy")
+    await expect
+      .poll(() => panel.count('button[aria-label="Copy failed"]'))
+      .toBe(1)
+    await expect
+      .poll(() => panel.count('button[aria-label="Copy failed"]'), {
+        timeout: 3000,
+      })
+      .toBe(0)
+    expect(await panel.count('button[aria-label="Copy"]')).toBe(1)
+    expect(await panel.errors()).toEqual([])
+  } finally {
+    await panel.close()
+  }
+})
+
 test("filter chips narrow by protocol and status", async () => {
   const panel = await openPanel()
   try {

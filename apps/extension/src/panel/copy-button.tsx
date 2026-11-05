@@ -4,22 +4,34 @@ import { IconButton } from "./icon-button"
 
 const COPIED_MS = 1500
 
-// True for COPIED_MS after each copy, so the control can say "Copied".
-// Takes text, or a write for anything else (an image).
+type CopyState = "idle" | "copied" | "failed"
+
+// "copied" or "failed" for COPIED_MS after each copy, so the control can say
+// so. Takes text, or a write for anything else (an image), which can fail.
 export function createCopied(): [
-  Accessor<boolean>,
+  Accessor<CopyState>,
   (what: string | (() => Promise<void>)) => void,
 ] {
-  const [copied, setCopied] = createSignal(false)
+  const [state, setState] = createSignal<CopyState>("idle")
   let timer: ReturnType<typeof setTimeout> | undefined
   onCleanup(() => clearTimeout(timer))
   const copy = async (what: string | (() => Promise<void>)) => {
-    await (typeof what === "string" ? copyToClipboard(what) : what())
-    setCopied(true)
+    try {
+      await (typeof what === "string" ? copyToClipboard(what) : what())
+      setState("copied")
+    } catch {
+      setState("failed")
+    }
     clearTimeout(timer)
-    timer = setTimeout(() => setCopied(false), COPIED_MS)
+    timer = setTimeout(() => setState("idle"), COPIED_MS)
   }
-  return [copied, copy]
+  return [state, copy]
+}
+
+const SAID: Record<CopyState, string | undefined> = {
+  idle: undefined,
+  copied: "Copied",
+  failed: "Copy failed",
 }
 
 export function CopyButton(props: {
@@ -27,18 +39,21 @@ export function CopyButton(props: {
   value: () => string
   // Replaces copying value as text.
   write?: () => Promise<void>
-  // Visible text beside the icon; reads "Copied" after a copy.
+  // Visible text beside the icon; reads "Copied" or "Copy failed" after a copy.
   caption?: string
 }) {
-  const [copied, copy] = createCopied()
+  const [state, copy] = createCopied()
+  const said = () => SAID[state()]
   return (
     <IconButton
-      label={copied() ? "Copied" : props.label}
-      caption={props.caption && (copied() ? "Copied" : props.caption)}
+      label={said() ?? props.label}
+      caption={props.caption && (said() ?? props.caption)}
       onClick={() => copy(props.write ?? props.value())}
     >
-      {copied() ? (
+      {state() === "copied" ? (
         <path d="m5 12 5 5 9-10" />
+      ) : state() === "failed" ? (
+        <path d="M6 6l12 12M18 6 6 18" />
       ) : (
         <>
           <rect x="9" y="9" width="11" height="11" rx="2" />

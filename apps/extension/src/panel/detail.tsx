@@ -57,7 +57,7 @@ import { findTokens, tokenFacts } from "./values"
 // which sees the whole frame list.
 function CopyAs(props: { entry: Entry }) {
   const [open, setOpen] = createSignal(false)
-  const [copied, copy] = createCopied()
+  const [state, copy] = createCopied()
   const item = (label: string, text: (entry: Entry) => string) => (
     <button
       type="button"
@@ -80,7 +80,7 @@ function CopyAs(props: { entry: Entry }) {
         class="rounded px-1.5 py-0.5 text-muted hover:bg-selected hover:text-fg"
         onClick={() => setOpen(!open())}
       >
-        {copied() ? "Copied" : "Copy as"}
+        {state() === "copied" ? "Copied" : "Copy as"}
       </button>
       <Show when={open()}>
         <div
