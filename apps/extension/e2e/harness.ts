@@ -202,7 +202,7 @@ const packedPage = `<!doctype html>
 const mediaPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
-  for (const url of ["/api/png", "/api/gif", "/api/svg", "/api/font", "/api/badfont", "/api/bin"])
+  for (const url of ["/api/png", "/api/gif", "/api/svg", "/api/font", "/api/badfont", "/api/bin", "/api/png-octet", "/api/xfont"])
     fetch(url)
 </script>`
 
@@ -332,6 +332,15 @@ const media: Record<string, [string, () => Promise<Buffer> | Buffer]> = {
     () => readFile(new URL("./fixtures/glyph.ttf", import.meta.url)),
   ],
   "/api/badfont": ["font/woff2", () => Buffer.from([0, 1, 2, 3])],
+  // Mislabelled, as servers do: previews come from the bytes.
+  "/api/png-octet": [
+    "application/octet-stream",
+    () => Buffer.from(PNG_BASE64, "base64"),
+  ],
+  "/api/xfont": [
+    "application/x-font-ttf",
+    () => readFile(new URL("./fixtures/glyph.ttf", import.meta.url)),
+  ],
   "/static/dot.png": ["image/png", () => Buffer.from(PNG_BASE64, "base64")],
   "/static/site.css": ["text/css", () => Buffer.from("body {}")],
   "/api/bin": [

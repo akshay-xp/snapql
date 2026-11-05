@@ -1536,6 +1536,14 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
     await body("/api/badfont GET font")
     await expect.poll(panel.detail).toContain("font failed to load")
 
+    await body("/api/png-octet GET")
+    await expect.poll(panel.detail).toContain("3 × 2 px · 73 B")
+
+    await body("/api/xfont GET")
+    await expect
+      .poll(async () => (await panel.detail())?.split("quick brown fox").length)
+      .toBe(4)
+
     await body("/api/bin GET")
     await expect.poll(panel.detail).toContain("00000000  00 ff 10 41")
     await panel.clickButton("Copy")
