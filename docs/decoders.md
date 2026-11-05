@@ -10,6 +10,7 @@ Turn a request into a protocol `kind`, a `title` and an optional `detail` for th
 - `BodyView`: `{ content, encoding }` (`encoding` `""` or `"base64"`), the shape of capture's `Body`, so decoders don't import capture.
 - `decodeResponse?(body, decoded, headers)`: optional; `DecodedResponse` (`{ summary, data }`, e.g. `2 errors`) or `undefined` from the raw response `BodyView`, the stored `DecodeResult` and the response headers (`NameValue[]`: `{ name, value }`, defined here; capture re-exports it). Never run at capture: the panel calls it lazily (Response group in the Response tab, see `docs/panel.md`), so response bodies still load only on demand. Bodies over `BODY_LIMIT` (1 MB of content) are not decoded; a failed body fetch shows no Response group.
 - `decodeMessage?(frame, frames)`: optional; titles one socket frame (`FrameView`: `{ dir, text, bytes? }`, which `Message` satisfies) as a `Decoded`, or `undefined` to fall back to the preview. `frames` is the entry's whole list, for protocols whose frames refer to earlier ones. Never run at capture: the panel calls it per rendered Messages row (and for the selected frame).
+- `isHeartbeat?(frame)`: optional; true for the protocol's keep-alive frames, which Messages hides by default (see `docs/panel.md`, Messages).
 - `DecodeResult`: `Decoded & { kind }`, stored on `Entry.decoded`.
 - `RequestView.protocols?`: WebSockets only, the protocols requested at creation (from the probe), so socket decoders run at capture like the rest.
 - No headers or query params in `RequestView`: GET params come from `url`. Add when a decoder needs them.
@@ -59,12 +60,14 @@ No capture, store, or UI change.
 
 - Kind `socketio`: a `WS` entry whose URL path contains `/socket.io/`.
 - `decodeMessage`: binary frames (attachments) are left alone. Engine.IO type is the first char: `0` open (data = handshake JSON), `1` close, `2` ping, `3` pong (text after it, e.g. `probe`, as detail), `5` upgrade, `6` noop, `4` message carrying a Socket.IO packet.
+- `isHeartbeat`: text frames exactly `2` or `3` (not `2probe`/`3probe`, the upgrade probe).
 - Packet grammar `<type>[<attachments>-][/<namespace>,][<ack id>][<JSON>]`: `0` connect, `1` disconnect, `4` connect_error (data = payload), `2` event and `5` binary event (title = event name, data `{ args, ack? }`), `3` ack and `6` binary ack (title `ack <id>`, data `{ args }`). Detail: a namespace other than `/`, and `binary`, joined `, `.
 
 ## graphql-ws (`src/decoders/graphql-ws.ts`)
 
 - Kind `graphql-ws`: a `WS` entry requesting `graphql-transport-ws` (graphql-ws library) or `graphql-ws` (legacy subscriptions-transport-ws).
 - `decodeMessage` on JSON frames with a string `type`: control types (`connection_init`, `connection_ack`, `connection_error`, `connection_terminate`, `ping`, `pong`, `ka`) titled by type, data = `payload`. `subscribe`/`start`: title = operation name via `requestLabel(payload)` (exported from `graphql.ts`, so names match HTTP GraphQL rows, APQ included), `anonymous` without one; detail = type. `next`/`data`/`error`/`complete`/`stop`: title = the operation of the last `subscribe`/`start` in `frames` with the same `id` (the id itself when none), detail = type. Other types: `undefined`.
+- `isHeartbeat`: JSON `type` `ping`, `pong` or `ka`.
 
 ## Protobuf (`src/decoders/protobuf.ts`)
 
