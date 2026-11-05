@@ -156,6 +156,12 @@ export function FilterChips(props: {
     chipRow.scrollLeft += e.deltaY
     e.preventDefault()
   }
+  // Most of a row, so the chip cut off at the edge stays in view.
+  const page = (direction: -1 | 1) =>
+    chipRow.scrollBy({
+      left: direction * chipRow.clientWidth * 0.8,
+      behavior: "smooth",
+    })
   // Chips arriving during capture change the content, not the row's size.
   createEffect(on(() => props.chips, updateEdges))
   return (
@@ -176,22 +182,63 @@ export function FilterChips(props: {
           Showing all
         </button>
       </Show>
-      <fieldset
-        ref={chipRow}
-        aria-label="Filters"
-        data-chips
-        data-overflow-left={edges().left || undefined}
-        data-overflow-right={edges().right || undefined}
-        class="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2"
-        onScroll={updateEdges}
-        onWheel={scrollSideways}
-      >
-        {group("kinds")}
-        <span aria-hidden="true" class="mx-1 h-4 w-px shrink-0 bg-border" />
-        {group("statuses")}
-      </fieldset>
+      {/* Outside the fieldset, so its fade mask never dims them. */}
+      <div class="relative flex h-full min-w-0 flex-1">
+        <fieldset
+          ref={chipRow}
+          aria-label="Filters"
+          data-chips
+          data-overflow-left={edges().left || undefined}
+          data-overflow-right={edges().right || undefined}
+          class="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2"
+          onScroll={updateEdges}
+          onWheel={scrollSideways}
+        >
+          {group("kinds")}
+          <span aria-hidden="true" class="mx-1 h-4 w-px shrink-0 bg-border" />
+          {group("statuses")}
+        </fieldset>
+        <Show when={edges().left}>
+          <Chevron side="left" onClick={() => page(-1)} />
+        </Show>
+        <Show when={edges().right}>
+          <Chevron side="right" onClick={() => page(1)} />
+        </Show>
+      </div>
       <HideMenu hide={props.hide} onChange={props.onHide} />
     </div>
+  )
+}
+
+// For mouse users with no trackpad or shift+wheel; out of the tab order, since
+// focusing a chip already scrolls it into view.
+function Chevron(props: { side: "left" | "right"; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      tabindex="-1"
+      aria-label={`Scroll filters ${props.side}`}
+      title={`Scroll filters ${props.side}`}
+      class="absolute inset-y-0 flex w-5 items-center justify-center text-muted hover:text-fg"
+      classList={{
+        "left-0": props.side === "left",
+        "right-0": props.side === "right",
+      }}
+      onClick={props.onClick}
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        class="size-3.5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d={props.side === "left" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6"} />
+      </svg>
+    </button>
   )
 }
 
