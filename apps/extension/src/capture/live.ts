@@ -30,16 +30,25 @@ export function createLive(
 ) {
   const streams = new Map<string, Stream>()
 
+  // Chrome reports a handshake only once its socket closes, which can beat the
+  // probe's next poll; the socket then takes over that row.
+  const handshakeFor = (url: string) =>
+    store
+      .snapshot()
+      .find((e) => e.method === "GET" && e.url === url && /^wss?:/.test(e.url))
+
   function open(key: string, ev: ProbeEvent & { type: "open" }) {
+    const socket = ev.kind === "websocket"
+    const handshake = socket ? handshakeFor(ev.url) : undefined
     const stream: Stream = {
-      entryId: nextId(),
+      entryId: handshake?.id ?? nextId(),
       method: ev.method,
       url: ev.url,
       parser: streamParser(ev.mimeType),
       raw: "",
+      claimed: !!handshake,
     }
     streams.set(key, stream)
-    const socket = ev.kind === "websocket"
     const req = {
       method: ev.method,
       url: ev.url,
@@ -68,7 +77,12 @@ export function createLive(
         socket: { protocol: "", protocols: ev.protocols ?? [] },
       }),
     }
-    store.add(entry)
+    if (handshake)
+      store.update(handshake.id, () => ({
+        ...entry,
+        exchange: handshake.exchange,
+      }))
+    else store.add(entry)
   }
 
   const append = (stream: Stream, msgs: Message[]) =>
