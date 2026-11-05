@@ -3,6 +3,7 @@ import {
   arrow,
   byteLabel,
   frameLabel,
+  isHeartbeat,
   messageBytes,
   messageText,
   offsetLabel,
@@ -49,5 +50,31 @@ describe("message labels", () => {
     expect(
       frameLabel({ text: "", bytes: 4 }, { title: "up", data: undefined }),
     ).toEqual({ text: "up" })
+  })
+})
+
+describe("isHeartbeat", () => {
+  const text = (t: string, more: { bytes?: number; event?: string } = {}) => ({
+    text: t,
+    ...more,
+  })
+
+  it("trusts the protocol decoder", () => {
+    expect(isHeartbeat(text("2"), () => true)).toBe(true)
+  })
+
+  it("recognises plain ping, pong and heartbeat text and SSE ping events", () => {
+    for (const t of ["ping", "PONG", " heartbeat "])
+      expect(isHeartbeat(text(t))).toBe(true)
+    for (const event of ["ping", "heartbeat"])
+      expect(isHeartbeat(text("{}", { event }))).toBe(true)
+    expect(isHeartbeat(text("ping"), () => false)).toBe(true)
+  })
+
+  it("leaves other frames alone", () => {
+    expect(isHeartbeat(text("ping me"))).toBe(false)
+    expect(isHeartbeat(text('{"type":"ping"}'))).toBe(false)
+    expect(isHeartbeat(text("ping", { bytes: 4 }))).toBe(false)
+    expect(isHeartbeat(text("x", { event: "update" }))).toBe(false)
   })
 })
