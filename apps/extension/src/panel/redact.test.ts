@@ -83,6 +83,32 @@ const b64url = (o: object) =>
     .replace(/\//g, "_")
 const jwt = `${b64url({ alg: "HS256" })}.${b64url({ sub: "1" })}.sig`
 
+describe("redactHar: socket subprotocols", () => {
+  it("redacts token subprotocols item by item, keeping names", () => {
+    const token = "%7B%22token%22%7D"
+    const entry = one(
+      harOf({
+        exchange: {
+          ...emptyExchange,
+          requestHeaders: [nv("Sec-WebSocket-Protocol", `chat, ${token}`)],
+          responseHeaders: [nv("sec-websocket-protocol", token)],
+        },
+      }),
+    )
+    expect(entry.request.headers[0].value).toBe(`chat, ${R}`)
+    expect(entry.response.headers[0].value).toBe(R)
+    const names = one(
+      harOf({
+        exchange: {
+          ...emptyExchange,
+          requestHeaders: [nv("Sec-WebSocket-Protocol", "chat, v2")],
+        },
+      }),
+    )
+    expect(names.request.headers[0].value).toBe("chat, v2")
+  })
+})
+
 describe("redactHar: bodies and JWTs", () => {
   it("redacts secret form fields", () => {
     const entry = one(

@@ -1,5 +1,6 @@
 import type { NameValue } from "../capture/entry"
 import { parseJson } from "../decoders/json"
+import { isProtocolName } from "../decoders/websocket"
 import type { Har, HarEntry } from "./har"
 import { decodeJwt } from "./values"
 
@@ -82,6 +83,21 @@ function redactText(text: string, mimeType = ""): string {
 const redactValues = (pairs: readonly NameValue[]) =>
   pairs.map((p) => ({ ...p, value: redactJwts(p.value) }))
 
+// Sockets can't carry headers, so apps send tokens as subprotocols; servers
+// echo the chosen one back. Names stay, so the export still says which protocol.
+const redactProtocols = (pairs: readonly NameValue[]) =>
+  pairs.map((p) =>
+    p.name.toLowerCase() === "sec-websocket-protocol"
+      ? {
+          ...p,
+          value: p.value
+            .split(",")
+            .map((v) => (isProtocolName(v.trim()) ? v.trim() : REDACTED))
+            .join(", "),
+        }
+      : p,
+  )
+
 // Cookie headers are always redacted, so the parsed lists must be too.
 const redactCookies = (cookies: readonly NameValue[]) =>
   redactPairs(cookies, () => true)
@@ -94,7 +110,9 @@ function redactEntry(entry: HarEntry): HarEntry {
     request: {
       ...request,
       url: redactJwts(redactUrl(request.url)),
-      headers: redactValues(redactPairs(request.headers, secretHeader)),
+      headers: redactProtocols(
+        redactValues(redactPairs(request.headers, secretHeader)),
+      ),
       cookies: redactCookies(request.cookies),
       queryString: redactValues(redactPairs(request.queryString, secretName)),
       ...(request.postData && {
@@ -106,7 +124,9 @@ function redactEntry(entry: HarEntry): HarEntry {
     },
     response: {
       ...response,
-      headers: redactValues(redactPairs(response.headers, secretHeader)),
+      headers: redactProtocols(
+        redactValues(redactPairs(response.headers, secretHeader)),
+      ),
       cookies: redactCookies(response.cookies),
       content:
         content.text === undefined || content.encoding === "base64"
