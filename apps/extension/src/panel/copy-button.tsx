@@ -5,12 +5,16 @@ import { IconButton } from "./icon-button"
 const COPIED_MS = 1500
 
 // True for COPIED_MS after each copy, so the control can say "Copied".
-export function createCopied(): [Accessor<boolean>, (text: string) => void] {
+// Takes text, or a write for anything else (an image).
+export function createCopied(): [
+  Accessor<boolean>,
+  (what: string | (() => Promise<void>)) => void,
+] {
   const [copied, setCopied] = createSignal(false)
   let timer: ReturnType<typeof setTimeout> | undefined
   onCleanup(() => clearTimeout(timer))
-  const copy = async (text: string) => {
-    await copyToClipboard(text)
+  const copy = async (what: string | (() => Promise<void>)) => {
+    await (typeof what === "string" ? copyToClipboard(what) : what())
     setCopied(true)
     clearTimeout(timer)
     timer = setTimeout(() => setCopied(false), COPIED_MS)
@@ -21,6 +25,8 @@ export function createCopied(): [Accessor<boolean>, (text: string) => void] {
 export function CopyButton(props: {
   label: string
   value: () => string
+  // Replaces copying value as text.
+  write?: () => Promise<void>
   // Visible text beside the icon; reads "Copied" after a copy.
   caption?: string
 }) {
@@ -29,7 +35,7 @@ export function CopyButton(props: {
     <IconButton
       label={copied() ? "Copied" : props.label}
       caption={props.caption && (copied() ? "Copied" : props.caption)}
-      onClick={() => copy(props.value())}
+      onClick={() => copy(props.write ?? props.value())}
     >
       {copied() ? (
         <path d="m5 12 5 5 9-10" />

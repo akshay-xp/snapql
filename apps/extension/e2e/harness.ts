@@ -202,7 +202,7 @@ const packedPage = `<!doctype html>
 const mediaPage = `<!doctype html>
 <link rel="icon" href="data:,">
 <script>
-  for (const url of ["/api/png", "/api/svg", "/api/font", "/api/badfont", "/api/bin"])
+  for (const url of ["/api/png", "/api/gif", "/api/svg", "/api/font", "/api/badfont", "/api/bin"])
     fetch(url)
 </script>`
 
@@ -317,6 +317,15 @@ self.addEventListener("fetch", (e) => {
 
 const media: Record<string, [string, () => Promise<Buffer> | Buffer]> = {
   "/api/png": ["image/png", () => Buffer.from(PNG_BASE64, "base64")],
+  // 1x1 GIF: Chrome's clipboard takes only PNG, so Copy converts it.
+  "/api/gif": [
+    "image/gif",
+    () =>
+      Buffer.from(
+        "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        "base64",
+      ),
+  ],
   "/api/svg": ["image/svg+xml", () => Buffer.from(SVG)],
   "/api/font": [
     "font/ttf",
@@ -512,6 +521,10 @@ export type Panel = {
   // Text of matches whose content is wider than their box.
   overflowing(selector: string): Promise<string[]>
   stubClipboard(): Promise<void>
+  // Replaces clipboard.write (rejecting when fail) to record each write's
+  // item types and whether its image/png blob has the PNG signature.
+  stubClipboardWrite(fail?: boolean): Promise<void>
+  written(): Promise<{ types: string[]; png: boolean } | undefined>
   // Records blob link clicks (name and text) instead of downloading.
   stubDownload(): Promise<void>
   downloads(): Promise<{ name: string; text: string }[]>
@@ -968,6 +981,20 @@ export async function openPanel(
         `navigator.clipboard.writeText = async (text) => { window.__copied = text }`,
       ),
     copied: () => panelFrame.evaluate<string | undefined>("window.__copied"),
+    stubClipboardWrite: (fail = false) =>
+      panelFrame.evaluate<void>(`navigator.clipboard.write = async ([item]) => {
+        if (${fail}) throw new DOMException("denied", "NotAllowedError")
+        const blob = await item.getType("image/png")
+        const head = [...new Uint8Array(await blob.arrayBuffer()).slice(0, 4)]
+        window.__written = {
+          types: [...item.types],
+          png: head.join() === "137,80,78,71",
+        }
+      }`),
+    written: () =>
+      panelFrame.evaluate<{ types: string[]; png: boolean } | undefined>(
+        "window.__written",
+      ),
     stubDownload: () =>
       panelFrame.evaluate<void>(`(() => {
         window.__downloads = []

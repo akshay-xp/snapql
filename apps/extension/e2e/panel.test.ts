@@ -1545,6 +1545,42 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
   }
 })
 
+test("Copy puts images on the clipboard as PNG", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/media`)
+    await expect.poll(panel.rows).toContain("/media GET html")
+    await panel.unhide("assets")
+    await expect
+      .poll(panel.rows)
+      .toEqual(
+        expect.arrayContaining(["/api/png GET image", "/api/gif GET image"]),
+      )
+    await panel.stubClipboard()
+    await panel.stubClipboardWrite()
+    const copy = async (row: string) => {
+      await panel.select(row)
+      await panel.openTab("Response")
+      await expect.poll(panel.detail).toContain(" px")
+      await panel.clickButton("Copy")
+    }
+
+    for (const row of ["/api/png GET image", "/api/gif GET image"]) {
+      await panel.stubClipboardWrite()
+      await copy(row)
+      await expect
+        .poll(panel.written)
+        .toEqual({ types: ["image/png"], png: true })
+    }
+    expect(await panel.copied()).toBeUndefined()
+
+    await copy("/api/svg GET image")
+    expect(await panel.copied()).toContain("<svg")
+  } finally {
+    await panel.close()
+  }
+})
+
 test("filter chips narrow by protocol and status", async () => {
   const panel = await openPanel()
   try {
