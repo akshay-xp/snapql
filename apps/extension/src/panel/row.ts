@@ -43,20 +43,20 @@ export function rowLabel(
   const failure = failureOf(entry)
   const { pathname, search } = new URL(entry.url)
   const content = !decoded && contentKind(entry)
+  const detail = decoded ? decoded.detail : entry.method
+  const kind = decoded?.kind || content
   return {
-    ...(decoded
-      ? {
-          title: decoded.title,
-          ...(decoded.detail !== undefined && { detail: decoded.detail }),
-          kind: decoded.kind,
-        }
+    // Sockets read by URL even when decoded: their decoder title is the bare
+    // path, and a socket on "/" would leave nothing to tell rows apart.
+    ...(decoded && entry.method !== "WS"
+      ? { title: decoded.title }
       : {
           // Query kept so repeated calls to one endpoint stay distinguishable.
           title: pathname + search,
           parts: [...splitPath(pathname), search],
-          detail: entry.method,
-          ...(content && { kind: content }),
         }),
+    ...(detail !== undefined && { detail }),
+    ...(kind && { kind }),
     ...(failure && { failure }),
     ...(entry.open && { live: true as const }),
     ...(entry.socket?.closeCode !== undefined && {

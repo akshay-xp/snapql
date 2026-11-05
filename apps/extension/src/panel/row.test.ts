@@ -53,6 +53,38 @@ describe("rowLabel", () => {
     ).not.toHaveProperty("kind")
   })
 
+  it("titles sockets by path and query, keeping the decoder's kind and detail", () => {
+    const url = "wss://x.test/socket.io/?EIO=4&transport=websocket"
+    expect(
+      rowLabel(
+        entry({
+          method: "WS",
+          url,
+          status: 101,
+          decoded: { kind: "socketio", title: "/socket.io/", data: undefined },
+        }),
+      ),
+    ).toEqual({
+      title: "/socket.io/?EIO=4&transport=websocket",
+      parts: ["/", "socket.io/", "?EIO=4&transport=websocket"],
+      kind: "socketio",
+    })
+    const chat = rowLabel(
+      entry({
+        method: "WS",
+        url,
+        status: 101,
+        decoded: {
+          kind: "websocket",
+          title: "/socket.io/",
+          detail: "chat",
+          data: undefined,
+        },
+      }),
+    )
+    expect(chat.detail).toBe("chat")
+  })
+
   it("splits the title before the last path segment, keeping a trailing slash with it", () => {
     const parts = (path: string) =>
       rowLabel(entry({ url: `https://x.test${path}` })).parts
