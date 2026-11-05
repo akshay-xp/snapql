@@ -49,3 +49,48 @@ export const isFontMime = (mime: string) => {
 }
 
 export const isJavaScriptMime = (mime: string) => JAVASCRIPT.has(baseMime(mime))
+
+type Pattern = [bytes: number[], mask: number[], kind: "image" | "font"]
+
+const exact = (bytes: number[] | string): number[] =>
+  typeof bytes === "string" ? [...bytes].map((c) => c.charCodeAt(0)) : bytes
+const all = (n: number) => Array<number>(n).fill(0xff)
+const strict = (bytes: number[] | string, kind: Pattern[2]): Pattern => {
+  const pattern = exact(bytes)
+  return [pattern, all(pattern.length), kind]
+}
+
+// https://mimesniff.spec.whatwg.org/#matching-an-image-type-pattern and
+// #matching-a-font-type-pattern; mask 0x00 bytes are ignored.
+const PATTERNS: Pattern[] = [
+  strict([0, 0, 1, 0], "image"),
+  strict([0, 0, 2, 0], "image"),
+  strict("BM", "image"),
+  strict("GIF87a", "image"),
+  strict("GIF89a", "image"),
+  [exact("RIFF\0\0\0\0WEBPVP"), [...all(4), 0, 0, 0, 0, ...all(6)], "image"],
+  strict([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], "image"),
+  strict([0xff, 0xd8, 0xff], "image"),
+  [
+    [...Array<number>(34).fill(0), 0x4c, 0x50],
+    [...Array<number>(34).fill(0), 0xff, 0xff],
+    "font",
+  ],
+  strict([0, 1, 0, 0], "font"),
+  strict("OTTO", "font"),
+  strict("ttcf", "font"),
+  strict("wOFF", "font"),
+  strict("wOF2", "font"),
+]
+
+// #pattern-matching-algorithm, without leading bytes to ignore (no image or
+// font pattern has any).
+const matches = (bytes: Uint8Array, [pattern, mask]: Pattern) =>
+  bytes.length >= pattern.length &&
+  pattern.every((p, i) => (bytes[i] & mask[i]) === p)
+
+// The longest pattern (EOT) needs 36 bytes.
+export const SNIFF_BYTES = 36
+
+export const sniffBody = (bytes: Uint8Array) =>
+  PATTERNS.find((p) => matches(bytes, p))?.[2]
