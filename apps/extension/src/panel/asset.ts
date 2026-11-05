@@ -1,5 +1,11 @@
 import type { Entry } from "../capture/entry"
 import { baseMime } from "../decoders/text"
+import {
+  isAudioOrVideoMime,
+  isFontMime,
+  isImageMime,
+  isJavaScriptMime,
+} from "./mime"
 
 export type AssetKind = "image" | "font" | "css" | "js" | "media" | "wasm"
 
@@ -12,20 +18,18 @@ const BY_TYPE: Record<string, AssetKind> = {
   media: "media",
 }
 
-const BY_PREFIX: [string, AssetKind][] = [
-  ["image/", "image"],
-  ["font/", "font"],
-  ["video/", "media"],
-  ["audio/", "media"],
-]
-
+// Not spec groups, so matched exactly.
 const BY_MIME: Record<string, AssetKind> = {
   "text/css": "css",
-  "text/javascript": "js",
-  "application/javascript": "js",
-  "application/x-javascript": "js",
   "application/wasm": "wasm",
 }
+
+const BY_GROUP: [(mime: string) => boolean, AssetKind][] = [
+  [isImageMime, "image"],
+  [isFontMime, "font"],
+  [isAudioOrVideoMime, "media"],
+  [isJavaScriptMime, "js"],
+]
 
 export function assetKind(
   entry: Pick<Entry, "mimeType" | "exchange">,
@@ -33,7 +37,7 @@ export function assetKind(
   const type = entry.exchange.resourceType
   if (type && type in BY_TYPE) return BY_TYPE[type]
   const mime = baseMime(entry.mimeType)
-  return BY_MIME[mime] ?? BY_PREFIX.find(([p]) => mime.startsWith(p))?.[1]
+  return BY_MIME[mime] ?? BY_GROUP.find(([is]) => is(mime))?.[1]
 }
 
 // The label for an undecoded entry. HTML gets one but is not an asset: the

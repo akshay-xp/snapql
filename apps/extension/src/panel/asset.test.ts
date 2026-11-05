@@ -32,6 +32,11 @@ describe("assetKind", () => {
       ["application/javascript", "js"],
       ["application/x-javascript", "js"],
       ["application/wasm", "wasm"],
+      ["text/jscript", "js"],
+      ["application/x-ecmascript", "js"],
+      ["application/font-sfnt", "font"],
+      ["application/vnd.ms-opentype", "font"],
+      ["application/ogg", "media"],
     ]) {
       expect(assetKind(entry(mime)), mime).toBe(kind)
       expect(assetKind(entry(mime, "fetch")), mime).toBe(kind)
