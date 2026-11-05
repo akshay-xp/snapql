@@ -1,6 +1,8 @@
 import type { Body, Entry } from "../capture/entry"
+import { bytes } from "../decoders/bytes"
 import { baseMime } from "../decoders/text"
 import { prettyXml } from "../decoders/xml"
+import { isFontMime, isImageMime, SNIFF_BYTES, sniffBody } from "./mime"
 import { decodeBase64 } from "./values"
 
 // How the Response tab shows a body; absent means text (pretty-printed if it can be).
@@ -40,7 +42,7 @@ export function formatBody(
   if (body.encoding === "base64" && isTextMime(mimeType))
     body = { content: decodeBase64(body.content), encoding: "" }
   const base64 = body.encoding === "base64"
-  const view = bodyView(base64, mimeType)
+  const view = bodyView(body, mimeType)
   const result = (text: string, notes: string[]): FormattedBody =>
     view ? { text, notes, view } : { text, notes }
   const notes = base64
@@ -55,28 +57,20 @@ export function formatBody(
   return result(prettyJson(body.content) ?? prettyXml(body.content), notes)
 }
 
-const IMAGE_MIMES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/avif",
-  "image/x-icon",
-  "image/vnd.microsoft.icon",
-])
-const FONT_MIMES = new Set([
-  "font/woff2",
-  "font/woff",
-  "font/ttf",
-  "font/otf",
-  "application/font-woff",
-])
-
-function bodyView(base64: boolean, mimeType: string): BodyViewKind | undefined {
-  const mime = baseMime(mimeType)
-  if (mime === "image/svg+xml" || (base64 && IMAGE_MIMES.has(mime)))
-    return "image"
-  if (base64) return FONT_MIMES.has(mime) ? "font" : "hex"
+// Bytes before the label: servers mislabel images and fonts (octet-stream,
+// x-font-ttf). The label still counts for formats with no spec pattern (AVIF).
+function bodyView(body: Body, mimeType: string): BodyViewKind | undefined {
+  if (baseMime(mimeType) === "image/svg+xml") return "image"
+  if (body.encoding !== "base64") return
+  // A multiple of 4 base64 characters decodes cleanly.
+  const head = bytes({
+    content: body.content.slice(0, Math.ceil(SNIFF_BYTES / 3) * 4),
+    encoding: "base64",
+  })
+  const sniffed = sniffBody(head)
+  if (sniffed) return sniffed
+  if (isImageMime(mimeType)) return "image"
+  return isFontMime(mimeType) ? "font" : "hex"
 }
 
 export function base64Bytes(content: string): number {
