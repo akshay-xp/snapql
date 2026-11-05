@@ -52,9 +52,10 @@ No capture, store, or UI change.
 
 ## WebSocket (`src/decoders/websocket.ts`)
 
-- `socketDecoder(kind, match)`: the shared socket `decode` (method `WS` and `match(req)`; title path, detail requested protocols). `websocket` is `socketDecoder("websocket", () => true)`, last of the three.
+- `isProtocolName(value)` (pure): `^[A-Za-z0-9._-]{1,40}$`. Apps that can't set socket headers send tokens as subprotocols (e.g. URL-encoded JSON); those fail it. Used for the socket detail and HAR redaction (`docs/panel.md`).
+- `socketDecoder(kind, match)`: the shared socket `decode` (method `WS` and `match(req)`; title path, detail the requested protocols that pass `isProtocolName`). `websocket` is `socketDecoder("websocket", () => true)`, last of the three.
 
-- Kind `websocket`. Matches method `WS` (only probe socket entries have it). Title = URL path, detail = requested protocols joined `, ` (absent when none). No `data`.
+- Kind `websocket`. Matches method `WS` (only probe socket entries have it). Title = URL path (rows title sockets by URL instead, see `docs/panel.md`), detail = requested protocols passing `isProtocolName` joined `, ` (absent when none pass), so tokens stay out of the row and the Summary tag. No `data`.
 
 ## Socket.IO (`src/decoders/socketio.ts`)
 

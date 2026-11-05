@@ -1212,8 +1212,12 @@ test("Socket.IO and graphql-ws frames are titled by their protocol", async () =>
     await panel.page.click("#sio")
     await expect
       .poll(panel.rows)
-      .toEqual(expect.arrayContaining(["/socket.io/ live 6 msgs socketio"]))
-    await panel.selectStarting("/socket.io/ ")
+      .toEqual(
+        expect.arrayContaining([
+          "/socket.io/?EIO=4&transport=websocket live 6 msgs socketio",
+        ]),
+      )
+    await panel.selectStarting("/socket.io/?")
     await panel.openTab("Messages")
     await expect
       .poll(titles)
@@ -1261,8 +1265,12 @@ test("heartbeats are hidden from Messages until shown", async () => {
     await panel.page.click("#sio")
     await expect
       .poll(panel.rows)
-      .toEqual(expect.arrayContaining(["/socket.io/ live 6 msgs socketio"]))
-    await panel.selectStarting("/socket.io/ ")
+      .toEqual(
+        expect.arrayContaining([
+          "/socket.io/?EIO=4&transport=websocket live 6 msgs socketio",
+        ]),
+      )
+    await panel.selectStarting("/socket.io/?")
     await panel.openTab("Messages")
     await expect
       .poll(titles)
@@ -1978,6 +1986,42 @@ test("Export HAR downloads the visible requests", async () => {
       // Fetched in parallel, so their start order varies.
       filtered.log.entries.map((e) => new URL(e.request.url).pathname).sort(),
     ).toEqual(["/api/gql-bad", "/api/gql-ok"])
+  } finally {
+    await panel.close()
+  }
+})
+
+test("token subprotocols stay out of rows and redacted exports", async () => {
+  const panel = await openPanel()
+  try {
+    await panel.page.goto(`${panel.origin}/socket`)
+    await expect.poll(panel.probed).toBe(true)
+    await panel.page.click("#token")
+    const row = async () =>
+      (await panel.rows()).find((r) => r.startsWith("/tok"))
+    await expect
+      .poll(row, { timeout: 5000 })
+      .toMatch(/^\/tok\?room=1 chat closed 1000 2 msgs websocket$/)
+
+    await panel.selectStarting("/tok")
+    await panel.openTab("Headers")
+    await expect
+      .poll(panel.detail, { timeout: 5000 })
+      .toContain("%7B%22token%22%3A%22abc%22%7D")
+
+    await panel.stubDownload()
+    await panel.click('button[aria-label="Export HAR"]')
+    await panel.clickButton("Download")
+    await expect.poll(async () => (await panel.downloads()).length).toBe(1)
+    type Pair = { name: string; value: string }
+    const har = JSON.parse((await panel.downloads())[0].text)
+    const socket = har.log.entries.find((e: { request: { url: string } }) =>
+      e.request.url.includes("/tok"),
+    )
+    const protocol = socket.request.headers.find(
+      (p: Pair) => p.name.toLowerCase() === "sec-websocket-protocol",
+    )
+    expect(protocol?.value).toBe("chat, [redacted]")
   } finally {
     await panel.close()
   }
