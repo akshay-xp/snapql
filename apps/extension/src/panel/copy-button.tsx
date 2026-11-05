@@ -21,13 +21,14 @@ export function createCopied(): [Accessor<boolean>, (text: string) => void] {
 export function CopyButton(props: {
   label: string
   value: () => string
-  captioned?: boolean
+  // Visible text beside the icon; reads "Copied" after a copy.
+  caption?: string
 }) {
   const [copied, copy] = createCopied()
   return (
     <IconButton
       label={copied() ? "Copied" : props.label}
-      caption={props.captioned ? (copied() ? "Copied" : "Copy") : undefined}
+      caption={props.caption && (copied() ? "Copied" : props.caption)}
       onClick={() => copy(props.value())}
     >
       {copied() ? (
