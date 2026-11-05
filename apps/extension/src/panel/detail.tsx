@@ -421,7 +421,7 @@ function RawView(props: {
         />
         <CopyButton
           label="Copy"
-          captioned
+          caption="Copy"
           value={() => `${props.request}\n\n${props.response}`}
         />
       </Toolbar>
@@ -576,7 +576,23 @@ function BodyView(props: {
             Expand all
           </button>
         </Show>
-        <CopyButton label="Copy" captioned value={() => props.text} />
+        <Show when={props.view === "image"}>
+          <CopyButton
+            label="Copy data URL"
+            caption="Data URL"
+            value={() => dataUrl(props.text, props.entry.mimeType)}
+          />
+        </Show>
+        {/* A font's base64 is useless pasted; its data URL drops into @font-face. */}
+        <CopyButton
+          label="Copy"
+          caption="Copy"
+          value={() =>
+            props.view === "font"
+              ? dataUrl(props.text, props.entry.mimeType)
+              : props.text
+          }
+        />
       </Toolbar>
       <Switch
         fallback={

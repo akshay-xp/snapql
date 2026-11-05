@@ -1519,8 +1519,8 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
     await body("/api/png GET image")
     await expect.poll(panel.detail).toContain("3 × 2 px · 73 B")
     await panel.stubClipboard()
-    await panel.clickButton("Copy")
-    expect(await panel.copied()).toBe(PNG_BASE64)
+    await panel.click('button[aria-label="Copy data URL"]')
+    expect(await panel.copied()).toBe(`data:image/png;base64,${PNG_BASE64}`)
 
     await body("/api/svg GET image")
     await expect.poll(panel.detail).toContain("4 × 5 px")
@@ -1530,12 +1530,16 @@ test("the Body tab previews images and fonts and dumps other binary", async () =
     await expect
       .poll(async () => (await panel.detail())?.split("quick brown fox").length)
       .toBe(4)
+    await panel.clickButton("Copy")
+    expect(await panel.copied()).toMatch(/^data:font\/ttf;base64,AAEAAA/)
 
     await body("/api/badfont GET font")
     await expect.poll(panel.detail).toContain("font failed to load")
 
     await body("/api/bin GET")
     await expect.poll(panel.detail).toContain("00000000  00 ff 10 41")
+    await panel.clickButton("Copy")
+    expect(await panel.copied()).toBe("AP8QQQ==")
   } finally {
     await panel.close()
   }
