@@ -69,6 +69,28 @@ describe("toFinishedRequest", () => {
     })
   })
 
+  it("reads Firefox's mime type argument as base64 for non-text types", async () => {
+    const body = async (mimeType: string) => {
+      const req = chromeRequest()
+      req.getContent.mockImplementation((cb) => cb("e30=", mimeType))
+      return (await toFinishedRequest(req).fetchBody()).encoding
+    }
+    for (const mimeType of [
+      "image/png",
+      "font/woff2",
+      "application/x-font-ttf",
+    ])
+      expect(await body(mimeType)).toBe("base64")
+    for (const mimeType of [
+      "text/plain",
+      "application/json",
+      "application/vnd.api+json",
+      "application/javascript",
+      "image/svg+xml",
+    ])
+      expect(await body(mimeType)).toBe("")
+  })
+
   it("records when Chrome served the response from cache", () => {
     const cached = Object.assign(chromeRequest(), { _fromCache: "disk" })
 
