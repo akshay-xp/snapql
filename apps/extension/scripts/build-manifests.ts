@@ -3,8 +3,8 @@ import type { Plugin } from "vite"
 
 export type Target = "chrome" | "firefox"
 
-// Provisional until an AMO account exists.
-const GECKO_ID = "snapql@akshay-xp"
+// Permanent once on AMO: installs and updates are tied to it.
+const GECKO_ID = "snapql@akxp.net"
 
 const base = {
   manifest_version: 3,
@@ -22,6 +22,8 @@ export function manifestFor(target: Target, version: string) {
   if (target === "firefox") {
     return {
       ...manifest,
+      // AMO caps the name at 45 characters.
+      name: "SnapQL: GraphQL, gRPC & WebSocket Inspector",
       browser_specific_settings: {
         gecko: {
           id: GECKO_ID,

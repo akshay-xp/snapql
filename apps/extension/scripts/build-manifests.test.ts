@@ -15,15 +15,17 @@ describe("manifestFor", () => {
     })
   })
 
-  it("builds the Firefox manifest as Chrome plus the gecko id", () => {
+  it("builds the Firefox manifest as Chrome plus the gecko id, with AMO's shorter name", () => {
     const firefox = manifestFor("firefox", "0.2.0")
     const chrome = manifestFor("chrome", "0.2.0")
 
+    expect(firefox.name.length).toBeLessThanOrEqual(45)
     expect(firefox).toStrictEqual({
       ...chrome,
+      name: "SnapQL: GraphQL, gRPC & WebSocket Inspector",
       browser_specific_settings: {
         gecko: {
-          id: "snapql@akshay-xp",
+          id: "snapql@akxp.net",
           data_collection_permissions: { required: ["none"] },
         },
       },

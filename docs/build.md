@@ -25,10 +25,11 @@ The extension lives in `apps/extension/`; paths in this doc are relative to it, 
 - Generated, not checked in. `manifestPlugin` emits `manifest.json` per target from `manifestFor(target, version)`.
 - Version comes from `package.json`.
 - `name` and `description` are the Chrome Web Store title (max 75 chars) and summary (max 132), the fields its search weighs most; `scripts/build-manifests.test.ts` checks the limits. Write the summary as a sentence, not a protocol list: v1.0.0 was rejected for "excessive keywords" (Yellow Argon) over a comma list of seven formats. The DevTools tab title is separate (`createPanel("SnapQL", ...)` in `src/devtools.ts`). The long description lives in `store/listing.txt`, plain text (the dashboard shows Markdown literally).
+- Firefox overrides `name` with `SnapQL: GraphQL, gRPC & WebSocket Inspector`: AMO caps it at 45 characters (`web-ext lint` `JSON_INVALID` on `/name`), and Chrome keeps its search-tuned longer title.
 - Firefox adds `browser_specific_settings.gecko`:
-  - `id: "snapql@akshay-xp"`: provisional until an AMO account exists.
+  - `id: "snapql@akxp.net"`: permanent once on AMO (installs and updates are tied to it); on the owner's domain, not a GitHub handle.
   - `data_collection_permissions: { required: ["none"] }`: required for new AMO extensions.
-- Validate the Firefox build with `pnpm dlx web-ext lint -s dist/firefox`.
+- Validate the Firefox build with `pnpm dlx web-ext lint -s dist/firefox`. web-ext 10.8.0 dies with SIGBUS on Node 24.14.1 (macOS) before printing; it runs on Node 20.20.2 (`~/.nvm/versions/node/v20.20.2/bin/node <dlx cache>/node_modules/web-ext/bin/web-ext.js lint ...`). Expected result: 0 errors, 1 warning (`UNSAFE_VAR_ASSIGNMENT`, Solid's `template()` setting innerHTML from compile-time strings; explained in `store/amo-notes.txt`).
 
 ## Loading locally
 
@@ -61,7 +62,9 @@ The extension lives in `apps/extension/`; paths in this doc are relative to it, 
 
 ## Release
 
-- `pnpm release`: `vite build --mode chrome`, then `node scripts/release.ts` (Node runs the `.ts` directly; 22.18+ strips types unflagged; cwd is `apps/extension`). Exits 1 with `<file> is <n> bytes gzipped, over the 40960 budget` when the panel is too big; otherwise writes `release/snapql-chrome-<version>.zip` (gitignored, replaced on rerun) by running `zip -qrX` inside `dist/chrome`, so `manifest.json` is at the zip root as the store requires. Vite empties `dist/chrome` per build, so no stale files ship.
+- `pnpm release`: `pnpm build` (both targets), then `node scripts/release.ts` (Node runs the `.ts` directly; 22.18+ strips types unflagged; cwd is `apps/extension`). Exits 1 with `<file> is <n> bytes gzipped, over the 40960 budget` when the panel is too big; otherwise writes to `release/` (gitignored, replaced on rerun):
+  - `snapql-chrome-<version>.zip` and `snapql-firefox-<version>.zip`: `zip -qrX` inside `dist/<target>`, so `manifest.json` is at the zip root as the stores require. Vite empties `dist/<target>` per build, so no stale files ship. The Chrome zip also goes to Edge Add-ons (#117).
+  - `snapql-source-<version>.zip`: AMO requires source for minified code. The repo root's `git ls-files --cached --others --exclude-standard` (what git would commit, uncommitted edits included, ignored files out), so a version bump not yet committed still matches. Verified: unzipped, `pnpm install --frozen-lockfile` and `pnpm --filter extension exec vite build --mode firefox` rebuild `dist/firefox` byte-identical. Reviewer build and test steps: `store/amo-notes.txt`.
 - Steps:
   1. Set `version` in `apps/extension/package.json` (the manifests take it from there).
   2. `pnpm release`.
@@ -73,7 +76,11 @@ The extension lives in `apps/extension/`; paths in this doc are relative to it, 
      - Test instructions (Distribution / reviewer notes): paste `store/test-instructions.txt` (field limit 500 chars). Reviewers run no scripts: the example, countries.trevorblades.com (a public GraphiQL page), sends an introspection query on load, so a reload shows a decoded GraphQL row. Recheck it before each submission.
      - Privacy practices: paste the sections of `store/privacy.txt` (single purpose, permission justification, remote code, data usage) into their fields.
      - Submit for review.
-- Firefox is built but not published; AMO submission is out of scope until it is.
+- Firefox (addons.mozilla.org Developer Hub), after `pnpm release` and `web-ext lint` (0 errors; see Manifests):
+  - Submit a new version, listed on this site; upload `release/snapql-firefox-<version>.zip`.
+  - Source code: yes, upload `release/snapql-source-<version>.zip`. Notes to reviewer: paste `store/amo-notes.txt`.
+  - Listing (first submission): summary is the manifest `description`; description from `store/listing.txt`; screenshots `store/listing-images/*.png`; homepage `https://snapql.akxp.net`; privacy policy from `https://snapql.akxp.net/#privacy`; category Developer Tools; license GPL-3.0 (`LICENSE`).
+- Edge Add-ons: pending (#117).
 
 ## Store screenshots
 
