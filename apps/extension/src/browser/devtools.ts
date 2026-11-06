@@ -9,6 +9,38 @@ const pairs = (list?: NameValue[]): NameValue[] =>
 
 const ms = (n?: number) => n ?? -1
 
+// Firefox passes the mime type where Chrome passes the encoding, and its
+// netmonitor base64-encodes every body its isTextMimeType rejects
+// (devtools/shared/network-observer/NetworkHelper.sys.mjs, mirrored here).
+const bodyEncoding = (arg: string) => {
+  if (!arg.includes("/")) return arg
+  return isFirefoxText(arg) ? "" : "base64"
+}
+
+const FIREFOX_TEXT = new Set([
+  "application/xml",
+  "application/vnd.mozilla.maybe.feed",
+  "application/javascript",
+  "application/x-javascript",
+  "application/x-httpd-php",
+  "application/ecmascript",
+  "application/http-index-format",
+  "application/json",
+  "application/x-js",
+  "application/x-mpegurl",
+  "application/vnd.apple.mpegurl",
+  "application/json-rpc",
+  "multipart/mixed",
+  "multipart/x-mixed-replace",
+  "image/svg+xml",
+  "video/vnd.mpeg.dash.mpd",
+])
+
+const isFirefoxText = (mime: string) =>
+  mime.startsWith("text/") ||
+  /^application\/\w+(?:[.-]\w+)*(?:\+xml|[-+]json)$/.test(mime) ||
+  FIREFOX_TEXT.has(mime)
+
 export function toFinishedRequest(
   req: chrome.devtools.network.Request,
 ): FinishedRequest {
@@ -18,7 +50,7 @@ export function toFinishedRequest(
   const content = () =>
     new Promise<Body>((resolve) =>
       req.getContent((content, encoding) =>
-        resolve({ content: content ?? "", encoding }),
+        resolve({ content: content ?? "", encoding: bodyEncoding(encoding) }),
       ),
     )
   // Chrome drops older bodies as a page loads more, so API bodies are read as
