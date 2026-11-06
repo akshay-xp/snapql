@@ -17,7 +17,8 @@ DevTools extension that makes network traffic human readable. v0.2.0 (live on th
 ## Targets
 
 - Chrome: built and published.
-- Firefox: built and kept working, not published.
+- Firefox: built, manually verified (2026-11-06), AMO submission in progress (#117).
+- Edge and Brave: run the Chrome build, manually verified (2026-11-06). Brave installs from the Chrome Web Store; Edge Add-ons pending (#117). Safari deferred.
 
 ## Invariants
 

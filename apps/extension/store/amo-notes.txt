@@ -1,0 +1,14 @@
+Build from source (the uploaded source zip):
+Requires Node.js 22 or later and pnpm 10.12.1 (run "corepack enable" to get the pinned pnpm). Tested on macOS; any OS with Node works.
+1. Unzip the source and cd into it.
+2. pnpm install --frozen-lockfile
+3. pnpm --filter extension exec vite build --mode firefox
+4. The add-on is in apps/extension/dist/firefox and matches the uploaded package file for file.
+The bundled code is Vite output from apps/extension/src (TypeScript and Solid). The one linter warning (innerHTML in assets/panel-*.js) is Solid's template() helper, which parses HTML strings fixed at compile time; no page or network data reaches innerHTML. probe.js is copied unminified from apps/extension/src/probe/probe.js; it is the script the DevTools panel injects into the inspected page to see streams (fetch, EventSource, WebSocket) as they arrive.
+
+Testing:
+1. Open https://countries.trevorblades.com
+2. Open DevTools (F12) and select the SnapQL tab.
+3. Reload the page. The site sends a GraphQL introspection query as it loads.
+4. Requests appear in the list. Click one to see its payload and response decoded.
+No account, login or permissions are needed. SnapQL sends no data anywhere.
